@@ -33,6 +33,8 @@
 <use name="xerces-c"/>
 <use name="boost"/>
 <use name="root"/>
+<use name="rootcore"/>
+<use name="rootgraphics"/>
 <use name="rootrflx"/>
 <use name="DataFormats/SiPixelDetId"/>
 <use name="DataFormats/L1TrackTrigger"/>

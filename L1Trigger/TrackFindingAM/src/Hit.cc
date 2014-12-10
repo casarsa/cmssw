@@ -1,6 +1,6 @@
 #include "../interface/Hit.h"
 
-Hit::Hit(char l, char lad, char zp, char seg, short strip, int idx, int tp, float pt, float ip, float eta, float phi0, float p_x, float p_y, float p_z, float p_x0, float p_y0, float p_z0){
+Hit::Hit(short l, short lad, short zp, short seg, short strip, int idx, int tp, float pt, float ip, float eta, float phi0, float p_x, float p_y, float p_z, float p_x0, float p_y0, float p_z0){
   layer = l;
   ladder = lad;
   zPos = zp;
@@ -40,19 +40,19 @@ Hit::Hit(const Hit& h){
   Z0=h.Z0;
 }
 
-char Hit::getLayer() const{
+short Hit::getLayer() const{
   return layer;
 }
 
-char Hit::getLadder() const{
+short Hit::getLadder() const{
   return ladder;
 }
 
-char Hit::getModule() const{
+short Hit::getModule() const{
   return zPos;
 }
 
-char Hit::getSegment() const{
+short Hit::getSegment() const{
   return segment;
 }
 

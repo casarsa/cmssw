@@ -4,12 +4,19 @@ import FWCore.ParameterSet.Config as cms
 TTPatternsFromStub = cms.EDProducer("TrackFindingAMProducer",
    TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
    TTPatternName      = cms.string("AML1Patterns"),
-   inputBankFile      = cms.string('/afs/cern.ch/work/s/sviret/testarea/PatternBanks/BE_5D/Eta7_Phi8/ss32_cov40/612_SLHC6_MUBANK_lowmidhig_sec37_ss32_cov40.pbk'),
+   inputBankFile      = cms.string('/afs/cern.ch/work/s/sviret/public/PatternBanks/BE_5D/Eta6_Phi8/ss32/620_SLHC7_MUBANK_lowmidhig_sec24_ss32_cov40.pbk'),
    threshold          = cms.int32(5)
 )
 
 # Hough-based trackfit default sequence
-TTTracksFromPattern = cms.EDProducer("TrackFitHoughProducer",
+#TTTracksFromPattern = cms.EDProducer("TrackFitHoughProducer",
+#   TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
+#   TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
+#   TTTrackName        = cms.string("AML1Tracks"),
+#)
+
+# Retina-based trackfit default sequence
+TTTracksFromPattern = cms.EDProducer("TrackFitRetinaProducer",
    TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
    TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
    TTTrackName        = cms.string("AML1Tracks"),

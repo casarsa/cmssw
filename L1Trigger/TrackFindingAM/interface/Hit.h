@@ -10,10 +10,10 @@ using namespace std;
 class Hit{
 
  private :
-  char layer;
-  char ladder;
-  char zPos;
-  char segment;
+  short layer;
+  short ladder;
+  short zPos;
+  short segment;
   short stripNumber;
   int stub_idx;
   int part_id;
@@ -51,7 +51,7 @@ class Hit{
      \param p_y0 The Y0 coordinate of the hit in the tracker
      \param p_z0 The Z0 coordinate of the hit in the tracker
   **/
-  Hit(char l, char lad, char zp, char seg, short strip, int idx, int tp, float pt, float ip, float eta, float phi0, float p_x, float p_y, float p_z, float p_x0, float p_y0, float p_z0);
+  Hit(short l, short lad, short zp, short seg, short strip, int idx, int tp, float pt, float ip, float eta, float phi0, float p_x, float p_y, float p_z, float p_x0, float p_y0, float p_z0);
   /**
      \brief The copy Constructor
   **/
@@ -60,22 +60,22 @@ class Hit{
      \brief Get the layer of the hit
      \return The layer of the Hit
   **/
-  char getLayer() const;
+  short getLayer() const;
   /**
      \brief Get the ladder of the hit
      \return The ladder of the Hit
   **/
-  char getLadder() const;
+  short getLadder() const;
   /**
      \brief Get the Z position of the module of the hit
      \return The position of the module
   **/
-  char getModule() const;
+  short getModule() const;
   /**
      \brief Get the segment of the hit
      \return The segment of the Hit
   **/
-  char getSegment() const;
+  short getSegment() const;
   /**
      \brief Get the strip position of the hit
      \return The strip of the Hit
