@@ -193,7 +193,11 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
     }
 
+<<<<<<< HEAD
     //cout << "\n Number of roads = " << TTPatternHandle->size() << "\n" << endl;
+=======
+    cout << "\n Number of roads = " << TTPatternHandle->size() << "\n" << endl;
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
     /// Loop over Patterns
     unsigned int tkCnt = 0;
@@ -337,7 +341,11 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
       } /// End of loop over track stubs
 
+<<<<<<< HEAD
       //cout << "\n road / number of stubs = " << j << " / " << road_hits.size() << "\n" << endl;
+=======
+      cout << "\n road / number of stubs = " << j << " / " << road_hits.size() << "\n" << endl;
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
 //      cout << " >>>>>>>>>>>>>>>>>> " <<  road_hits.size() << endl;
 //      for (std::vector<Hit*>::iterator ihit=road_hits.begin(); ihit!=road_hits.end(); ++ihit)
@@ -353,7 +361,11 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       fitter->setEventID(iEvent.id());
      
       fitter->fit(road_hits);
+<<<<<<< HEAD
       //fitter->mergeTracks();
+=======
+      //fitter->mergeTracks();//remove some duplicates
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
       tracks.clear();
       tracks = fitter->getTracks();
       fitter->clean();
@@ -364,6 +376,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	for(unsigned int tt=0;tt<tracks.size();tt++)
 	  {	
 
+<<<<<<< HEAD
 	    ///// There is mismatch in the naming: pt <--> curvature to be fixed
 	    //double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
 	    //tracks[tt]->setCurve(pt_fit);
@@ -378,12 +391,35 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
 	    tempVec.clear();
 
+=======
+	    double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
+
+	    cout << "   " << iEvent.id().event() << "  -  "
+		 << tt << ": c = " << tracks[tt]->getCurve()
+		 << "  pt = " << 0.003*mMagneticField/ tracks[tt]->getCurve()
+		 << "  d0 = " << tracks[tt]->getD0()
+		 << "  phi = " << tracks[tt]->getPhi0()
+		 << "  eta = " << tracks[tt]->getEta0()
+		 << "  z0 = " << tracks[tt]->getZ0() << endl;
+
+
+	    tracks[tt]->setCurve(pt_fit);
+
+	    tempVec.clear();
+
+	    /////// Stubs used for the fit //////////
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 	    vector<int> stubs = tracks[tt]->getStubs();
 	    for(unsigned int sti=0;sti<stubs.size();sti++)
 	      {
 		//cout<<stubs[sti]<<endl;
 		tempVec.push_back( stubMapUsed[ stubs[sti] ] );
 	      }
+<<<<<<< HEAD
+=======
+	    /////////////////////////////////////////
+
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
 	    double pz = tracks[tt]->getCurve()/(tan(2.*atan(exp(-tracks[tt]->getEta0()))));
 
@@ -407,14 +443,21 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
     
       }
 
+<<<<<<< HEAD
       // --- Clean-up memory:
       delete(fitter);
 
+=======
+      delete(fitter);
+
+      // Clean-up the road stub vector:
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
       for(std::vector<Hit*>::iterator ihit=road_hits.begin(); ihit!=road_hits.end(); ++ihit)
 	delete *ihit;
 
     } // End of loop over patterns
 
+<<<<<<< HEAD
 
     
 //    if ( TTTracksForOutput->size()>0 ){
@@ -460,6 +503,13 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
     for(map<int,set<long>*>::iterator set_it=m_uniqueHitsPerSector.begin();set_it!=m_uniqueHitsPerSector.end();set_it++)
       delete set_it->second;//delete the set*
 
+=======
+    //free the map of sets
+    for(map<int,set<long>*>::iterator set_it=m_uniqueHitsPerSector.begin();set_it!=m_uniqueHitsPerSector.end();set_it++)
+    {
+      delete set_it->second;//delete the set*
+    }
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
     // cout<<"j value "<< j << " / " << jreal <<endl;
     

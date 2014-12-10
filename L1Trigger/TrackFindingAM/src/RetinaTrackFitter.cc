@@ -86,7 +86,11 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   double pstep_step1 = (pmax_step1-pmin_step1)/pbins_step1;
   double qstep_step1 = (qmax_step1-qmin_step1)/qbins_step1;
 
+<<<<<<< HEAD
   vector <double> sigma_step1(8,0.25*sqrt(pstep_step1*pstep_step1+qstep_step1*qstep_step1));
+=======
+  vector <double> sigma_step1(8,0.5*sqrt(pstep_step1*pstep_step1+qstep_step1*qstep_step1));
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
   if ( config[eta_range]["xy_sigma1_step1"] != 0. ) 
     sigma_step1[0] = config[eta_range]["xy_sigma1_step1"];
   if ( config[eta_range]["xy_sigma2_step1"] != 0. ) 
@@ -113,7 +117,11 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   // --- Fill the retina and find maxima:
   retinaXY_step1.fillGrid();
   retinaXY_step1.findMaxima();
+<<<<<<< HEAD
   //retinaXY_step1.dumpGrid(eventID.event(),1);
+=======
+  retinaXY_step1.dumpGrid(eventID.event(),1);
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
   //retinaXY_step1.printMaxima();
 
 
@@ -131,8 +139,12 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 
   // --- Zoom around first step maxima:
   for (unsigned int imax=0; imax<maximaXY_step1.size(); ++imax){
+<<<<<<< HEAD
     if (maximaXY_step1[imax].w == -1.) continue;
 
+=======
+    
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
     // --- Retina setup:
     double pmin_step2 = maximaXY_step1[imax].p - config[eta_range]["xy_zoom_step2"]*pstep_step1;
     double pmax_step2 = maximaXY_step1[imax].p + config[eta_range]["xy_zoom_step2"]*pstep_step1;
@@ -144,7 +156,11 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     
     double minWeight_step2 = config[eta_range]["xy_threshold_step2"];
 
+<<<<<<< HEAD
     vector <double> sigma_step2(8,0.25*sqrt(pstep_step2*pstep_step2+qstep_step2*qstep_step2));
+=======
+    vector <double> sigma_step2(8,0.5*sqrt(pstep_step2*pstep_step2+qstep_step2*qstep_step2));
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
     if ( config[eta_range]["xy_sigma1_step2"] != 0. ) 
       sigma_step2[0] = config[eta_range]["xy_sigma1_step2"];
     if ( config[eta_range]["xy_sigma2_step2"] != 0. ) 
@@ -171,17 +187,25 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     // --- Fill the retina and find maxima:
     retinaXY_step2.fillGrid();
     retinaXY_step2.findMaxima();
+<<<<<<< HEAD
     //retinaXY_step2.dumpGrid(eventID.event(),2,imax);
     //retinaXY_step2.printMaxima();
 
     pqPoint bestpqXY_step2 = retinaXY_step2.getBestPQ();
     if ( bestpqXY_step2.w == -1. ) continue;
+=======
+    retinaXY_step2.dumpGrid(eventID.event(),2,imax);
+    //retinaXY_step2.printMaxima();
+
+    pqPoint bestpqXY_step2 = retinaXY_step2.getBestPQ();
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
 
     // --- Invert the X+-X- transformation:
     double p = 0.5*(y1 - y0)/bestpqXY_step2.q;
     double q = y0 - p*(bestpqXY_step2.p-bestpqXY_step2.q);
 
+<<<<<<< HEAD
 
     // --- Associate stubs to this maxumum:
     hits_RZ.clear();
@@ -196,6 +220,26 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       //cout << ihit << " - " << dist << "  " << weight << endl;
 
     }
+=======
+    
+    // --- Find the stubs associated with the maxumum:
+    //hits_RZ.clear();
+    //cout << " --------------- " << imax << endl;
+    //for (unsigned int ihit=0;ihit<hits.size();++ihit){
+    //  
+    //  cout << ihit << " --> " 
+    //	   << (p*hits[ihit]->x - hits[ihit]->y + q)/sqrt(1.+p*p) << endl;
+    //
+    //
+    //
+    //  double dist = (p*hits[ihit]->x - hits[ihit]->y + q)/sqrt(1.+p*p);
+    //  if ( fabs(dist)<0.0001 ){
+    //	hits_RZ.push_back(hits[ihit]);
+    //	//hits.erase(hits.begin()+ihit);
+    //  } 
+    //
+    //}
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
 
     // --- Rotate back the original phi sector:
@@ -261,7 +305,11 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       sigma_step1[7] = config[eta_range]["rz_sigma8_step1"];
 
 
+<<<<<<< HEAD
     Retina retinaRZ_step1(hits_RZ, pbins_step1+2, qbins_step1+2, 
+=======
+    Retina retinaRZ_step1(hits, pbins_step1+2, qbins_step1+2, 
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 			  pmin_step1-pstep_step1, pmax_step1+pstep_step1, 
 			  qmin_step1-qstep_step1, qmax_step1+qstep_step1, 
 			  sigma_step1, minWeight_step1, 1, RZ);
@@ -286,8 +334,12 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 
     // Zoom around first step maxima
     for (unsigned int imax_RZ=0; imax_RZ<maximaRZ_step1.size(); ++imax_RZ){
+<<<<<<< HEAD
       if (maximaRZ_step1[imax].w == -1.) continue;
  
+=======
+    
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
       double pmin_step2 = maximaRZ_step1[imax_RZ].p - config[eta_range]["rz_zoom_step2"]*pstep_step1;
       double pmax_step2 = maximaRZ_step1[imax_RZ].p + config[eta_range]["rz_zoom_step2"]*pstep_step1;
       double qmin_step2 = maximaRZ_step1[imax_RZ].q - config[eta_range]["rz_zoom_step2"]*qstep_step1;
@@ -321,7 +373,11 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 	sigma_step2[7] = config[eta_range]["rz_sigma8_step2"];
 
 
+<<<<<<< HEAD
       Retina retinaRZ_step2(hits_RZ, pbins_step2+2, qbins_step2+2, 
+=======
+      Retina retinaRZ_step2(hits, pbins_step2+2, qbins_step2+2, 
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 			    pmin_step2-pstep_step2, pmax_step2+pstep_step2, 
 			    qmin_step2-qstep_step2, qmax_step2+qstep_step2, 
 			    sigma_step2, minWeight_step2, 1, RZ);
@@ -332,7 +388,10 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       //retinaRZ_step2.printMaxima();
 
       pqPoint bestpqRZ_step2 = retinaRZ_step2.getBestPQ();
+<<<<<<< HEAD
       if (bestpqRZ_step2.w == -1.) continue;
+=======
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
 
       // --- Invert the X+-X- transformation:
@@ -345,6 +404,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       eta = -log(tan(0.5*theta));
       z0  = -q/p;
 
+<<<<<<< HEAD
       //cout << c << "  " << phi << "  -  " << eta << "  " << z0 << endl; 
 
       if ( !std::isnan(c) && !std::isnan(phi) && !std::isnan(eta) && !std::isnan(z0) &&
@@ -363,6 +423,18 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     } // imax_RZ loop
 
 
+=======
+    } // imax_RZ loop
+
+    if ( !std::isnan(c) && !std::isnan(phi) && !std::isnan(eta) && !std::isnan(z0) &&
+	 eta != -9999. && z0 != -9999. ){
+
+      Track* trk = new Track(c, 0., phi, eta, z0);
+      tracks.push_back(trk);
+
+    }
+ 
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
   } // imax loop
 
 
@@ -402,6 +474,7 @@ void RetinaTrackFitter::mergePatterns(){
 
 
 void RetinaTrackFitter::mergeTracks(){
+<<<<<<< HEAD
 //  
 //  if ( tracks.size()<2 ) return;   // There is nothing to merge
 //
@@ -440,6 +513,8 @@ void RetinaTrackFitter::mergeTracks(){
 //  }
 //
 //
+=======
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 }
 
 
@@ -625,7 +700,11 @@ void RetinaTrackFitter::initialize(){
   config[3]["xy_pmax_step1"]      =  0.05;
   config[3]["xy_qmin_step1"]      = -0.05;
   config[3]["xy_qmax_step1"]      =  0.05;
+<<<<<<< HEAD
   config[3]["xy_threshold_step1"] =  4.;
+=======
+  config[3]["xy_threshold_step1"] =  4.5;
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
   config[3]["xy_sigma1_step1"]    =  0.;
   config[3]["xy_sigma2_step1"]    =  0.;
   config[3]["xy_sigma3_step1"]    =  0.;
@@ -648,7 +727,11 @@ void RetinaTrackFitter::initialize(){
   config[3]["rz_pmax_step1"]      =  60.;
   config[3]["rz_qmin_step1"]      = -60.;
   config[3]["rz_qmax_step1"]      =  60.;
+<<<<<<< HEAD
   config[3]["rz_threshold_step1"] =  4.;
+=======
+  config[3]["rz_threshold_step1"] =  4.5;
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
   config[3]["rz_sigma1_step1"]    =  0.;
   config[3]["rz_sigma2_step1"]    =  0.;
   config[3]["rz_sigma3_step1"]    =  0.;

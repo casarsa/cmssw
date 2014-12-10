@@ -99,8 +99,13 @@ double Retina::getResponseXpXm(double x_plus, double x_minus) {
     if ( view == RZ && fabs(y) > 60. )
       sigma_local = sigma[3];
 
+<<<<<<< HEAD
     //double Sijkr = (p*x-y+q)/p;  // from  x - (y-q)/p
     double Sijkr = fabs(y-p*x-q)/sqrt(1.+p*p);
+=======
+    double Sijkr = (p*x-y+q)/p;  // from  x - (y-q)/p
+    //double Sijkr = fabs(y-p*x-q)/sqrt(1.+p*p);
+>>>>>>> 1997b07bdd3fc97e21f88636217f694a0b8273ae
 
     double term = exp(-0.5*Sijkr*Sijkr/(sigma_local*sigma_local));
 
