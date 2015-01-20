@@ -1,6 +1,6 @@
 /*! \class   TrackFitRetinaProducer
  *
- *  \author M Casarsa / L Martini (cut&paste from S.Viret and G.Baulieu's TrackFitHoughProducer) 
+ *  \author M Casarsa / L Martini (mostly cut&paste from S.Viret and G.Baulieu's TrackFitHoughProducer) 
  *  \date   2014, May 20
  *
  */
@@ -74,6 +74,13 @@ class TrackFitRetinaProducer : public edm::EDProducer
   edm::InputTag                TTStubsInputTag;
   edm::InputTag                TTPatternsInputTag;
   std::string                  TTTrackOutputTag;
+  int                          verboseLevel_;
+  bool                         fitPerTriggerTower_;
+  // removeDuplicates_:
+  //            0  --> no duplicate removal
+  //            1  --> use deltaR
+  //            2  --> use common stubs
+  int                          removeDuplicates_;
 
   /// Mandatory methods
   virtual void beginRun( const edm::Run& run, const edm::EventSetup& iSetup );
@@ -88,9 +95,12 @@ class TrackFitRetinaProducer : public edm::EDProducer
 /// Constructors
 TrackFitRetinaProducer::TrackFitRetinaProducer( const edm::ParameterSet& iConfig )
 {
-  TTStubsInputTag    = iConfig.getParameter< edm::InputTag >( "TTInputStubs" );
-  TTPatternsInputTag = iConfig.getParameter< edm::InputTag >( "TTInputPatterns" );
-  TTTrackOutputTag   = iConfig.getParameter< std::string >( "TTTrackName" );
+  TTStubsInputTag     = iConfig.getParameter< edm::InputTag >( "TTInputStubs" );
+  TTPatternsInputTag  = iConfig.getParameter< edm::InputTag >( "TTInputPatterns" );
+  TTTrackOutputTag    = iConfig.getParameter< std::string >( "TTTrackName" );
+  verboseLevel_       = iConfig.getUntrackedParameter< int >( "verboseLevel", 0 );
+  removeDuplicates_   = iConfig.getUntrackedParameter< int >( "removeDuplicates", 1 );
+  fitPerTriggerTower_ = iConfig.getUntrackedParameter< bool >( "fitPerTriggerTower", false );
 
   produces< std::vector< TTTrack< Ref_PixelDigi_ > > >( TTTrackOutputTag );
 }
@@ -162,38 +172,44 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
   if ( TTPatternHandle->size() > 0 )
   {
 
-    cout << "-------------------------------------------------------------------" << endl;
-    cout << " Generated particles:" << endl; 
-    for (std::vector <reco::GenParticle>::const_iterator thepart  = genPart->begin(); 
-	 thepart != genPart->end(); 
-	 ++thepart) {
+    // --- Printout the generated particles:
+    if ( verboseLevel_ > 0 ){
+      cout << "\nEvent = " << iEvent.id().event() 
+	   << " ---------------------------------------------------------------------------------" << endl;
+      cout << "  Generated particles:" << endl; 
+      for (std::vector <reco::GenParticle>::const_iterator thepart = genPart->begin(); 
+	                                                   thepart != genPart->end(); 
+	                                                 ++thepart ){
 	  
-      // curvature and helix radius:
-      double c = thepart->charge()*0.003*mMagneticField/thepart->pt();
-      double R = thepart->pt()/(0.003*mMagneticField);
+	// curvature and helix radius:
+	double c = thepart->charge()*0.003*mMagneticField/thepart->pt();
+	double R = thepart->pt()/(0.003*mMagneticField);
 	  
-      // helix center:
-      double x0 = thepart->vx() - thepart->charge()*R*thepart->py()/thepart->pt();
-      double y0 = thepart->vy() + thepart->charge()*R*thepart->px()/thepart->pt();
+	// helix center:
+	double x0 = thepart->vx() - thepart->charge()*R*thepart->py()/thepart->pt();
+	double y0 = thepart->vy() + thepart->charge()*R*thepart->px()/thepart->pt();
 	  
-      // transverse and longitudinal impact parameters:
-      double d0 = thepart->charge()*(sqrt(x0*x0+y0*y0)-R);
-      double z0 = thepart->vz() - 2./c*thepart->pz()/thepart->pt()*
-	asin(0.5*c*sqrt((thepart->vx()*thepart->vx()+thepart->vy()*thepart->vy()-d0*d0)/(1.+c*d0)));
+	// transverse and longitudinal impact parameters:
+	double d0 = thepart->charge()*(sqrt(x0*x0+y0*y0)-R);
+	double z0 = thepart->vz() - 2./c*thepart->pz()/thepart->pt()*
+	  asin(0.5*c*sqrt((thepart->vx()*thepart->vx()+thepart->vy()*thepart->vy()-d0*d0)/(1.+c*d0)));
     
-      cout << "   " << iEvent.id().event() << "  -  "
-	   << thepart->pdgId()
-	   << ": c = " << c
-	   << "  pt = " << thepart->pt()
-	   << "  d0 = " << d0
-	   << "  phi = " << thepart->phi()
-	   << "  eta = " << thepart->eta()
-	   << "  z0 = " << z0 
-	   << endl;
+	cout << "   " << std::distance(genPart->begin(),thepart)
+	     << "  -  pdgId = " << thepart->pdgId()
+	     << "  c = " << c
+	     << "  pt = " << thepart->pt()
+	     << "  d0 = " << d0
+	     << "  phi = " << thepart->phi()
+	     << "  eta = " << thepart->eta()
+	     << "  z0 = " << z0 
+	     << endl;
+
+      }
 
     }
-
-    //cout << "\n Number of roads = " << TTPatternHandle->size() << "\n" << endl;
+    
+    if ( verboseLevel_ > 1 )
+      cout << "   Number of roads = " << TTPatternHandle->size() << endl;
 
     /// Loop over Patterns
     unsigned int tkCnt = 0;
@@ -331,19 +347,23 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
 	}
 
-	Hit* h1 = new Hit(layer,ladder, module, segment, strip, 
-			  j, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
-	road_hits.push_back(h1);
+	if ( !fitPerTriggerTower_ ){
+	  Hit* h1 = new Hit(layer,ladder, module, segment, strip, 
+			    j, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
+	  road_hits.push_back(h1);
+	}
 
       } /// End of loop over track stubs
 
-      //cout << "\n road / number of stubs = " << j << " / " << road_hits.size() << "\n" << endl;
+      if ( verboseLevel_ > 1 )
+	cout << "   road/number of stubs = " << j << " / " << road_hits.size() << endl;
 
-//      cout << " >>>>>>>>>>>>>>>>>> " <<  road_hits.size() << endl;
-//      for (std::vector<Hit*>::iterator ihit=road_hits.begin(); ihit!=road_hits.end(); ++ihit)
-//      	cout << "        " << (*ihit)->getX() << "  " << (*ihit)->getLayer() << endl;
-     
-      // Fit the road stubs:
+
+      // =====================================================================================================
+      //  Fit the road stubs:
+      // =====================================================================================================
+
+      if ( fitPerTriggerTower_ ) continue;
 
       std::vector<Track*> tracks; 
       std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
@@ -353,63 +373,62 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       fitter->setEventID(iEvent.id());
      
       fitter->fit(road_hits);
-      //fitter->mergeTracks();
       tracks.clear();
       tracks = fitter->getTracks();
       fitter->clean();
 
       // Store the tracks (no duplicate cleaning yet)
-      if ( tracks.size() > 0 ) {
-	cout << " Fitted tracks:" << endl;
-	for(unsigned int tt=0;tt<tracks.size();tt++)
-	  {	
+      for(unsigned int tt=0;tt<tracks.size();tt++){	
 
-	    ///// There is mismatch in the naming: pt <--> curvature to be fixed
-	    //double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
-	    //tracks[tt]->setCurve(pt_fit);
+	double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
 
-	    cout << "   " << iEvent.id().event() << "  -  "
-	    	 << tt << ": c = " << tracks[tt]->getCurve()
-	    	 << "  pt = " << 0.003*mMagneticField/ tracks[tt]->getCurve()
-	    	 << "  d0 = " << tracks[tt]->getD0()
-	    	 << "  phi = " << tracks[tt]->getPhi0()
-	    	 << "  eta = " << tracks[tt]->getEta0()
-	    	 << "  z0 = " << tracks[tt]->getZ0() << endl;
-
-	    tempVec.clear();
-
-	    /////// Stubs used for the fit //////////
-	    vector<int> stubs = tracks[tt]->getStubs();
-	    for(unsigned int sti=0;sti<stubs.size();sti++)
-	      {
-		//cout<<stubs[sti]<<endl;
-		tempVec.push_back( stubMapUsed[ stubs[sti] ] );
-	      }
-	    /////////////////////////////////////////
-
-
-	    double pz = tracks[tt]->getCurve()/(tan(2.*atan(exp(-tracks[tt]->getEta0()))));
-
-	    TTTrack< Ref_PixelDigi_ > tempTrack( tempVec );
-	    GlobalPoint POCA(0.,0.,tracks[tt]->getZ0());
-	    GlobalVector mom(tracks[tt]->getCurve()*cos(tracks[tt]->getPhi0()),
-			     tracks[tt]->getCurve()*sin(tracks[tt]->getPhi0()),
-			     pz);
-
-	    //	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << std::endl;
-
-	    tempTrack.setSector( seedSector );
-	    tempTrack.setWedge( -1 );
-	    tempTrack.setMomentum( mom , 5);
-	    tempTrack.setPOCA( POCA , 5);
-	    //	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << " / " << tempTrack.getPOCA().z() << std::endl;
-	    TTTracksForOutput->push_back( tempTrack );
+	if ( verboseLevel_ > 1 ){
+	  cout << "   Fitted track:  "
+	       << tt << "  -  c = " << tracks[tt]->getCurve()
+	       << "  pt = " << pt_fit
+	       << "  d0 = " << tracks[tt]->getD0()
+	       << "  phi = " << tracks[tt]->getPhi0()
+	       << "  eta = " << tracks[tt]->getEta0()
+	       << "  z0 = " << tracks[tt]->getZ0() 
+	       << "  -   weights = " << tracks[tt]->getWxy() << " " <<  tracks[tt]->getWrz() 
+	       << endl;
+	}
 	    
-	    delete tracks[tt];
-	  }
-    
-      }
+	tempVec.clear();
 
+	vector<int> stubs = tracks[tt]->getStubs();
+	for(unsigned int sti=0;sti<stubs.size();sti++){
+	  //cout<<stubs[sti]<<endl;
+	  tempVec.push_back( stubMapUsed[ stubs[sti] ] );
+	}
+
+	double pz = pt_fit/(tan(2.*atan(exp(-tracks[tt]->getEta0()))));
+
+	TTTrack< Ref_PixelDigi_ > tempTrack( tempVec );
+	GlobalPoint POCA(0.,0.,tracks[tt]->getZ0());
+	GlobalVector mom(pt_fit*cos(tracks[tt]->getPhi0()),
+			 pt_fit*sin(tracks[tt]->getPhi0()),
+			 pz);
+
+	//	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << std::endl;
+
+
+	// kludge: We save the maximum weights in the chi2 variable
+	tempTrack.setChi2(tracks[tt]->getWxy(), 5);
+	tempTrack.setChi2(tracks[tt]->getWrz(), 4);
+
+	tempTrack.setRInv(tracks[tt]->getCurve(), 5);
+
+	tempTrack.setSector( seedSector );
+	tempTrack.setWedge( -1 );
+	tempTrack.setMomentum( mom , 5);
+	tempTrack.setPOCA( POCA , 5);
+	//	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << " / " << tempTrack.getPOCA().z() << std::endl;
+	TTTracksForOutput->push_back( tempTrack );
+	    
+	delete tracks[tt];
+      }
+    
       // --- Clean-up memory:
       delete(fitter);
 
@@ -419,172 +438,208 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
     } // End of loop over patterns
 
-    
-//    if ( TTTracksForOutput->size()>0 ){
-//
-//      cout << " Fitted tracks:" << endl;
-//
-//      for ( std::vector< TTTrack< Ref_PixelDigi_ > >::const_iterator itrk  = TTTracksForOutput->begin();
-//	                                                             itrk != TTTracksForOutput->end(); 
-//                                                                   ++itrk ){
-//
-//	//cout << itrk->getSector() << endl;
-//	//GlobalVector mom = itrk->getMomentum(5);
-//	
-//	//cout << mom.
-//
-//	//double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
-//
-////	    cout << "   " << iEvent.id().event() << "  -  "
-////		 << tt << ": c = " << tracks[tt]->getCurve()
-////		 << "  pt = " << 0.003*mMagneticField/ tracks[tt]->getCurve()
-////		 << "  d0 = " << tracks[tt]->getD0()
-////		 << "  phi = " << tracks[tt]->getPhi0()
-////		 << "  eta = " << tracks[tt]->getEta0()
-////		 << "  z0 = " << tracks[tt]->getZ0() << endl;
-//
-////
-////    // --- Loop over the fitted tracks
-////    unsigned int ntrk = 0;
-////    edm::Handle< std::vector< TTTrack< Ref_PixelDigi_ > > > TTTracksForOutputHandle;
-////    for ( std::vector< TTTrack< Ref_PixelDigi_ > >::const_iterator itrk = TTTracksForOutputHandle->begin();
-////	  itrk != TTTracksForOutputHandle->end(); ++itrk ){
-////
-////      edm::Ptr< TTTrack< Ref_PixelDigi_ > > trk( TTTracksForOutputHandle, ntrk++ );
-////
-////      cout << ntrk << " " << trk->getSector() << endl;
-////
-//
-//      }
-//    
-//    }
 
     //free the map of sets
     for(map<int,set<long>*>::iterator set_it=m_uniqueHitsPerSector.begin();set_it!=m_uniqueHitsPerSector.end();set_it++)
       delete set_it->second;//delete the set*
 
 
-    // cout<<"j value "<< j << " / " << jreal <<endl;
-    
-    /// STEP 2
-    /// Passing the hits in the trackfit
-    
-//    RetinaTrackFitter* fitter = new RetinaTrackFitter();
-//    vector<Track*> tracks; 
-//    std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
-//
-//    // Loop over the different sectors
-//    for(map<int,vector<Hit*>*>::iterator sec_it=m_hitsPerSector.begin();sec_it!=m_hitsPerSector.end();sec_it++)
-//    {
-//      //cout<<"Sector "<<sec_it->first<<endl;
-//      fitter->setSectorID(sec_it->first);
-//      fitter->setEventID(iEvent.id());
-//
-//      // Do the fit
-//      fitter->fit(*(sec_it->second));
-////      fitter->mergeTracks();//remove some duplicates
-//      tracks.clear();
-//      tracks = fitter->getTracks();
-//      fitter->clean();
-//
-//
-//      if ( tracks.size() > 0 ) {
-//	cout << endl;
-//	cout << "Generated particles:" << endl; 
-//	for (std::vector <reco::GenParticle>::const_iterator thepart  = genPart->begin(); 
-//	     thepart != genPart->end(); 
-//	     ++thepart) {
-//
-//	  // curvature and helix radius:
-//	  double c = thepart->charge()*0.003*mMagneticField/thepart->pt();
-//	  double R = thepart->pt()/(0.003*mMagneticField);
-//	  
-//	  // helix center:
-//	  double x0 = thepart->vx() - thepart->charge()*R*thepart->py()/thepart->pt();
-//	  double y0 = thepart->vy() + thepart->charge()*R*thepart->px()/thepart->pt();
-//
-//	  // transverse and longitudinal impact parameters:
-//	  double d0 = thepart->charge()*(sqrt(x0*x0+y0*y0)-R);
-//	  double z0 = thepart->vz() - 2./c*thepart->pz()/thepart->pt()*
-//	    asin(0.5*c*sqrt((thepart->vx()*thepart->vx()+thepart->vy()*thepart->vy()-d0*d0)/(1+c*d0)));
-//	  
-//	  cout << iEvent.id().event() << "  -  "
-//	       << thepart->pdgId()
-//	       << ": c = " << c
-//	       << "  pt = " << thepart->pt()
-//	       << "  d0 = " << d0
-//	       << "  phi = " << thepart->phi()
-//	       << "  eta = " << thepart->eta()
-//	       << "  z0 = " << z0 
-//	       << endl;
-//
-//	}
-//      }
-// 
-//
-//
-//      // Store the tracks (no duplicate cleaning yet)
-//      cout << "Fitted tracks:" << endl;
-//      for(unsigned int tt=0;tt<tracks.size();tt++)
-//      {	
-//
-//	double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
-//
-//	cout << iEvent.id().event() << "  -  "
-//	     << tt << ": c = " << tracks[tt]->getCurve()
-//	     << "  pt = " << 0.003*mMagneticField/ tracks[tt]->getCurve()
-//	     << "  d0 = " << tracks[tt]->getD0()
-//	     << "  phi = " << tracks[tt]->getPhi0()
-//	     << "  eta = " << tracks[tt]->getEta0()
-//	     << "  z0 = " << tracks[tt]->getZ0() << endl;
-//
-//
-//	tracks[tt]->setCurve(pt_fit);
-//
-//	tempVec.clear();
-//
-//	/////// Stubs used for the fit //////////
-//	vector<int> stubs = tracks[tt]->getStubs();
-//	for(unsigned int sti=0;sti<stubs.size();sti++)
-//	{
-//	  //cout<<stubs[sti]<<endl;
-//	  tempVec.push_back( stubMapUsed[ stubs[sti] ] );
-//	}
-//	/////////////////////////////////////////
-//
-//
-//	double pz = tracks[tt]->getCurve()/(tan(2*atan(exp(-tracks[tt]->getEta0()))));
-//
-//	TTTrack< Ref_PixelDigi_ > tempTrack( tempVec );
-//	GlobalPoint POCA(0.,0.,tracks[tt]->getZ0());
-//	GlobalVector mom(tracks[tt]->getCurve()*cos(tracks[tt]->getPhi0()),
-//			 tracks[tt]->getCurve()*sin(tracks[tt]->getPhi0()),
-//			 pz);
-//
-//	//	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << std::endl;
-//
-//	tempTrack.setSector( sec_it->first );
-//	tempTrack.setWedge( -1 );
-//	tempTrack.setMomentum( mom , 5);
-//	tempTrack.setPOCA( POCA , 5);
-//	//	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << " / " << tempTrack.getPOCA().z() << std::endl;
-//	TTTracksForOutput->push_back( tempTrack );
-//
-//	delete tracks[tt];
-//      }
-//
-//      for(unsigned int i=0;i<sec_it->second->size();i++)
-//      {
-//	delete sec_it->second->at(i);//delete the Hit object
-//      }
-//
-//      delete sec_it->second;//delete the vector*
-//    }
-//    
-//    delete(fitter);
-//    
-  }
+    // =====================================================================================================
+    //  Fit the all trigger tower stubs:
+    // =====================================================================================================
 
+    if ( fitPerTriggerTower_ ) {
+
+      RetinaTrackFitter* fitter = new RetinaTrackFitter();
+      vector<Track*> tracks; 
+      std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
+
+      // Loop over the different sectors
+      for(map<int,vector<Hit*>*>::iterator sec_it=m_hitsPerSector.begin();sec_it!=m_hitsPerSector.end();sec_it++)
+	{
+	  //cout<<"Sector "<<sec_it->first<<endl;
+	  fitter->setSectorID(sec_it->first);
+	  fitter->setEventID(iEvent.id());
+
+	  // Do the fit
+	  fitter->fit(*(sec_it->second));
+	  tracks.clear();
+	  tracks = fitter->getTracks();
+	  fitter->clean();
+
+
+	  // Store the tracks (no duplicate cleaning yet)
+	  for(unsigned int tt=0;tt<tracks.size();tt++)
+	    {	
+
+	      double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
+
+	      if ( verboseLevel_ > 1 ){
+		cout << "   Fitted track:  "
+		     << tt << "  -  c = " << tracks[tt]->getCurve()
+		     << "  pt = " << pt_fit
+		     << "  d0 = " << tracks[tt]->getD0()
+		     << "  phi = " << tracks[tt]->getPhi0()
+		     << "  eta = " << tracks[tt]->getEta0()
+		     << "  z0 = " << tracks[tt]->getZ0() 
+		     << "  -   weights = " << tracks[tt]->getWxy() << " " <<  tracks[tt]->getWrz() 
+		     << endl;
+	      }
+
+	      tempVec.clear();
+
+	      vector<int> stubs = tracks[tt]->getStubs();
+	      for(unsigned int sti=0;sti<stubs.size();sti++){
+		//cout<<stubs[sti]<<endl;
+		tempVec.push_back( stubMapUsed[ stubs[sti] ] );
+	      }
+
+	      double pz = pt_fit/(tan(2.*atan(exp(-tracks[tt]->getEta0()))));
+	      
+	      TTTrack< Ref_PixelDigi_ > tempTrack( tempVec );
+	      GlobalPoint POCA(0.,0.,tracks[tt]->getZ0());
+	      GlobalVector mom(pt_fit*cos(tracks[tt]->getPhi0()),
+			       pt_fit*sin(tracks[tt]->getPhi0()),
+			       pz);
+
+	      //	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << std::endl;
+
+
+	      // kludge: We save the maximum weights in the chi2 variable
+	      tempTrack.setChi2(tracks[tt]->getWxy(), 5);
+	      tempTrack.setChi2(tracks[tt]->getWrz(), 4);
+
+	      tempTrack.setRInv(tracks[tt]->getCurve(), 5);
+
+	      tempTrack.setSector( sec_it->first );
+	      tempTrack.setWedge( -1 );
+	      tempTrack.setMomentum( mom , 5);
+	      tempTrack.setPOCA( POCA , 5);
+	      //	std::cout << tracks[tt]->getZ0() << " / " << POCA.z() << " / " << tempTrack.getPOCA().z() << std::endl;
+	      TTTracksForOutput->push_back( tempTrack );
+	    
+	      delete tracks[tt];
+	    }
+
+	  for(unsigned int i=0;i<sec_it->second->size();i++)
+	    {
+	      delete sec_it->second->at(i);//delete the Hit object
+	    }
+
+	  delete sec_it->second;//delete the vector*
+
+	}
+    
+      delete(fitter);
+    
+    } // if ( fitPerTriggerTower_ )
+
+
+    // =====================================================================================================
+    //  Remove duplicate tracks:
+    // =====================================================================================================
+    if ( TTTracksForOutput->size()>1 && removeDuplicates_>0 ){
+
+      
+      for ( std::vector< TTTrack< Ref_PixelDigi_ > >::iterator itrk  = TTTracksForOutput->begin();
+	                                                       itrk != TTTracksForOutput->end(); 
+	                                                     ++itrk ){
+
+	for ( std::vector< TTTrack< Ref_PixelDigi_ > >::iterator jtrk  = itrk+1;
+	                                                         jtrk != TTTracksForOutput->end(); 
+	                                                              ){ 
+
+	  // Method I: identify duplicates cutting on deltaR
+	  if ( removeDuplicates_ == 1 ) {
+
+	    double delta_phi =  itrk->getMomentum(5).phi() - jtrk->getMomentum(5).phi();
+	    if (fabs(delta_phi) > 3.14159265358979312)
+	      delta_phi = 6.28318530717958623 - fabs(delta_phi);
+	    double delta_eta =  itrk->getMomentum(5).eta() - jtrk->getMomentum(5).eta();
+
+	    double delta_R = sqrt(delta_phi*delta_phi+delta_eta*delta_eta); 
+
+	    if ( delta_R < 0.05 ){ 
+
+	      double weight_itrk = itrk->getChi2(5) + itrk->getChi2(4);
+	      double weight_jtrk = jtrk->getChi2(5) + jtrk->getChi2(4);
+
+	      // Remove the duplicate with smaller weight:
+	      if ( weight_itrk < weight_jtrk ){
+		itrk = TTTracksForOutput->erase(itrk);
+		--itrk;
+		break;
+	      } 
+	      else { 
+		jtrk = TTTracksForOutput->erase(jtrk);
+		continue;
+	      }
+
+	    }
+
+	  }
+	  // Method II: identify duplicates checking whether the two tracks 
+	  //            have more than one stub in common:
+	  else if ( removeDuplicates_ == 2 ){ 
+
+	    if ( itrk->isTheSameAs(*jtrk) ) {
+
+	      double weight_itrk = itrk->getChi2(5) + itrk->getChi2(4);
+	      double weight_jtrk = jtrk->getChi2(5) + jtrk->getChi2(4);
+
+	      // Remove the duplicate with smaller weight:
+	      if ( weight_itrk < weight_jtrk ){
+		itrk = TTTracksForOutput->erase(itrk);
+		--itrk;
+		break;
+	      } 
+	      else { 
+		jtrk = TTTracksForOutput->erase(jtrk);
+		continue;
+	      }
+
+	    }
+
+	  }
+
+	  ++jtrk;
+
+	} // loop over jtrk
+
+      } // loop over itrk
+
+    } // if ( TTTracksForOutput->size()>1 && removeDuplicates_>0 )
+
+  
+    
+    // =====================================================================================================
+    //  Printout the fitted tracks:
+    // =====================================================================================================
+    if ( TTTracksForOutput->size()>0 && verboseLevel_>0 ){
+      
+      if ( removeDuplicates_==0 )
+	cout << "  Fitted tracks (no duplicate removal):" << endl;
+      else
+	cout << "  Fitted tracks (after duplicate removal):" << endl;
+      
+      for ( std::vector< TTTrack< Ref_PixelDigi_ > >::iterator itrk  = TTTracksForOutput->begin();
+	                                                             itrk != TTTracksForOutput->end(); 
+                                                                   ++itrk ){
+	cout << "   "
+	     << std::distance(TTTracksForOutput->begin(),itrk)
+	     << "  -  c = " << itrk->getRInv(5)
+	     << "  pt = " << itrk->getMomentum(5).perp()
+	  //<< "  d0 = 0 " 
+	     << "  phi = " << itrk->getMomentum(5).phi()
+	     << "  eta = " << itrk->getMomentum(5).eta()
+	     << "  z0 = "  << itrk->getPOCA(5).z() 
+	     << endl;
+
+      }
+    
+    } // if  ( TTTracksForOutput->size()>0 && verboseLevel_>0 )
+
+  } // if  ( TTPatternHandle->size() > 0 )
 
 
   /// Put in the event content
