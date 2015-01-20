@@ -8,25 +8,33 @@ TTPatternsFromStub = cms.EDProducer("TrackFindingAMProducer",
    threshold          = cms.int32(5)
 )
 
-# Hough-based trackfit default sequence
-#TTTracksFromPattern = cms.EDProducer("TrackFitHoughProducer",
-#   TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
-#   TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
-#   TTTrackName        = cms.string("AML1Tracks"),
-#)
 
-# Retina-based trackfit default sequence
-TTTracksFromPattern = cms.EDProducer("TrackFitRetinaProducer",
-   TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
-   TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
-   TTTrackName        = cms.string("AML1Tracks"),
-)
+## Trackfit default sequence
+
+doRetinaFit = True
+
+TTTracksFromPattern = ( cms.EDProducer("TrackFitRetinaProducer",
+                                       TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
+                                       TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
+                                       TTTrackName        = cms.string("AML1Tracks"),
+                                       verboseLevel       = cms.untracked.int32(1),
+                                       fitPerTriggerTower = cms.untracked.bool(False),
+                                       removeDuplicates   = cms.untracked.int32(1)
+                                       )
+                        if doRetinaFit else 
+                        cms.EDProducer("TrackFitHoughProducer",
+                                       TTInputStubs       = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
+                                       TTInputPatterns    = cms.InputTag("MergePROutput", "AML1Patterns"),
+                                       TTTrackName        = cms.string("AML1Tracks"),
+                                       ) 
+                        )
+
 
 # AM output merging sequence
 MergePROutput = cms.EDProducer("AMOutputMerger",
    TTInputClusters     = cms.InputTag("TTStubsFromPixelDigis", "ClusterAccepted"),
    TTInputStubs        = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
-   TTInputPatterns     = cms.VInputTag(cms.InputTag("TTPatternsFromStub", "AML1Patterns")),                               
+   TTInputPatterns     = cms.VInputTag(cms.InputTag("TTPatternsFromStub", "AML1Patterns")),
    TTFiltClustersName  = cms.string("ClusInPattern"),
    TTFiltStubsName     = cms.string("StubInPattern"),
    TTPatternsName      = cms.string("AML1Patterns")                         
@@ -35,7 +43,7 @@ MergePROutput = cms.EDProducer("AMOutputMerger",
 MergeFITOutput = cms.EDProducer("AMOutputMerger",
    TTInputClusters     = cms.InputTag("TTStubsFromPixelDigis", "ClusterAccepted"),
    TTInputStubs        = cms.InputTag("TTStubsFromPixelDigis", "StubAccepted"),
-   TTInputPatterns     = cms.VInputTag(cms.InputTag("TTTracksFromPattern", "AML1Tracks")),                               
+   TTInputPatterns     = cms.VInputTag(cms.InputTag("TTTracksFromPattern", "AML1Tracks")),
    TTFiltClustersName  = cms.string("ClusInTrack"),
    TTFiltStubsName     = cms.string("StubInTrack"),
    TTPatternsName      = cms.string("AML1Tracks")                         
