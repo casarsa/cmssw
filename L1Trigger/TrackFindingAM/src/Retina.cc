@@ -91,8 +91,8 @@ double Retina::getResponseXpXm(double x_plus, double x_minus) {
 
   for (unsigned int kr = 0; kr < hits_tot; kr++) {
     
-    double x = ( view == XY ? hits[kr]->x : hits[kr]->z   );
-    double y = ( view == XY ? hits[kr]->y : hits[kr]->rho );
+    double x = ( view == XY ? hits[kr]->x : fabs(hits[kr]->z) );  // NB: we are using fabs(z) !!!!
+    double y = ( view == XY ? hits[kr]->y : hits[kr]->rho     );
 
     double sigma_local = sigma[0];
 
