@@ -356,18 +356,20 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	  unsigned int stub_index = 0;
 	  for(std::map< unsigned int , 
 		edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, 
-		TTStub< Ref_PixelDigi_ > > >::iterator istub = stubMapUsed.begin();
-	      istub!=stubMapUsed.end(); ++istub){
+		TTStub< Ref_PixelDigi_ > > >::iterator istub  = stubMapUsed.begin();
+	                                               istub != stubMapUsed.end(); 
+                                                     ++istub ){
 
 	    if ( istub->second == tempStubRef )
 	      stub_index =  istub->first;
 
 	  }
 
-	  Hit* h1 = new Hit(layer,ladder, module, segment, strip, 
-			    stub_index, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
-	  road_hits.push_back(h1);
-
+	  if ( stub_index > 0 ){
+	    Hit* h1 = new Hit(layer,ladder, module, segment, strip, 
+			      stub_index, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
+	    road_hits.push_back(h1);
+	  }
 
 	}
 
