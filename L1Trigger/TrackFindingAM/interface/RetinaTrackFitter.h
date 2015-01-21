@@ -19,9 +19,11 @@ class RetinaTrackFitter:public TrackFitter{
 
  private:
 
+  int verboseLevel; 
+
   // This contains the retina configuration parameters,
   // it is filled in initialize():
-  std::map <const char*,double> config[6];
+  std::map <const char*,double> config[3];
 
   // This is used to rotate the trigger tower into the first quadrant:
   const double rot_angle[8] = {  0.39269908169872414,   //  pi/8
@@ -78,6 +80,9 @@ class RetinaTrackFitter:public TrackFitter{
   void setEventID(edm::EventID eventID_){
     eventID = eventID_;
   };
+  void setVerboseLevel(int verboseLevel_){
+    verboseLevel = verboseLevel_;
+  }; 
 
 };
 #endif
