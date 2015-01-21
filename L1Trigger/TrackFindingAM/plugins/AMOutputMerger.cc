@@ -182,6 +182,9 @@ void AMOutputMerger::produce( edm::Event& iEvent, const edm::EventSetup& iSetup 
 	tempTTPatt.setWedge(iterTTTrack->getWedge());
 	tempTTPatt.setMomentum(iterTTTrack->getMomentum(5),5);
 	tempTTPatt.setPOCA(iterTTTrack->getPOCA(5),5);
+	tempTTPatt.setRInv(iterTTTrack->getRInv(5),5);
+	tempTTPatt.setChi2(iterTTTrack->getChi2(5),5);
+	tempTTPatt.setChi2(iterTTTrack->getChi2(4),4);
 
 	TTTracksForOutput->push_back(tempTTPatt);
       }
