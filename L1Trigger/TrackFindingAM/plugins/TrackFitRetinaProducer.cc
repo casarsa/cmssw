@@ -512,7 +512,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
 	      vector<int> stubs = tracks[tt]->getStubs();
 	      for(unsigned int sti=0;sti<stubs.size();sti++){
-		cout<<stubs[sti]<<endl;
+		//cout<<stubs[sti]<<endl;
 		tempVec.push_back( stubMapUsed[ stubs[sti] ] );
 	      }
 
