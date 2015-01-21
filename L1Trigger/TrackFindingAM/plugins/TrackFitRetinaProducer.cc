@@ -168,6 +168,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
   std::vector< TTTrack< Ref_PixelDigi_ > >::const_iterator iterTTTrack;
 
+
   /// Go on only if there are Patterns from PixelDigis
   if ( TTPatternHandle->size() > 0 )
   {
@@ -180,7 +181,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       for (std::vector <reco::GenParticle>::const_iterator thepart = genPart->begin(); 
 	                                                   thepart != genPart->end(); 
 	                                                 ++thepart ){
-	  
+	
 	// curvature and helix radius:
 	double c = thepart->charge()*0.003*mMagneticField/thepart->pt();
 	double R = thepart->pt()/(0.003*mMagneticField);
@@ -204,12 +205,14 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	     << "  z0 = " << z0 
 	     << endl;
 
-      }
+      } // loop over thepart  
 
-    }
-    
+    } // if ( verboseLevel_ > 0 )
+
+
     if ( verboseLevel_ > 1 )
       cout << "   Number of roads = " << TTPatternHandle->size() << endl;
+
 
     /// Loop over Patterns
     unsigned int tkCnt = 0;
@@ -243,7 +246,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       }
       else
       {
-	m_hits = sec_it->second;
+       m_hits = sec_it->second;
       }
 
       //get the hits set of this sector
@@ -348,15 +351,27 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	}
 
 	if ( !fitPerTriggerTower_ ){
+
+	  // Find the stub index:
+	  unsigned int stub_index = 0;
+	  for(std::map< unsigned int , 
+		edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, 
+		TTStub< Ref_PixelDigi_ > > >::iterator istub = stubMapUsed.begin();
+	      istub!=stubMapUsed.end(); ++istub){
+
+	    if ( istub->second == tempStubRef )
+	      stub_index =  istub->first;
+
+	  }
+
 	  Hit* h1 = new Hit(layer,ladder, module, segment, strip, 
-			    j, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
+			    stub_index, tp, spt, ip, eta, phi0, x, y, z, x0, y0, z0);
 	  road_hits.push_back(h1);
+
+
 	}
 
       } /// End of loop over track stubs
-
-      if ( verboseLevel_ > 1 )
-	cout << "   road/number of stubs = " << j << " / " << road_hits.size() << endl;
 
 
       // =====================================================================================================
@@ -365,12 +380,16 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
       if ( fitPerTriggerTower_ ) continue;
 
+      if ( verboseLevel_ > 1 )
+	cout << "   road/number of stubs = " << j << " / " << road_hits.size() << endl;
+
       std::vector<Track*> tracks; 
       std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
       RetinaTrackFitter* fitter = new RetinaTrackFitter();
 
       fitter->setSectorID(seedSector);
       fitter->setEventID(iEvent.id());
+      fitter->setVerboseLevel(0);
      
       fitter->fit(road_hits);
       tracks.clear();
@@ -460,6 +479,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	  //cout<<"Sector "<<sec_it->first<<endl;
 	  fitter->setSectorID(sec_it->first);
 	  fitter->setEventID(iEvent.id());
+	  fitter->setVerboseLevel(0);
 
 	  // Do the fit
 	  fitter->fit(*(sec_it->second));
@@ -471,6 +491,8 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	  // Store the tracks (no duplicate cleaning yet)
 	  for(unsigned int tt=0;tt<tracks.size();tt++)
 	    {	
+
+	      tempVec.clear();
 
 	      double pt_fit = 0.003*mMagneticField/ tracks[tt]->getCurve();
 
@@ -486,11 +508,9 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 		     << endl;
 	      }
 
-	      tempVec.clear();
-
 	      vector<int> stubs = tracks[tt]->getStubs();
 	      for(unsigned int sti=0;sti<stubs.size();sti++){
-		//cout<<stubs[sti]<<endl;
+		cout<<stubs[sti]<<endl;
 		tempVec.push_back( stubMapUsed[ stubs[sti] ] );
 	      }
 
@@ -520,13 +540,6 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	    
 	      delete tracks[tt];
 	    }
-
-	  for(unsigned int i=0;i<sec_it->second->size();i++)
-	    {
-	      delete sec_it->second->at(i);//delete the Hit object
-	    }
-
-	  delete sec_it->second;//delete the vector*
 
 	}
     
@@ -639,11 +652,26 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
     
     } // if  ( TTTracksForOutput->size()>0 && verboseLevel_>0 )
 
+
+    // Clean up the stubs map:
+    for(map<int,vector<Hit*>*>::iterator sec_it  = m_hitsPerSector.begin();
+	                                 sec_it != m_hitsPerSector.end();
+	                               ++sec_it ){
+
+      for(unsigned int i=0;i<sec_it->second->size();i++)
+	delete sec_it->second->at(i);//delete the Hit object
+      
+      delete sec_it->second;//delete the vector*
+
+    }
+
+
   } // if  ( TTPatternHandle->size() > 0 )
 
 
   /// Put in the event content
   iEvent.put( TTTracksForOutput, TTTrackOutputTag);
+
 }
 
 // DEFINE THIS AS A PLUG-IN
