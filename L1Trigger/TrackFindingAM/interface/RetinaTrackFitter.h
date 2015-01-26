@@ -4,8 +4,6 @@
 #include "TrackFitter.h"
 #include "Retina.h"
 
-#include "DataFormats/Provenance/interface/EventID.h"
-
 #include <set>
 #include <map>
 
@@ -19,7 +17,8 @@ class RetinaTrackFitter:public TrackFitter{
 
  private:
 
-  int verboseLevel; 
+  unsigned int verboseLevel; 
+  unsigned int counter;
 
   // This contains the retina configuration parameters,
   // it is filled in initialize():
@@ -76,11 +75,10 @@ class RetinaTrackFitter:public TrackFitter{
   void fit(std::vector<Hit*> hits);
   TrackFitter* clone();
 
-  edm::EventID eventID;
-  void setEventID(edm::EventID eventID_){
-    eventID = eventID_;
+  void setCounter(unsigned int counter_){
+    counter = counter_;
   };
-  void setVerboseLevel(int verboseLevel_){
+  void setVerboseLevel(unsigned int verboseLevel_){
     verboseLevel = verboseLevel_;
   }; 
 

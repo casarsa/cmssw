@@ -82,6 +82,9 @@ class TrackFitRetinaProducer : public edm::EDProducer
   //            2  --> use common stubs
   int                          removeDuplicates_;
 
+  unsigned int                 icount;
+
+
   /// Mandatory methods
   virtual void beginRun( const edm::Run& run, const edm::EventSetup& iSetup );
   virtual void endRun( const edm::Run& run, const edm::EventSetup& iSetup );
@@ -111,6 +114,9 @@ TrackFitRetinaProducer::~TrackFitRetinaProducer() {}
 /// Begin run
 void TrackFitRetinaProducer::beginRun( const edm::Run& run, const edm::EventSetup& iSetup )
 {
+  /// Initialize the event counter
+  icount = 0;
+  
   /// Get the geometry references
   edm::ESHandle< StackedTrackerGeometry > StackedTrackerGeomHandle;
   iSetup.get< StackedTrackerGeometryRecord >().get( StackedTrackerGeomHandle );
@@ -130,6 +136,8 @@ void TrackFitRetinaProducer::endRun( const edm::Run& run, const edm::EventSetup&
 /// Implement the producer
 void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup& iSetup )
 {
+
+  icount++;
 
   // Get GEN particle collection
   edm::Handle<vector<reco::GenParticle> > genPart;
@@ -175,7 +183,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
     // --- Printout the generated particles:
     if ( verboseLevel_ > 0 ){
-      cout << "\nEvent = " << iEvent.id().event() 
+      cout << "\nEvent = " << icount 
 	   << " ---------------------------------------------------------------------------------" << endl;
       cout << "  Generated particles:" << endl; 
       for (std::vector <reco::GenParticle>::const_iterator thepart = genPart->begin(); 
@@ -390,7 +398,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       RetinaTrackFitter* fitter = new RetinaTrackFitter();
 
       fitter->setSectorID(seedSector);
-      fitter->setEventID(iEvent.id());
+      fitter->setCounter(icount);
       fitter->setVerboseLevel(0);
      
       fitter->fit(road_hits);
@@ -480,7 +488,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	{
 	  //cout<<"Sector "<<sec_it->first<<endl;
 	  fitter->setSectorID(sec_it->first);
-	  fitter->setEventID(iEvent.id());
+	  fitter->setCounter(icount);
 	  fitter->setVerboseLevel(0);
 
 	  // Do the fit

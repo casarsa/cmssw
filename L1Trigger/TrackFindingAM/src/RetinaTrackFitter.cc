@@ -3,7 +3,7 @@
 RetinaTrackFitter::RetinaTrackFitter():TrackFitter(0)
 {
   verboseLevel = 0;
-  eventID = edm::EventID(0,0,0);
+  counter = 0;
 
   initialize();
 }
@@ -11,7 +11,7 @@ RetinaTrackFitter::RetinaTrackFitter():TrackFitter(0)
 RetinaTrackFitter::RetinaTrackFitter(int nb):TrackFitter(nb)
 {
   verboseLevel = 0;
-  eventID = edm::EventID(0,0,0);
+  counter = 0;
 
   initialize();
 }
@@ -131,7 +131,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   retinaXY_step1.fillGrid();
   retinaXY_step1.findMaxima();
   if (verboseLevel==1 )
-    retinaXY_step1.dumpGrid(eventID.event(),1);
+    retinaXY_step1.dumpGrid(counter,1);
   if (verboseLevel==2 )
     retinaXY_step1.printMaxima();
 
@@ -191,7 +191,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     retinaXY_step2.fillGrid();
     retinaXY_step2.findMaxima();
     if (verboseLevel==1 )
-      retinaXY_step2.dumpGrid(eventID.event(),2,imax);
+      retinaXY_step2.dumpGrid(counter,2,imax);
     if (verboseLevel==2 )
       retinaXY_step2.printMaxima();
 
@@ -291,7 +291,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       retinaRZ_step1.fillGrid();
       retinaRZ_step1.findMaxima();
       if (verboseLevel==1 )
-	retinaRZ_step1.dumpGrid(eventID.event(),imax);
+	retinaRZ_step1.dumpGrid(counter,imax);
       if (verboseLevel==2 )
 	retinaRZ_step1.printMaxima();
 
@@ -353,7 +353,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 	retinaRZ_step2.fillGrid();
 	retinaRZ_step2.findMaxima();
 	if (verboseLevel==1 )
-	  retinaRZ_step2.dumpGrid(eventID.event(),2,10+imax_RZ);
+	  retinaRZ_step2.dumpGrid(counter,2,10+imax_RZ);
 	if (verboseLevel==2 )
 	  retinaRZ_step2.printMaxima();
 
