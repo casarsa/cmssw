@@ -11,6 +11,7 @@
 #include "CMSPatternLayer.h"
 #include "PrincipalTrackFitter.h"
 #include "KarimakiTrackFitter.h"
+#include "RetinaTrackFitter.h"
 #include "HoughFitter.h"
 
 #ifdef IPNL_USE_CUDA
