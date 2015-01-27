@@ -132,26 +132,28 @@ void Retina::dumpGrid(int eventNum, int step, int imax) {
 //  cout << endl;
 
 
-  TH2D pq_h("pq_h", "x_{+}-x_{-} grid;x_{+};x_{-}", pbins, pmin, pmax, qbins, qmin, qmax);
+  TH2D *pq_h = new TH2D("pq_h", "x_{+}-x_{-} grid;x_{+};x_{-}", pbins, pmin, pmax, qbins, qmin, qmax);
   for (unsigned int i = 0; i < pbins; i++) {
     for (unsigned int j = 0; j < qbins; j++) {
-      pq_h.SetBinContent(i+1, j+1, Grid[i][j]);
+      pq_h->SetBinContent(i+1, j+1, Grid[i][j]);
     }
   }
   gStyle->SetPalette(53);
   gStyle->SetPaintTextFormat("5.2f");
-  TCanvas c("c", "c", 650, 600);
-  c.SetRightMargin(0.1346749);
-  pq_h.SetStats(false);
-  pq_h.SetMaximum(7.);
-  pq_h.SetMinimum(0.);
+  TCanvas *c = new TCanvas("c", "c", 650, 600);
+  c->SetRightMargin(0.1346749);
+  pq_h->SetStats(false);
+  pq_h->SetMaximum(7.);
+  pq_h->SetMinimum(0.);
   string draw_s("COLZTEXT");
   if (qbins > 30 || pbins > 30) draw_s = "COLZ";
-  pq_h.Draw(draw_s.c_str());
+  pq_h->Draw(draw_s.c_str());
   string fit_view = "XY";
   if (view == RZ) fit_view = "RZ";
-  c.SaveAs(Form("PQgrid_%d_%s_%d-%d.png",eventNum,fit_view.c_str(),step,imax));
+  c->SaveAs(Form("PQgrid_%d_%s_%d-%d.png",eventNum,fit_view.c_str(),step,imax));
 
+  delete pq_h;
+  delete c;
 }
 
 

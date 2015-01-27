@@ -18,7 +18,7 @@ class RetinaTrackFitter:public TrackFitter{
  private:
 
   unsigned int verboseLevel; 
-  unsigned int counter;
+  unsigned int event_counter;
 
   // This contains the retina configuration parameters,
   // it is filled in initialize():
@@ -75,8 +75,8 @@ class RetinaTrackFitter:public TrackFitter{
   void fit(std::vector<Hit*> hits);
   TrackFitter* clone();
 
-  void setCounter(unsigned int counter_){
-    counter = counter_;
+  void setEventCounter(unsigned int event_counter_){
+    event_counter = event_counter_;
   };
   void setVerboseLevel(unsigned int verboseLevel_){
     verboseLevel = verboseLevel_;

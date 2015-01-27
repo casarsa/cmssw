@@ -398,7 +398,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
       RetinaTrackFitter* fitter = new RetinaTrackFitter();
 
       fitter->setSectorID(seedSector);
-      fitter->setCounter(icount);
+      fitter->setEventCounter(icount);
       fitter->setVerboseLevel(0);
      
       fitter->fit(road_hits);
@@ -488,7 +488,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 	{
 	  //cout<<"Sector "<<sec_it->first<<endl;
 	  fitter->setSectorID(sec_it->first);
-	  fitter->setCounter(icount);
+	  fitter->setEventCounter(icount);
 	  fitter->setVerboseLevel(0);
 
 	  // Do the fit

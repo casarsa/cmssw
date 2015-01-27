@@ -2,16 +2,16 @@
 
 RetinaTrackFitter::RetinaTrackFitter():TrackFitter(0)
 {
-  verboseLevel = 0;
-  counter = 0;
+  verboseLevel  = 0;
+  event_counter = 0;
 
   initialize();
 }
 
 RetinaTrackFitter::RetinaTrackFitter(int nb):TrackFitter(nb)
 {
-  verboseLevel = 0;
-  counter = 0;
+  verboseLevel  = 0;
+  event_counter = 0;
 
   initialize();
 }
@@ -44,7 +44,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     hit->z     = hits_[ihit]->getZ();
     hit->rho   = sqrt( hits_[ihit]->getX()*hits_[ihit]->getX() +
 		       hits_[ihit]->getY()*hits_[ihit]->getY() );
-    hit->layer = hits_[ihit]->getLayer();
+    hit->layer = (short) hits_[ihit]->getLayer();
     hit->id    = hits_[ihit]->getID();
     
     hits.push_back(hit);
@@ -58,7 +58,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     			      hits_[ihit]->getY()*hits_[ihit]->getY())
     	   << "  -  id = " <<  hits_[ihit]->getID()
     	   << endl;
-    }
+      }
   
   }
 
@@ -130,14 +130,19 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   // --- Fill the retina and find maxima:
   retinaXY_step1.fillGrid();
   retinaXY_step1.findMaxima();
-  if (verboseLevel==1 )
-    retinaXY_step1.dumpGrid(counter,1);
-  if (verboseLevel==2 )
+  if ( verboseLevel==1 )
+    retinaXY_step1.dumpGrid(event_counter,1);
+  if ( verboseLevel==2 )
     retinaXY_step1.printMaxima();
 
 
   // --- Get first step maxima:
   vector <pqPoint> maximaXY_step1 = retinaXY_step1.getMaxima();
+
+  if ( maximaXY_step1.size()==0 && verboseLevel>0 ){
+    cout << "*** WARNING in RetinaTrackFitter::fit() *** XY fit - step 1: no maximum found for event = "
+	 << event_counter << endl;
+  }
 
 
   //
@@ -147,10 +152,8 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   double pbins_step2 = config[trigTow_type]["xy_pbins_step2"];
   double qbins_step2 = config[trigTow_type]["xy_qbins_step2"];
 
-
   // --- Zoom around first step maxima:
   for (unsigned int imax=0; imax<maximaXY_step1.size(); ++imax){
-    if (maximaXY_step1[imax].w == -1.) continue;
 
     // --- Retina setup:
     double pmin_step2 = maximaXY_step1[imax].p - config[trigTow_type]["xy_zoom_step2"]*pstep_step1;
@@ -190,17 +193,22 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
     // --- Fill the retina and find maxima:
     retinaXY_step2.fillGrid();
     retinaXY_step2.findMaxima();
-    if (verboseLevel==1 )
-      retinaXY_step2.dumpGrid(counter,2,imax);
-    if (verboseLevel==2 )
+    if ( verboseLevel==1 )
+      retinaXY_step2.dumpGrid(event_counter,2,imax);
+    if ( verboseLevel==2 )
       retinaXY_step2.printMaxima();
 
     // --- Get second step maxima:
     vector <pqPoint> maximaXY_step2 = retinaXY_step2.getMaxima();
-    //pqPoint bestpqXY_step2 = retinaXY_step2.getBestPQ();
 
+    if ( maximaXY_step2.size()==0 && verboseLevel>0 ){
+      cout << "*** WARNING in RetinaTrackFitter::fit() *** XY fit - step 2: no maximum found for event = " 
+	   << event_counter << " and step-1 maximum " << imax << endl;
+    }
+
+    
+    // --- Loop over XY second step maxima:
     for (unsigned int itrk=0; itrk<maximaXY_step2.size(); ++itrk){
-      if (maximaXY_step1[itrk].w == -1.) continue;
 
       // --- Invert the X+-X- transformation:
       double p = 0.5*(y1 - y0)/maximaXY_step2[itrk].q;
@@ -290,15 +298,20 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 
       retinaRZ_step1.fillGrid();
       retinaRZ_step1.findMaxima();
-      if (verboseLevel==1 )
-	retinaRZ_step1.dumpGrid(counter,imax);
-      if (verboseLevel==2 )
+      if ( verboseLevel==1 )
+	retinaRZ_step1.dumpGrid(event_counter,imax);
+      if ( verboseLevel==2 )
 	retinaRZ_step1.printMaxima();
 
 
       // --- Get first step maximum:
       vector <pqPoint> maximaRZ_step1 = retinaRZ_step1.getMaxima();
-      //pqPoint bestpqRZ_step1 = retinaRZ_step1.getBestPQ();
+
+      if ( maximaRZ_step1.size()==0 && verboseLevel>0 ){
+	cout << "*** WARNING in RetinaTrackFitter::fit() *** RZ fit - step 1: no maximum found for event = " 
+	     << event_counter << " and XY step-1 maximum " << imax << endl;
+      }
+
 
       
       //
@@ -310,8 +323,7 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 
       // Zoom around first step maxima
       for (unsigned int imax_RZ=0; imax_RZ<maximaRZ_step1.size(); ++imax_RZ){
-	if (maximaRZ_step1[imax].w == -1.) continue;
- 
+
 	double pmin_step2 = maximaRZ_step1[imax_RZ].p - config[trigTow_type]["rz_zoom_step2"]*pstep_step1;
 	double pmax_step2 = maximaRZ_step1[imax_RZ].p + config[trigTow_type]["rz_zoom_step2"]*pstep_step1;
 	double qmin_step2 = maximaRZ_step1[imax_RZ].q - config[trigTow_type]["rz_zoom_step2"]*qstep_step1;
@@ -352,13 +364,17 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 
 	retinaRZ_step2.fillGrid();
 	retinaRZ_step2.findMaxima();
-	if (verboseLevel==1 )
-	  retinaRZ_step2.dumpGrid(counter,2,10+imax_RZ);
-	if (verboseLevel==2 )
+	if ( verboseLevel==1 )
+	  retinaRZ_step2.dumpGrid(event_counter,2,10+imax_RZ);
+	if ( verboseLevel==2 )
 	  retinaRZ_step2.printMaxima();
 
 	pqPoint bestpqRZ_step2 = retinaRZ_step2.getBestPQ();
-	if (bestpqRZ_step2.w == -1.) continue;
+	if ( bestpqRZ_step2.w == -1. && verboseLevel>0 ) {
+	  cout << "*** WARNING in RetinaTrackFitter::fit() *** RZ fit - step 2: no maximum found for event = " 
+	       << event_counter << " and RZ step-1 maximum " << imax_RZ << endl;
+	  continue;
+	}
 
 
 	// --- Invert the X+-X- transformation:
@@ -501,7 +517,7 @@ void RetinaTrackFitter::initialize(){
   config[0]["xy_pbins_step2"]     = 100.;
   config[0]["xy_qbins_step2"]     = 100.;
   config[0]["xy_zoom_step2"]      = 1.;
-  config[0]["xy_threshold_step2"] =  4.5;
+  config[0]["xy_threshold_step2"] =  4.;
   config[0]["xy_sigma1_step2"]    =  0.;
   config[0]["xy_sigma2_step2"]    =  0.;
   config[0]["xy_sigma3_step2"]    =  0.;
@@ -529,7 +545,7 @@ void RetinaTrackFitter::initialize(){
   config[0]["rz_pbins_step2"]     = 80.;
   config[0]["rz_qbins_step2"]     = 80.;
   config[0]["rz_zoom_step2"]      = 1.5;
-  config[0]["rz_threshold_step2"] =  4.;
+  config[0]["rz_threshold_step2"] =  3.;
   config[0]["rz_sigma1_step2"]    =  0.;
   config[0]["rz_sigma2_step2"]    =  0.;
   config[0]["rz_sigma3_step2"]    =  0.;
@@ -546,7 +562,7 @@ void RetinaTrackFitter::initialize(){
   config[1]["xy_pmax_step1"]      =  0.05;
   config[1]["xy_qmin_step1"]      = -0.05;
   config[1]["xy_qmax_step1"]      =  0.05;
-  config[1]["xy_threshold_step1"] =  4.5;
+  config[1]["xy_threshold_step1"] =  4.;
   config[1]["xy_sigma1_step1"]    =  0.;
   config[1]["xy_sigma2_step1"]    =  0.;
   config[1]["xy_sigma3_step1"]    =  0.;
@@ -558,7 +574,7 @@ void RetinaTrackFitter::initialize(){
   config[1]["xy_pbins_step2"]     = 100.;
   config[1]["xy_qbins_step2"]     = 100.;
   config[1]["xy_zoom_step2"]      = 1.;
-  config[1]["xy_threshold_step2"] =  4.5;
+  config[1]["xy_threshold_step2"] =  4.;
   config[1]["xy_sigma1_step2"]    =  0.;
   config[1]["xy_sigma2_step2"]    =  0.;
   config[1]["xy_sigma3_step2"]    =  0.;
@@ -574,7 +590,7 @@ void RetinaTrackFitter::initialize(){
   config[1]["rz_pmax_step1"]      = 140.;
   config[1]["rz_qmin_step1"]      = 0.;
   config[1]["rz_qmax_step1"]      = 120.;
-  config[1]["rz_threshold_step1"] =  4.5;
+  config[1]["rz_threshold_step1"] =  4.;
   config[1]["rz_sigma1_step1"]    =  0.;
   config[1]["rz_sigma2_step1"]    =  0.;
   config[1]["rz_sigma3_step1"]    =  0.;
@@ -586,7 +602,7 @@ void RetinaTrackFitter::initialize(){
   config[1]["rz_pbins_step2"]     = 80.;
   config[1]["rz_qbins_step2"]     = 80.;
   config[1]["rz_zoom_step2"]      = 1.5;
-  config[1]["rz_threshold_step2"] =  4.5;
+  config[1]["rz_threshold_step2"] =  3.;
   config[1]["rz_sigma1_step2"]    =  0.;
   config[1]["rz_sigma2_step2"]    =  0.;
   config[1]["rz_sigma3_step2"]    =  0.;
@@ -603,7 +619,7 @@ void RetinaTrackFitter::initialize(){
   config[2]["xy_pmax_step1"]      =  0.05;
   config[2]["xy_qmin_step1"]      = -0.05;
   config[2]["xy_qmax_step1"]      =  0.05;
-  config[2]["xy_threshold_step1"] =  4.5;
+  config[2]["xy_threshold_step1"] =  4.;
   config[2]["xy_sigma1_step1"]    =  0.;
   config[2]["xy_sigma2_step1"]    =  0.;
   config[2]["xy_sigma3_step1"]    =  0.;
@@ -615,7 +631,7 @@ void RetinaTrackFitter::initialize(){
   config[2]["xy_pbins_step2"]     = 100.;
   config[2]["xy_qbins_step2"]     = 100.;
   config[2]["xy_zoom_step2"]      = 1.;
-  config[2]["xy_threshold_step2"] =  4.5;
+  config[2]["xy_threshold_step2"] =  4.;
   config[2]["xy_sigma1_step2"]    =  0.;
   config[2]["xy_sigma2_step2"]    =  0.;
   config[2]["xy_sigma3_step2"]    =  0.;
@@ -631,7 +647,7 @@ void RetinaTrackFitter::initialize(){
   config[2]["rz_pmax_step1"]      = 240.;
   config[2]["rz_qmin_step1"]      = 80.;
   config[2]["rz_qmax_step1"]      = 180.;
-  config[2]["rz_threshold_step1"] =  4.5;
+  config[2]["rz_threshold_step1"] =  4.;
   config[2]["rz_sigma1_step1"]    =  1.5;
   config[2]["rz_sigma2_step1"]    =  1.5;
   config[2]["rz_sigma3_step1"]    =  1.5;
@@ -643,7 +659,7 @@ void RetinaTrackFitter::initialize(){
   config[2]["rz_pbins_step2"]     = 80.;
   config[2]["rz_qbins_step2"]     = 80.;
   config[2]["rz_zoom_step2"]      = 1.5;
-  config[2]["rz_threshold_step2"] = 4.5;
+  config[2]["rz_threshold_step2"] = 3.;
   config[2]["rz_sigma1_step2"]    = 0.;
   config[2]["rz_sigma2_step2"]    = 0.;
   config[2]["rz_sigma3_step2"]    = 0.;
