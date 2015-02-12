@@ -91,16 +91,16 @@ double Retina::getResponseXpXm(double x_plus, double x_minus) {
 
   for (unsigned int kr = 0; kr < hits_tot; kr++) {
     
-    double x = ( view == XY ? hits[kr]->x : fabs(hits[kr]->z) );  // NB: we are using fabs(z) !!!!
-    double y = ( view == XY ? hits[kr]->y : hits[kr]->rho     );
+    double x = ( view == XY ? hits[kr]->x : hits[kr]->z   );
+    double y = ( view == XY ? hits[kr]->y : hits[kr]->rho );
 
     double sigma_local = sigma[0];
 
     if ( view == RZ && fabs(y) > 60. )
       sigma_local = sigma[3];
 
-    //double Sijkr = (p*x-y+q)/p;  // from  x - (y-q)/p
-    double Sijkr = fabs(y-p*x-q)/sqrt(1.+p*p);
+    double Sijkr = (p*x-y+q)/p;  // from  x - (y-q)/p
+    //double Sijkr = fabs(y-p*x-q)/sqrt(1.+p*p);
 
     double term = exp(-0.5*Sijkr*Sijkr/(sigma_local*sigma_local));
 
@@ -113,24 +113,6 @@ double Retina::getResponseXpXm(double x_plus, double x_minus) {
 
 
 void Retina::dumpGrid(int eventNum, int step, int imax) {
-
-//  cout << endl;
-//  cout << "Dumping the retina ... " << endl;
-//  cout << " p range = " << pmin << " --> " << pmax << endl; 
-//  cout << "   p bins = " << pbins << endl; 
-//  cout << "   p step = " << pbinsize << endl; 
-//  cout << " q range = " << qmin << " --> " << qmax << endl; 
-//  cout << "   q bins = " << qbins << endl; 
-//  cout << "   q step = " << qbinsize << endl; 
-//  cout << " sigma = " << sigma[0] << endl;
-//  cout << " minWeight = " << minWeight << endl;
-//  for (unsigned int i = 0; i < pbins; i++){
-//    for (unsigned int j = 0; j < qbins; j++)
-//      cout <<  Grid[i][j] << "\t";
-//    cout << endl;
-//  }
-//  cout << endl;
-
 
   TH2D *pq_h = new TH2D("pq_h", "x_{+}-x_{-} grid;x_{+};x_{-}", pbins, pmin, pmax, qbins, qmin, qmax);
   for (unsigned int i = 0; i < pbins; i++) {
@@ -151,6 +133,7 @@ void Retina::dumpGrid(int eventNum, int step, int imax) {
   string fit_view = "XY";
   if (view == RZ) fit_view = "RZ";
   c->SaveAs(Form("PQgrid_%d_%s_%d-%d.png",eventNum,fit_view.c_str(),step,imax));
+  //c->SaveAs(Form("PQgrid_%d_%s_%d-%d.root",eventNum,fit_view.c_str(),step,imax));
 
   delete pq_h;
   delete c;

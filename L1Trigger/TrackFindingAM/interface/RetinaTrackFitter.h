@@ -19,6 +19,7 @@ class RetinaTrackFitter:public TrackFitter{
 
   unsigned int verboseLevel; 
   unsigned int event_counter;
+  unsigned int road_id;
 
   // This contains the retina configuration parameters,
   // it is filled in initialize():
@@ -77,6 +78,9 @@ class RetinaTrackFitter:public TrackFitter{
 
   void setEventCounter(unsigned int event_counter_){
     event_counter = event_counter_;
+  };
+  void setRoadID(unsigned int road_id_){
+    road_id = road_id_;
   };
   void setVerboseLevel(unsigned int verboseLevel_){
     verboseLevel = verboseLevel_;

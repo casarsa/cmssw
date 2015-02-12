@@ -395,10 +395,11 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
       std::vector<Track*> tracks; 
       std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
-      RetinaTrackFitter* fitter = new RetinaTrackFitter();
+      RetinaTrackFitter* fitter = new RetinaTrackFitter(5);
 
       fitter->setSectorID(seedSector);
       fitter->setEventCounter(icount);
+      fitter->setRoadID(j);
       fitter->setVerboseLevel(0);
      
       fitter->fit(road_hits);
@@ -479,7 +480,7 @@ void TrackFitRetinaProducer::produce( edm::Event& iEvent, const edm::EventSetup&
 
     if ( fitPerTriggerTower_ ) {
 
-      RetinaTrackFitter* fitter = new RetinaTrackFitter();
+      RetinaTrackFitter* fitter = new RetinaTrackFitter(5);
       vector<Track*> tracks; 
       std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > > tempVec;
 
