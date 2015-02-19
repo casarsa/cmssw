@@ -30,8 +30,9 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
   }
 
   if ( hits_.size()<(unsigned int) nb_layers ){
-    cout << "*** ERROR in RetinaTrackFitter::fit() at event/road = " << event_counter << "/" 
-	 << road_id << ": only " << hits_.size() << " stubs found, fit aborted!" << endl;
+    if ( verboseLevel>0 )
+      cout << "*** ERROR in RetinaTrackFitter::fit() at event/road = " << event_counter << "/" 
+	   << road_id << ": only " << hits_.size() << " stubs found, fit aborted!" << endl;
     return;
   }
 
@@ -278,20 +279,24 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
       }
 
       // --- Rotate back the original phi sector:
-      q = q/(cos(rot_angle[phi_sector])+p*sin(rot_angle[phi_sector]));
-      p = (p*cos(rot_angle[phi_sector])-sin(rot_angle[phi_sector]))/
-        (cos(rot_angle[phi_sector])+p*sin(rot_angle[phi_sector]));
+      //q = q/(cos(rot_angle[phi_sector])+p*sin(rot_angle[phi_sector]));
+      //p = (p*cos(rot_angle[phi_sector])-sin(rot_angle[phi_sector]))/
+      //  (cos(rot_angle[phi_sector])+p*sin(rot_angle[phi_sector]));
 
 
       // --- Invert the conformal transformation and get the track parameters:
       double a = -0.5*p/q;
       double b =  0.5/q;
-    
+      
+      //  TTTrack might not be ready for a signed curvature!!!!!!!!!!!!!!!!!
+      //double charge = TMath::Sign(1.,b);
+      //double c   = charge/sqrt(a*a+b*b);
       double c   = 1./sqrt(a*a+b*b);
-      double phi = atan(p);
-      //if ( phi<0. )
-      //	phi += TMath::TwoPi();
 
+      double phi = atan(p)-rot_angle[phi_sector];
+      if ( phi>TMath::Pi() )
+	phi -= TMath::TwoPi();
+      
       // =========================================================================
       //  RZ fit
       // =========================================================================
@@ -486,7 +491,6 @@ void RetinaTrackFitter::fit(vector<Hit*> hits_){
 	  trk->addStubIndex(hits_RZ[ihit]->id);
 
 	tracks.push_back(trk);
-	
 
       } // imax_RZ loop
 
