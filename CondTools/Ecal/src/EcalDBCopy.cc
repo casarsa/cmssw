@@ -39,6 +39,8 @@
 #include "CondFormats/DataRecord/interface/EcalLaserAPDPNRatiosRefRcd.h"
 #include "CondFormats/EcalObjects/interface/EcalTPGCrystalStatus.h"
 #include "CondFormats/DataRecord/interface/EcalTPGCrystalStatusRcd.h"
+#include "CondFormats/EcalObjects/interface/EcalTPGTowerStatus.h"
+#include "CondFormats/DataRecord/interface/EcalTPGTowerStatusRcd.h"
 
 #include "CondFormats/EcalObjects/interface/EcalDCSTowerStatus.h"
 #include "CondFormats/DataRecord/interface/EcalDCSTowerStatusRcd.h"
@@ -51,6 +53,10 @@
 
 #include "CondFormats/EcalObjects/interface/EcalClusterCrackCorrParameters.h"
 #include "CondFormats/DataRecord/interface/EcalClusterCrackCorrParametersRcd.h"
+
+#include "CondFormats/EcalObjects/interface/EcalPFRecHitThresholds.h"
+#include "CondFormats/DataRecord/interface/EcalPFRecHitThresholdsRcd.h"
+
 #include "CondFormats/EcalObjects/interface/EcalClusterEnergyCorrectionParameters.h"
 #include "CondFormats/DataRecord/interface/EcalClusterEnergyCorrectionParametersRcd.h"
 #include "CondFormats/EcalObjects/interface/EcalClusterEnergyUncertaintyParameters.h"
@@ -72,6 +78,12 @@
 
 #include "CondFormats/EcalObjects/interface/EcalTimeBiasCorrections.h"
 #include "CondFormats/DataRecord/interface/EcalTimeBiasCorrectionsRcd.h"
+
+#include "CondFormats/EcalObjects/interface/EcalSamplesCorrelation.h"
+#include "CondFormats/DataRecord/interface/EcalSamplesCorrelationRcd.h"
+
+#include "CondFormats/EcalObjects/interface/EcalSimPulseShape.h"
+#include "CondFormats/DataRecord/interface/EcalSimPulseShapeRcd.h"
 
 #include <vector>
 
@@ -161,6 +173,8 @@ bool EcalDBCopy::shouldCopy(const edm::EventSetup& evtSetup, std::string contain
     cacheID = evtSetup.get<EcalTimeCalibConstantsRcd>().cacheIdentifier();
   } else if (container == "EcalClusterCrackCorrParameters") {
     cacheID = evtSetup.get<EcalClusterCrackCorrParametersRcd>().cacheIdentifier();
+  } else if (container == "EcalPFRecHitThresholds") {
+    cacheID = evtSetup.get<EcalPFRecHitThresholdsRcd>().cacheIdentifier();
   } else if (container == "EcalClusterEnergyUncertaintyParameters") {
     cacheID = evtSetup.get<EcalClusterEnergyUncertaintyParametersRcd>().cacheIdentifier();
   } else if (container == "EcalClusterEnergyCorrectionParameters") {
@@ -171,7 +185,9 @@ bool EcalDBCopy::shouldCopy(const edm::EventSetup& evtSetup, std::string contain
     cacheID = evtSetup.get<EcalClusterLocalContCorrParametersRcd>().cacheIdentifier();
   } else if (container == "EcalTPGCrystalStatus") {
     cacheID = evtSetup.get<EcalTPGCrystalStatusRcd>().cacheIdentifier();
-  } else if (container == "EBAlignment") {
+   } else if (container == "EcalTPGTowerStatus") {
+    cacheID = evtSetup.get<EcalTPGTowerStatusRcd>().cacheIdentifier();
+ } else if (container == "EBAlignment") {
     cacheID = evtSetup.get<EBAlignmentRcd>().cacheIdentifier();
   } else if (container == "EEAlignment") {
     cacheID = evtSetup.get<EEAlignmentRcd>().cacheIdentifier();
@@ -183,6 +199,10 @@ bool EcalDBCopy::shouldCopy(const edm::EventSetup& evtSetup, std::string contain
     cacheID = evtSetup.get<EcalSampleMaskRcd>().cacheIdentifier();
   } else if (container == "EcalTimeBiasCorrections") {
     cacheID = evtSetup.get<EcalTimeBiasCorrectionsRcd>().cacheIdentifier();
+  } else if (container == "EcalSimPulseShape") {
+    cacheID = evtSetup.get<EcalSimPulseShapeRcd>().cacheIdentifier();
+  } else if (container == "EcalSamplesCorrelation") {
+    cacheID = evtSetup.get<EcalSamplesCorrelationRcd>().cacheIdentifier();
   }
 
   else {
@@ -190,10 +210,10 @@ bool EcalDBCopy::shouldCopy(const edm::EventSetup& evtSetup, std::string contain
   }
   
   if (m_cacheIDs[container] == cacheID) {
-    return 0;
+    return false;
   } else {
     m_cacheIDs[container] = cacheID;
-    return 1;
+    return true;
   }
 
 }
@@ -280,6 +300,14 @@ void EcalDBCopy::copyToDB(const edm::EventSetup& evtSetup, std::string container
 
    dbOutput->createNewIOV<const EcalTPGCrystalStatus>( new EcalTPGCrystalStatus(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
 
+  }  else if (container == "EcalTPGTowerStatus") {
+    edm::ESHandle<EcalTPGTowerStatus> handle;
+    evtSetup.get<EcalTPGTowerStatusRcd>().get(handle);
+    const EcalTPGTowerStatus* obj = handle.product();
+    std::cout << "TPG tower status pointer is: "<< obj<< std::endl;
+
+    dbOutput->createNewIOV<const EcalTPGTowerStatus>( new EcalTPGTowerStatus(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
+
 
   } else if (container == "EcalIntercalibConstants") {
     edm::ESHandle<EcalIntercalibConstants> handle;
@@ -357,8 +385,15 @@ else if (container == "EcalIntercalibConstantsMC") {
     edm::ESHandle<EcalClusterCrackCorrParameters> handle;
     evtSetup.get<EcalClusterCrackCorrParametersRcd>().get(handle);
     const EcalClusterCrackCorrParameters* obj = handle.product();
-    std::cout << "tbweight pointer is: "<< obj<< std::endl;
+    std::cout << "cluster crack pointer is: "<< obj<< std::endl;
    dbOutput->createNewIOV<const EcalClusterCrackCorrParameters>( new EcalClusterCrackCorrParameters(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
+
+  } else if (container == "EcalPFRecHitThresholds") {
+    edm::ESHandle<EcalPFRecHitThresholds> handle;
+    evtSetup.get<EcalPFRecHitThresholdsRcd>().get(handle);
+    const EcalPFRecHitThresholds* obj = handle.product();
+    std::cout << "Ecal PF rec hit thresholds pointer is: "<< obj<< std::endl;
+   dbOutput->createNewIOV<const EcalPFRecHitThresholds>( new EcalPFRecHitThresholds(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
 
 
   } else if (container == "EcalClusterEnergyUncertaintyParameters") {
@@ -426,6 +461,12 @@ else if (container == "EcalIntercalibConstantsMC") {
    std::cout << "sample mask pointer is: "<< obj<< std::endl;
    dbOutput->createNewIOV<const EcalSampleMask>( new EcalSampleMask(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
 
+ }  else if (container == "EcalSimPulseShape") {
+  edm::ESHandle<EcalSimPulseShape> handle;
+  evtSetup.get<EcalSimPulseShapeRcd>().get(handle);
+  const EcalSimPulseShape* obj = handle.product();
+  dbOutput->createNewIOV<const EcalSimPulseShape>( new EcalSimPulseShape(*obj),dbOutput->beginOfTime(), dbOutput->endOfTime(),recordName);
+
  } else if (container == "EcalTimeBiasCorrections") {
    edm::ESHandle<EcalTimeBiasCorrections> handle;
    evtSetup.get<EcalTimeBiasCorrectionsRcd>().get(handle);
@@ -442,6 +483,28 @@ else if (container == "EcalIntercalibConstantsMC") {
    vect = obj->EETimeCorrShiftBins;
    copy(vect.begin(), vect.end(), back_inserter(bias_->EETimeCorrShiftBins));
    dbOutput->writeOne(bias_, dbOutput->beginOfTime(), "EcalTimeBiasCorrectionsRcd");
+
+ } else if (container == "EcalSamplesCorrelation") {
+   edm::ESHandle<EcalSamplesCorrelation> handle;
+   evtSetup.get<EcalSamplesCorrelationRcd>().get(handle);
+   const EcalSamplesCorrelation* obj = handle.product();
+   std::cout << "SamplesCorrelation pointer is: "<< obj<< std::endl;
+   EcalSamplesCorrelation *correl_;
+   correl_ = new EcalSamplesCorrelation();
+   std::vector<double> vect = obj->EBG12SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EBG12SamplesCorrelation));
+   vect = obj->EBG6SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EBG6SamplesCorrelation));
+   vect = obj->EBG1SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EBG1SamplesCorrelation));
+   vect = obj->EEG12SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EEG12SamplesCorrelation));
+   vect = obj->EEG6SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EEG6SamplesCorrelation));
+   vect = obj->EEG1SamplesCorrelation;
+   copy(vect.begin(), vect.end(), back_inserter(correl_->EEG1SamplesCorrelation));
+   dbOutput->writeOne(correl_, dbOutput->beginOfTime(), "EcalSamplesCorrelationRcd");
+
 } else {
     throw cms::Exception("Unknown container");
   }

@@ -6,6 +6,7 @@ compare lumibyls result file of a run with corresponding result in HFLUMIRESULT 
 4)difference in delivered
 5)difference in recorded
 '''
+from __future__ import print_function
 import csv,coral,glob
 from RecoLuminosity.LumiDB import sessionManager
 def parselumibylsfile(runnum,lumifilename):
@@ -20,7 +21,7 @@ def parselumibylsfile(runnum,lumifilename):
     try:
         f=open(lumifilename,'rb')
     except IOError:
-        print 'failed to open file ',lumifilename
+        print('failed to open file ',lumifilename)
         return result
     freader=csv.reader(f,delimiter=',')
     idx=0
@@ -65,7 +66,7 @@ def getresultfromdb(schema,runnum):
         qCondition['runnum'].setData(runnum)
         qHandle.setCondition('RUNNUM=:runnum',qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             lumils=cursor.currentRow()['LS'].data()
             cmsls=cursor.currentRow()['CMSLS'].data()
             beamstatus=cursor.currentRow()['BEAM_STATUS'].data()
@@ -90,22 +91,22 @@ def isdifferent(resultlist,resultmap):
     if len(resultlist)!=len(resultmap): return False
     for perlumidata in resultlist:
         [lumilsa,cmslsa,beamstatusa,beamenergya,delivereda,recordeda]=perlumidata
-        if not resultmap.has_key(lumilsa): return False
+        if lumilsa not in resultmap: return False
         [cmslsb,beamstatusb,beamenergyb,deliveredb,recordedb]=resultmap[lumilsa]
         if cmslsa!=cmslsb:
-            print '[DEBUG] diff in number of ls ',cmslsa,cmslsb
+            print('[DEBUG] diff in number of ls ',cmslsa,cmslsb)
             return True
         if beamstatusa!=beamstatusb:
-            print '[DEBUG] diff in beamstatus ',beamstatusa,beamstatusb
+            print('[DEBUG] diff in beamstatus ',beamstatusa,beamstatusb)
             return True
         if beamenergya!=beamenergyb:
-            print '[DEBUG] diff in beamenergy ',beamenergya,beamenergyb
+            print('[DEBUG] diff in beamenergy ',beamenergya,beamenergyb)
             return True
         if abs(delivereda-deliveredb)>0.009:
-            print '[DEBUG] diff in recorded ',delivereda,deliveredb
+            print('[DEBUG] diff in recorded ',delivereda,deliveredb)
             return True
         if abs(recordeda-recordedb)>0.009:
-            print '[DEBUG] diff in recorded ',recordeda,recordedb
+            print('[DEBUG] diff in recorded ',recordeda,recordedb)
             return True
         return False
 if __name__ == "__main__" :
@@ -120,6 +121,6 @@ if __name__ == "__main__" :
         dbresult=getresultfromdb(sourcesession.nominalSchema(),runnum)
         fileresult=parselumibylsfile(runnum,csvfile)
         diffresult=isdifferent(fileresult,dbresult)
-        print runnum,int(diffresult)
+        print(runnum,int(diffresult))
     sourcesession.transaction().commit()
 

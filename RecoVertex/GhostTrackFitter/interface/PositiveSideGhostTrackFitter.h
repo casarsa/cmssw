@@ -19,7 +19,7 @@ class PositiveSideGhostTrackFitter : public GhostTrackFitter::FitterImpl {
 			const GlobalPoint &origin,
 			const GhostTrackFitter::FitterImpl &actualFitter) :
 		origin_(origin), actualFitter_(actualFitter.clone()) {}
-	~PositiveSideGhostTrackFitter() {}
+	~PositiveSideGhostTrackFitter() override {}
 
 	PositiveSideGhostTrackFitter(
 				const PositiveSideGhostTrackFitter &orig) :
@@ -30,14 +30,14 @@ class PositiveSideGhostTrackFitter : public GhostTrackFitter::FitterImpl {
 			const GhostTrackFitter::PredictionUpdater &updater,
 			const GhostTrackPrediction &prior,
 			std::vector<GhostTrackState> &states,
-			double &ndof, double &chi2);
+			double &ndof, double &chi2) override;
 
     private:
-	virtual FitterImpl *clone() const
+	FitterImpl *clone() const override
 	{ return new PositiveSideGhostTrackFitter(*this); }
 
 	GlobalPoint					origin_;
-	std::auto_ptr<GhostTrackFitter::FitterImpl>	actualFitter_;
+	std::unique_ptr<GhostTrackFitter::FitterImpl>	actualFitter_;
 };
 
 }

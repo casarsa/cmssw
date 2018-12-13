@@ -22,8 +22,7 @@
 
 class JetChargeAnalyzer : public edm::EDAnalyzer {
     public:
-  struct JetRefCompare :
-       public std::binary_function<edm::RefToBase<reco::Jet>, edm::RefToBase<reco::Jet>, bool> {
+  struct JetRefCompare {
     inline bool operator () (const edm::RefToBase<reco::Jet> &j1,
                              const edm::RefToBase<reco::Jet> &j2) const
     { return j1.id() < j2.id() || (j1.id() == j2.id() && j1.key() < j2.key()); }
@@ -37,8 +36,7 @@ class JetChargeAnalyzer : public edm::EDAnalyzer {
         explicit JetChargeAnalyzer(const edm::ParameterSet&);
         ~JetChargeAnalyzer() {}
 
-        virtual void analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup);
-        virtual void endJob(const edm::EventSetup& iSetup);
+        virtual void analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) override;
     private:
         // physics stuff
         edm::EDGetTokenT<JetChargeCollection>         srcToken_;
@@ -106,8 +104,6 @@ void JetChargeAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup&
     charge_[k]->Fill(hJC->value(i));
   }
 
-}
-void JetChargeAnalyzer::endJob(const edm::EventSetup& iSetup) {
 }
 
 DEFINE_FWK_MODULE(JetChargeAnalyzer);

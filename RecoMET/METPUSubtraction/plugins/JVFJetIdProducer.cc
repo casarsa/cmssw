@@ -8,6 +8,7 @@
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/PatCandidates/interface/PackedCandidate.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -64,15 +65,17 @@ namespace
     
     std::vector<reco::PFCandidatePtr> pfConsts = jet.getPFConstituents();
     for ( std::vector<reco::PFCandidatePtr>::const_iterator jetConstituent = pfConsts.begin(); jetConstituent != pfConsts.end(); ++jetConstituent ) {
-      //      reco::PFCandidate pfc=(*jetConstituent); //using the pointer along the sequence makes the code segfaulting for no apparent reason...
-      if ( (*jetConstituent)->charge() != 0 ) {
-	double trackPt = 0.;
-	if ( (*jetConstituent)->gsfTrackRef().isNonnull() && (*jetConstituent)->gsfTrackRef().isAvailable() ) trackPt = (*jetConstituent)->gsfTrackRef()->pt();
-	else if ( (*jetConstituent)->trackRef().isNonnull() && (*jetConstituent)->trackRef().isAvailable() ) trackPt = (*jetConstituent)->trackRef()->pt();
-	else trackPt = (*jetConstituent)->pt();
+      
+      if ( (*jetConstituent)->charge() == 0 ) continue;
 	
+	double trackPt = 0.;
+	if( (*jetConstituent)->gsfTrackRef().isNonnull() && (*jetConstituent)->gsfTrackRef().isAvailable() ) trackPt = (*jetConstituent)->gsfTrackRef()->pt();
+	else if ( (*jetConstituent)->trackRef().isNonnull() && (*jetConstituent)->trackRef().isAvailable() ) trackPt =(*jetConstituent)->trackRef()->pt();
+	else trackPt = (*jetConstituent)->pt();
+
 	if ( trackPt > minTrackPt ) {
-	  int jetConstituent_vtxAssociationType = isVertexAssociated( (*jetConstituent), pfCandToVertexAssociations, vertices, dZ);
+	  int jetConstituent_vtxAssociationType = noPuUtils::isVertexAssociated( (*jetConstituent), pfCandToVertexAssociations, vertices, dZ);
+	    //isVertexAssociated_fast(pfCandidateRef, pfCandToVertexAssociations_reversed, *hardScatterVertex, dZcut_, numWarnings_, maxWarnings_);
 	  bool jetConstituent_isVtxAssociated = (jetConstituent_vtxAssociationType == noPuUtils::kChHSAssoc ); 
 	  double jetConstituentPt = (*jetConstituent)->pt();
 	  if ( jetConstituent_isVtxAssociated ) {
@@ -89,7 +92,6 @@ namespace
 	    trackSum_isNotVtxAssociated += jetConstituentPt;
 	  }
 	}
-      }
     }
 
     double trackSum = trackSum_isVtxAssociated + trackSum_isNotVtxAssociated;
@@ -140,18 +142,18 @@ void JVFJetIdProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     jetIdFlags.push_back(jetIdFlag);
   }
  
-  std::auto_ptr<edm::ValueMap<double> > jetIdDiscriminants_ptr(new edm::ValueMap<double>());
+  auto jetIdDiscriminants_ptr = std::make_unique<edm::ValueMap<double>>();
   edm::ValueMap<double>::Filler jetIdDiscriminantFiller(*jetIdDiscriminants_ptr);
   jetIdDiscriminantFiller.insert(jets, jetIdDiscriminants.begin(), jetIdDiscriminants.end());
   jetIdDiscriminantFiller.fill();
  
-  std::auto_ptr<edm::ValueMap<int> > jetIdFlags_ptr(new edm::ValueMap<int>());
+  auto jetIdFlags_ptr = std::make_unique<edm::ValueMap<int>>();
   edm::ValueMap<int>::Filler jetIdFlagFiller(*jetIdFlags_ptr);
   jetIdFlagFiller.insert(jets, jetIdFlags.begin(), jetIdFlags.end());
   jetIdFlagFiller.fill();
 
-  evt.put(jetIdDiscriminants_ptr, "Discriminant");
-  evt.put(jetIdFlags_ptr, "Id");
+  evt.put(std::move(jetIdDiscriminants_ptr), "Discriminant");
+  evt.put(std::move(jetIdFlags_ptr), "Id");
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"

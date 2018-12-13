@@ -1,26 +1,30 @@
-using namespace std;
-
 #include <cmath>
 #include <iostream>
-#include <fstream>
+#include <string>
 #include <vector>
-#include "DetectorDescription/Parser/interface/DDLParser.h"
-#include "DetectorDescription/Parser/interface/FIPConfiguration.h"
 
+#include "DetectorDescription/Core/interface/DDRotationMatrix.h"
+#include "DetectorDescription/Core/interface/DDTranslation.h"
 #include "DetectorDescription/Core/interface/DDCompactView.h"
 #include "DetectorDescription/Core/interface/DDExpandedView.h"
-#include "CLHEP/Units/GlobalSystemOfUnits.h"
-
-#include "DetectorDescription/Core/interface/DDRoot.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
 #include "DetectorDescription/Core/interface/DDMaterial.h"
+#include "DetectorDescription/Core/interface/DDName.h"
+#include "DetectorDescription/Core/interface/DDRoot.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
 #include "DetectorDescription/Core/interface/DDTransform.h"
+#include "DetectorDescription/Core/interface/DDUnits.h"
+#include "DetectorDescription/Parser/interface/DDLParser.h"
+#include "DetectorDescription/Parser/interface/FIPConfiguration.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "Math/GenVector/AxisAngle.h"
+#include "Math/GenVector/Cartesian3D.h"
+#include "Math/GenVector/DisplacementVector3D.h"
+#include "Math/GenVector/Rotation3D.h"
+#include "Math/GenVector/RotationZ.h"
 
-#include "DetectorDescription/ExprAlgo/interface/ExprEvalSingleton.h"
-
-#include <Math/RotationZ.h>
-#include <Math/AxisAngle.h>
+using namespace std;
+using namespace dd::operators;
 
 /*
 File setup.xml:
@@ -33,8 +37,7 @@ File elements.xml:
   Material(elem) Nitrogen
   Material(elem) Oxygen  
 */
-void regressionTest_setup() {
-   ClhepEvaluator & eval = ExprEval::instance();
+void regressionTest_setup(ClhepEvaluator& eval) {
    
    string ns = "setup"; // current namespace faking the filename 'setup.xml'
    
@@ -78,19 +81,19 @@ void regressionTest_setup() {
    cout << air << endl;   
 
    // Some rotations in the x-y plane (Unit, 30,60,90 degs)
-   DDRotationMatrix * r0  = new DDRotationMatrix();
-   DDRotationMatrix * r30 = new DDRotationMatrix(ROOT::Math::RotationZ(30.*deg));   
-   DDRotationMatrix * r60 = new DDRotationMatrix(ROOT::Math::RotationZ(60.*deg));   
-   DDRotationMatrix * r90 = new DDRotationMatrix(ROOT::Math::RotationZ(90.*deg));   
+   std::unique_ptr<DDRotationMatrix> r0  = std::make_unique<DDRotationMatrix>();
+   std::unique_ptr<DDRotationMatrix> r30 = std::make_unique<DDRotationMatrix>(ROOT::Math::RotationZ( 30._deg ));
+   std::unique_ptr<DDRotationMatrix> r60 = std::make_unique<DDRotationMatrix>(ROOT::Math::RotationZ( 60._deg ));
+   std::unique_ptr<DDRotationMatrix> r90 = std::make_unique<DDRotationMatrix>(ROOT::Math::RotationZ( 90._deg ));
    
-   DDrot(DDName("Unit",ns),r0);
-   DDrot(DDName("R30",ns),r30);
-   DDrot(DDName("R60",ns),r60);
-   DDrot(DDName("R90",ns),r90);
+   DDrot( DDName( "Unit", ns ), std::move( r0 ));
+   DDrot( DDName( "R30", ns ), std::move( r30 ));
+   DDrot( DDName( "R60", ns ), std::move( r60 ));
+   DDrot( DDName( "R90", ns ), std::move( r90 ));
    
-   DDSolid collectorSolid = DDSolidFactory::shapeless(DDName("group",ns));
+   DDSolid collectorSolid = DDSolidFactory::shapeless( DDName( "group", ns ));
    
-   DDRootDef::instance().set(worldName);	      
+   DDRootDef::instance().set( worldName );
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -107,15 +110,14 @@ void regressionTest_setup() {
   File: first.xml
   
 */ 
-void regressionTest_first( ) {
+void regressionTest_first(ClhepEvaluator& eval ) {
   ///load the new cpv
   DDCompactView cpv;
   cout << "main::initialize DDL parser" << endl;
-  DDLParser myP(cpv);// = DDLParser::instance();
+  DDLParser myP(cpv);
   
   cout << "main::about to set configuration" << endl;
   
-  ClhepEvaluator & eval = ExprEval::instance();
   string ns("first");
   DDSolid support = DDSolidFactory::box(DDName("support",ns),
 					eval.eval(ns,"[setup:corner]/4."),
@@ -169,10 +171,10 @@ void regressionTest_first( ) {
   cpv.position(supportLP, part, std::string("3"), t4, r60);
   cpv.position(supportLP, part, std::string("4"), t5, r90);
    
-  DDRotationMatrix * rm = new DDRotationMatrix(ROOT::Math::AxisAngle(DD3Vector(1.,1.,1.),20.*deg));
-  DDRotation rw= DDrot(DDName("group", ns), rm);
-  DDLogicalPart ws(DDName("world","setup"));
-  cpv.position(part, ws, std::string("1"), t0, rw);
+  std::unique_ptr<DDRotationMatrix> rm = std::make_unique<DDRotationMatrix>( ROOT::Math::AxisAngle( DD3Vector( 1., 1., 1. ), 20._deg ));
+  DDRotation rw = DDrot( DDName( "group", ns ), std::move( rm ));
+  DDLogicalPart ws( DDName( "world", "setup" ));
+  cpv.position( part, ws, std::string( "1" ), t0, rw );
 }
 
 
@@ -184,10 +186,9 @@ void output(string filename)
   ///load the new cpv
   DDCompactView cpv;
   cout << "main::initialize DDL parser" << endl;
-  DDLParser myP(cpv);// = DDLParser::instance();
+  DDLParser myP(cpv);
 
   cout << "main::about to set configuration" << endl;
-  //    myP->SetConfig("configuration.xml");
   FIPConfiguration cf(cpv);
   cf.readConfig("DetectorDescription/RegressionTest/test/configuration.xml");
 
@@ -207,8 +208,8 @@ void output(string filename)
        << "  " << exv.logicalPart().material() << endl
        << "  " << exv.logicalPart().solid() << endl
        << "  " << exv.translation() << endl;
-    os << "  " << ra.Axis() << ra.Angle()/deg << endl;
-    tvec.push_back(exv.translation());   
+    os << "  " << ra.Axis() << CONVERT_TO( ra.Angle(), deg ) << endl;
+    tvec.emplace_back(exv.translation());   
     loop = exv.next();
   }
   
@@ -225,10 +226,10 @@ void testParser()
     cout << "main:: initialize" << endl;
     DDCompactView cpv;
     cout << "main::initialize DDL parser" << endl;
-    DDLParser myP(cpv);// = DDLParser::instance();
+    DDLParser myP(cpv);
 
     cout << "main::about to set configuration" << endl;
-    //    myP->SetConfig("configuration.xml");
+
     FIPConfiguration cf(cpv);
     cf.readConfig("DetectorDescription/RegressionTest/test/configuration.xml");
 
@@ -250,23 +251,24 @@ void testParser()
 
 void printRot(const DDRotationMatrix & rot) {
   std::cout << "rot asis\n" << rot << std::endl;
-  DD3Vector x,y,z; const_cast<DDRotationMatrix &>(rot).GetComponents(x,y,z);
+  DD3Vector x,y,z;
+  rot.GetComponents(x,y,z);
   std::cout << "components\n" 
 	    << x << "\n"
 	    << y << "\n"
 	    << z << std::endl;
   cout << "phiX=" << x.phi() << " or in degrees = " 
-       << x.phi()/deg << endl;
+       << CONVERT_TO( x.phi(), deg ) << endl;
   cout << "thetaX=" << x.theta() << " or in degrees = " 
-       << x.theta()/deg << endl;
+       << CONVERT_TO( x.theta(), deg ) << endl;
   cout << "phiY=" << y.phi() << " or in degrees = " 
-       << y.phi()/deg << endl;
+       << CONVERT_TO( y.phi(), deg ) << endl;
   cout << "thetaY=" << y.theta() << " or in degrees = " 
-       << y.theta()/deg << endl;
+       << CONVERT_TO( y.theta(), deg ) << endl;
   cout << "phiZ=" << z.phi() << " or in degrees = " 
-       << z.phi()/deg << endl;
+       << CONVERT_TO( z.phi(), deg ) << endl;
   cout << "thetaZ=" << z.theta() << " or in degrees = " 
-       << z.theta()/deg << endl;
+       << CONVERT_TO( z.theta(), deg ) << endl;
   
   cout << "some factor/equations..." << endl;
   cout << " sin(thetaX()) * cos(phiX()) = " 
@@ -277,7 +279,7 @@ void printRot(const DDRotationMatrix & rot) {
 void testrot()
 {
   {
-    ROOT::Math::AxisAngle aa(DD3Vector(1.,1.,1.), 20.*deg);
+    ROOT::Math::AxisAngle aa(DD3Vector(1.,1.,1.), 20._deg);
     DDRotationMatrix rm(aa); 
     cout << "DD3Vector was " << DD3Vector(1.,1.,1.) << " and the rotation was 20*deg around that axis." << endl;
     printRot(rm);

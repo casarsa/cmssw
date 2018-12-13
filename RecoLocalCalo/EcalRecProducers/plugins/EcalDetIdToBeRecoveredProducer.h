@@ -31,10 +31,10 @@ class EcalDetIdToBeRecoveredProducer : public edm::stream::EDProducer<> {
 
         public:
                 explicit EcalDetIdToBeRecoveredProducer(const edm::ParameterSet& ps);
-                ~EcalDetIdToBeRecoveredProducer();
-                virtual void produce(edm::Event& evt, const edm::EventSetup& es) override final;
-                virtual void beginRun(edm::Run const& run, const edm::EventSetup& es) override final;
-
+                ~EcalDetIdToBeRecoveredProducer() override;
+                void produce(edm::Event& evt, const edm::EventSetup& es) final;
+                void beginRun(edm::Run const& run, const edm::EventSetup& es) final;
+		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
         private:
 
                 //edm::InputTag eeUncalibRecHitCollection_; // secondary name given to collection of EE uncalib rechits

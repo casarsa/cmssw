@@ -1,48 +1,31 @@
 #ifndef Geometry_HcalEventSetup_HcalDDDGeometryEP_H
 #define Geometry_HcalEventSetup_HcalDDDGeometryEP_H 1
 
-
-// system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
-// user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
 
-#include "FWCore/Framework/interface/ESTransientHandle.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 
 #include "Geometry/Records/interface/HcalGeometryRecord.h"
+#include "Geometry/Records/interface/HcalRecNumberingRecord.h"
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "Geometry/HcalTowerAlgo/interface/HcalDDDGeometryLoader.h"
 
-//
-// class decleration
-//
+class HcalDDDGeometryEP : public edm::ESProducer {
 
-class HcalDDDGeometryEP : public edm::ESProducer 
-{
-   public:
+public:
 
-      HcalDDDGeometryEP(const edm::ParameterSet&);
-      ~HcalDDDGeometryEP();
+  HcalDDDGeometryEP(const edm::ParameterSet&);
 
-      typedef boost::shared_ptr<CaloSubdetectorGeometry> ReturnType;
-  
-      void idealRecordCallBack(const IdealGeometryRecord&);
+  using ReturnType = std::unique_ptr<CaloSubdetectorGeometry>;
 
-      ReturnType produceIdeal(const IdealGeometryRecord&);
-      ReturnType produceAligned(const HcalGeometryRecord&);
+  ReturnType produceIdeal(const HcalRecNumberingRecord&);
+  ReturnType produceAligned(const HcalGeometryRecord&);
 
 private:
 
-  // ----------member data ---------------------------
-
-      HcalDDDGeometryLoader* m_loader ;
-
-      const DDCompactView* m_cpv ;
-
-      bool m_applyAlignment ;
+  bool m_applyAlignment ;
 };
-
 #endif

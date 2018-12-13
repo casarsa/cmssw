@@ -43,11 +43,12 @@ class GBRWrapperRcd;
 class PFECALSuperClusterProducer : public edm::stream::EDProducer<> {
  public:  
   explicit PFECALSuperClusterProducer(const edm::ParameterSet&);
-  ~PFECALSuperClusterProducer();
+  ~PFECALSuperClusterProducer() override;
 
-  virtual void beginLuminosityBlock(const edm::LuminosityBlock&, const edm::EventSetup&);
-  virtual void produce(edm::Event&, const edm::EventSetup&);
+  void beginLuminosityBlock(const edm::LuminosityBlock&, const edm::EventSetup&) override;
+  void produce(edm::Event&, const edm::EventSetup&) override;
   
+  static void fillDescriptions(edm::ConfigurationDescriptions& descriptions); 
 
  private:  
   // ----------member data ---------------------------
@@ -71,6 +72,8 @@ class PFECALSuperClusterProducer : public edm::stream::EDProducer<> {
   std::string PFClusterAssociationEBEE_;
   std::string PFClusterAssociationES_;
 
+  // OOT photons
+  bool isOOTCollection_;
 };
 
 #endif

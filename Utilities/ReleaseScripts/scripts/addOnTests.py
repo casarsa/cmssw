@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 import os
 import time
 import sys
@@ -11,7 +12,7 @@ scriptPath = os.path.dirname( os.path.abspath(sys.argv[0]) )
 if scriptPath not in sys.path:
     sys.path.append(scriptPath)
 
-        
+
 class testit(Thread):
     def __init__(self,dirName, commandList):
         Thread.__init__(self)
@@ -23,7 +24,7 @@ class testit(Thread):
         self.npass=[]
 
         return
-    
+
     def run(self):
 
         startime='date %s' %time.asctime()
@@ -36,7 +37,7 @@ class testit(Thread):
 
             commandbase = command.replace(' ','_').replace('/','_')
             logfile='%s.log' % commandbase[:150].replace("'",'').replace('"','').replace('../','')
-            
+
             executable = 'cd '+self.dirName+'; '+command+' > '+logfile+' 2>&1'
 
             ret = os.system(executable)
@@ -44,7 +45,7 @@ class testit(Thread):
 
         endtime='date %s' %time.asctime()
         tottime='%s-%s'%(endtime,startime)
-    
+
         for i in range(len(self.commandList)):
             command = self.commandList[i]
             exitcode = exitCodes[i]
@@ -80,51 +81,36 @@ class StandardTester(object):
         return nActive
 
     def prepare(self):
-    
+
         self.devPath = os.environ['LOCALRT'] + '/src/'
         self.relPath = self.devPath
-        if os.environ.has_key('CMSSW_RELEASE_BASE') and (os.environ['CMSSW_RELEASE_BASE'] != ""): self.relPath = os.environ['CMSSW_RELEASE_BASE'] + '/src/'
+        if 'CMSSW_RELEASE_BASE' in os.environ and (os.environ['CMSSW_RELEASE_BASE'] != ""): self.relPath = os.environ['CMSSW_RELEASE_BASE'] + '/src/'
 
         lines = { 'read312RV' : ['cmsRun '+self.file2Path('Utilities/ReleaseScripts/scripts/read312RV_cfg.py')], 
-                  'fastsim1'  : ['cmsRun '+self.file2Path('FastSimulation/Configuration/test/IntegrationTestFake_cfg.py')],
-                  'fastsim2'  : ['cmsRun '+self.file2Path('FastSimulation/Configuration/test/IntegrationTest_cfg.py')],
-                  #'fastsim3'  : ['cmsRun '+self.file2Path('FastSimulation/Configuration/test/ExampleWithHLT_1E31_cfg.py')],
-                  'fastsim4'  : ['cmsRun '+self.file2Path('FastSimulation/Configuration/test/IntegrationTestWithHLT_cfg.py')],
+                  'fastsim'   : ["cmsDriver.py TTbar_8TeV_TuneCUETP8M1_cfi  --conditions auto:run1_mc --fast  -n 100 --eventcontent AODSIM,DQM --relval 100000,1000 -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,L1,DIGI2RAW,L1Reco,RECO,EI,VALIDATION  --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --datatier GEN-SIM-DIGI-RECO,DQMIO --beamspot Realistic8TeVCollision"],
+                  'fastsim1'  : ["cmsDriver.py TTbar_13TeV_TuneCUETP8M1_cfi --conditions auto:run2_mc_l1stage1 --fast  -n 100 --eventcontent AODSIM,DQM --relval 100000,1000 -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,L1,DIGI2RAW,L1Reco,RECO,EI,VALIDATION  --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --datatier GEN-SIM-DIGI-RECO,DQMIO --beamspot NominalCollision2015 --era Run2_25ns"],
+                  'fastsim2'  : ["cmsDriver.py TTbar_13TeV_TuneCUETP8M1_cfi --conditions auto:run2_mc --fast  -n 100 --eventcontent AODSIM,DQM --relval 100000,1000 -s GEN,SIM,RECOBEFMIX,DIGI:pdigi_valid,L1,DIGI2RAW,L1Reco,RECO,EI,VALIDATION  --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --datatier GEN-SIM-DIGI-RECO,DQMIO --beamspot NominalCollision2015 --era Run2_2016"],
                   'pat1'      : ['cmsRun '+self.file2Path('PhysicsTools/PatAlgos/test/IntegrationTest_cfg.py')],
                 }
 
-        hltTests = {
-                    'hlt_mc_Fake' : ['cmsDriver.py TTbar_Tauola_8TeV_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW --mc --scenario=pp -n 10 --conditions auto:run1_mc_Fake --relval 9000,50 --datatier "GEN-SIM-RAW" --eventcontent RAW --fileout file:RelVal_Raw_Fake_MC.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnMc_HLT_Fake.py'),
-                               'cmsDriver.py RelVal -s HLT:Fake,RAW2DIGI,L1Reco,RECO --mc --scenario=pp -n 10 --conditions auto:run1_mc_Fake --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --processName=HLTRECO --filein file:RelVal_Raw_Fake_MC.root --fileout file:RelVal_Raw_Fake_MC_HLT_RECO.root'], 
-                    'hlt_mc_FULL' : ['cmsDriver.py TTbar_Tauola_13TeV_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW --mc --scenario=pp -n 10 --conditions auto:run2_mc_FULL --relval 9000,50 --datatier "GEN-SIM-RAW" --eventcontent RAW --customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --fileout file:RelVal_Raw_FULL_MC.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnMc_HLT_FULL.py'),
-                               'cmsDriver.py RelVal -s HLT:FULL,RAW2DIGI,L1Reco,RECO --mc --scenario=pp -n 10 --conditions auto:run2_mc_FULL --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_FULL_MC.root --fileout file:RelVal_Raw_FULL_MC_HLT_RECO.root'], 
-                    'hlt_mc_GRun' : ['cmsDriver.py TTbar_Tauola_13TeV_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW --mc --scenario=pp -n 10 --conditions auto:run2_mc_GRun --relval 9000,50 --datatier "GEN-SIM-RAW" --eventcontent RAW --customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --fileout file:RelVal_Raw_GRun_MC.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnMc_HLT_GRun.py'),
-                               'cmsDriver.py RelVal -s HLT:GRun,RAW2DIGI,L1Reco,RECO --mc --scenario=pp -n 10 --conditions auto:run2_mc_GRun --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_GRun_MC.root --fileout file:RelVal_Raw_GRun_MC_HLT_RECO.root'], 
-                    'hlt_mc_HIon' : ['cmsDriver.py TTbar_Tauola_13TeV_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW --mc --scenario=HeavyIons -n 10 --conditions auto:run2_mc_HIon --relval 9000,50 --datatier "GEN-SIM-RAW" --eventcontent RAW --customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --fileout file:RelVal_Raw_HIon_MC.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnMc_HLT_HIon.py'),
-                               'cmsDriver.py RelVal -s HLT:HIon,RAW2DIGI,L1Reco,RECO --mc --scenario=HeavyIons -n 10 --conditions auto:run2_mc_HIon --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_HIon_MC.root --fileout file:RelVal_Raw_HIon_MC_HLT_RECO.root'],
-                    'hlt_mc_PIon' : ['cmsDriver.py TTbar_Tauola_13TeV_cfi -s GEN,SIM,DIGI,L1,DIGI2RAW --mc --scenario=pp -n 10 --conditions auto:run2_mc_PIon --relval 9000,50 --datatier "GEN-SIM-RAW" --eventcontent RAW --customise SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --fileout file:RelVal_Raw_PIon_MC.root', 
-                               'cmsRun ' + self.file2Path('HLTrigger/Configuration/test/OnMc_HLT_PIon.py'),
-                               'cmsDriver.py RelVal -s HLT:PIon,RAW2DIGI,L1Reco,RECO --mc --scenario=pp -n 10 --conditions auto:run2_mc_PIon --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_PIon_MC.root --fileout file:RelVal_Raw_PIon_MC_HLT_RECO.root'],
-                    'hlt_data_Fake' : ['cmsDriver.py RelVal -s L1REPACK --data --scenario=pp -n 10 --conditions auto:run1_hlt_Fake --relval 9000,50 --datatier "RAW" --eventcontent RAW --fileout file:RelVal_Raw_Fake_DATA.root --filein /store/data/Run2012A/MuEG/RAW/v1/000/191/718/14932935-E289-E111-830C-5404A6388697.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnData_HLT_Fake.py'),
-                               'cmsDriver.py RelVal -s HLT:Fake,RAW2DIGI,L1Reco,RECO --data --scenario=pp -n 10 --conditions auto:run1_data_Fake --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --processName=HLTRECO --filein file:RelVal_Raw_Fake_DATA.root --fileout file:RelVal_Raw_Fake_DATA_HLT_RECO.root'],
-                    'hlt_data_FULL' : ['cmsDriver.py RelVal -s NONE     --data --scenario=pp -n 10 --conditions auto:run2_hlt_FULL --relval 9000,50 --datatier "RAW" --eventcontent RAW --fileout file:RelVal_Raw_FULL_DATA.root --filein /store/data/Run2012A/MuEG/RAW/v1/000/191/718/14932935-E289-E111-830C-5404A6388697.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnData_HLT_FULL.py'),
-                               'cmsDriver.py RelVal -s HLT:FULL,RAW2DIGI,L1Reco,RECO --data --scenario=pp -n 10 --conditions auto:run2_data_FULL --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_FULL_DATA.root --fileout file:RelVal_Raw_FULL_DATA_HLT_RECO.root'],
-                    'hlt_data_GRun' : ['cmsDriver.py RelVal -s NONE     --data --scenario=pp -n 10 --conditions auto:run2_hlt_GRun --relval 9000,50 --datatier "RAW" --eventcontent RAW --fileout file:RelVal_Raw_GRun_DATA.root --filein /store/data/Run2012A/MuEG/RAW/v1/000/191/718/14932935-E289-E111-830C-5404A6388697.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnData_HLT_GRun.py'),
-                               'cmsDriver.py RelVal -s HLT:GRun,RAW2DIGI,L1Reco,RECO --data --scenario=pp -n 10 --conditions auto:run2_data_GRun --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_GRun_DATA.root --fileout file:RelVal_Raw_GRun_DATA_HLT_RECO.root'],
-                    'hlt_data_HIon' : ['cmsDriver.py RelVal -s NONE     --data --scenario=HeavyIons -n 10 --conditions auto:run2_hlt_HIon --relval 9000,50 --datatier "RAW" --eventcontent RAW --fileout file:RelVal_Raw_HIon_DATA.root --filein /store/hidata/HIRun2011/HIHighPt/RAW/v1/000/182/838/F20AAF66-F71C-E111-9704-BCAEC532971D.root',
-                               'cmsRun '+self.file2Path('HLTrigger/Configuration/test/OnData_HLT_HIon.py'),
-                               'cmsDriver.py RelVal -s HLT:HIon,RAW2DIGI,L1Reco,RECO --data --scenario=HeavyIons -n 10 --conditions auto:run2_data_HIon --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --customise=HLTrigger/Configuration/CustomConfigs.MassReplaceInputTag --processName=HLTRECO --filein file:RelVal_Raw_HIon_DATA.root --fileout file:RelVal_Raw_HIon_DATA_HLT_RECO.root'],
-                    'hlt_data_PIon' : ['cmsDriver.py RelVal -s NONE     --data --scenario=pp -n 10 --conditions auto:run2_hlt_PIon --relval 9000,50 --datatier "RAW" --eventcontent RAW --fileout file:RelVal_Raw_PIon_DATA.root --filein /store/data/Run2012A/MuEG/RAW/v1/000/191/718/14932935-E289-E111-830C-5404A6388697.root',
-                               'cmsRun ' + self.file2Path('HLTrigger/Configuration/test/OnData_HLT_PIon.py'),
-                               'cmsDriver.py RelVal -s HLT:PIon,RAW2DIGI,L1Reco,RECO --data --scenario=pp -n 10 --conditions auto:run2_data_PIon --relval 9000,50 --datatier "RAW-HLT-RECO" --eventcontent FEVTDEBUGHLT --customise=HLTrigger/Configuration/CustomConfigs.L1THLT --customise=SLHCUpgradeSimulations/Configuration/postLS1Customs.customisePostLS1 --magField 38T_PostLS1 --processName=HLTRECO --filein file:RelVal_Raw_PIon_DATA.root --fileout file:RelVal_Raw_PIon_DATA_HLT_RECO.root'],
-                     }
+        hltTests = {}
+        hltFlag_data = ' realData=True  globalTag=@ inputFiles=@ '
+        hltFlag_mc   = ' realData=False globalTag=@ inputFiles=@ '
+        from Configuration.HLT.addOnTestsHLT import addOnTestsHLT
+        hltTestsToAdd = addOnTestsHLT()
+        for key in hltTestsToAdd:
+            if '_data_' in key:
+                hltTests[key] = [hltTestsToAdd[key][0],
+                                 'cmsRun '+self.file2Path(hltTestsToAdd[key][1])+hltFlag_data,
+                                 hltTestsToAdd[key][2]]
+            elif '_mc_' in key:
+                hltTests[key] = [hltTestsToAdd[key][0],
+                                 'cmsRun '+self.file2Path(hltTestsToAdd[key][1])+hltFlag_mc,
+                                 hltTestsToAdd[key][2]]
+            else:
+                hltTests[key] = [hltTestsToAdd[key][0],
+                                 'cmsRun '+self.file2Path(hltTestsToAdd[key][1]),
+                                 hltTestsToAdd[key][2]]
 
         self.commands={}
         for dirName, command in lines.items():
@@ -133,9 +119,9 @@ class StandardTester(object):
         for dirName, commandList in hltTests.items():
             self.commands[dirName] = commandList
         return
-	
+
     def dumpTest(self):
-        print ",".join(self.commands.keys())
+        print(",".join(self.commands.keys()))
         return
 
     def file2Path(self,rFile):
@@ -153,95 +139,95 @@ class StandardTester(object):
         os.chdir('addOnTests')
 
         nfail=0
-    	npass=0
-    	report=''
-    	
-    	print 'Running in %s thread(s)' % self.maxThreads
-    	
+        npass=0
+        report=''
+
+        print('Running in %s thread(s)' % self.maxThreads)
+
         for dirName, command in self.commands.items():
 
-    	    if testList and not dirName in testList:
+            if testList and not dirName in testList:
                 del self.commands[dirName]
                 continue
 
             # make sure we don't run more than the allowed number of threads:
-    	    while self.activeThreads() >= self.maxThreads:
-    	        time.sleep(10)
+            while self.activeThreads() >= self.maxThreads:
+                time.sleep(10)
                 continue
-    	    
-    	    print 'Preparing to run %s' % str(command)
-    	    current = testit(dirName, command)
-    	    self.threadList.append(current)
-    	    current.start()
+
+            print('Preparing to run %s' % str(command))
+            current = testit(dirName, command)
+            self.threadList.append(current)
+            current.start()
             time.sleep(random.randint(1,5)) # try to avoid race cond by sleeping random amount of time [1,5] sec 
-            
+
         # wait until all threads are finished
         while self.activeThreads() > 0:
-    	    time.sleep(5)
-    	    
-    	# all threads are done now, check status ...
-    	for pingle in self.threadList:
-    	    pingle.join()
+            time.sleep(5)
+
+        # all threads are done now, check status ...
+        for pingle in self.threadList:
+            pingle.join()
             for f in pingle.nfail: nfail  += f
             for p in pingle.npass: npass  += p
-    	    report += pingle.report
-    	    print pingle.report
+            report += pingle.report
+            print(pingle.report)
             sys.stdout.flush()
-            
-    	reportSumm = '\n %s tests passed, %s failed \n' %(npass,nfail)
-    	print reportSumm
-    	
-    	runall_report_name='runall-report.log'
-    	runall_report=open(runall_report_name,'w')
-    	runall_report.write(report+reportSumm)
-    	runall_report.close()
+
+        reportSumm = '\n %s tests passed, %s failed \n' %(npass,nfail)
+        print(reportSumm)
+
+        runall_report_name='runall-report.log'
+        runall_report=open(runall_report_name,'w')
+        runall_report.write(report+reportSumm)
+        runall_report.close()
 
         # get the logs to the logs dir:
-        print '==> in :', os.getcwd()
-        print '    going to copy log files to logs dir ...'
+        print('==> in :', os.getcwd())
+        print('    going to copy log files to logs dir ...')
         if not os.path.exists('logs'):
             os.makedirs('logs')
         for dirName in self.commands:
             cmd = "for L in `ls "+dirName+"/*.log`; do cp $L logs/cmsDriver-`dirname $L`_`basename $L` ; done"
-            print "going to ",cmd
+            print("going to ",cmd)
             os.system(cmd)
 
         import pickle
         pickle.dump(self.commands, open('logs/addOnTests.pkl', 'w') )
 
         os.chdir(actDir)
-        
-    	return
+
+        return
 
     def upload(self, tgtDir):
 
-        print "in ", os.getcwd()
+        print("in ", os.getcwd())
 
         if not os.path.exists(tgtDir):
             os.makedirs(tgtDir)
-        
+
         cmd = 'tar cf - addOnTests.log addOnTests/logs | (cd '+tgtDir+' ; tar xf - ) '
         try:
-            print 'executing: ',cmd
+            print('executing: ',cmd)
             ret = os.system(cmd)
             if ret != 0:
-                print "ERROR uploading logs:", ret, cmd
-        except Exception, e:
-            print "EXCEPTION while uploading addOnTest-logs : ", str(e)
-            
-    	return
+                print("ERROR uploading logs:", ret, cmd)
+        except Exception as e:
+            print("EXCEPTION while uploading addOnTest-logs : ", str(e))
 
-                
+        return
+
+
 def main(argv) :
 
     import getopt
-    
+
     try:
         opts, args = getopt.getopt(argv, "dj:t:", ["nproc=", 'uploadDir=', 'tests=','noRun','dump'])
-    except getopt.GetoptError, e:
-        print "unknown option", str(e)
+    except getopt.GetoptError as e:
+        print("unknown option", str(e))
         sys.exit(2)
-        
+
     np        = 4
     uploadDir = None
     runTests  = True
@@ -268,6 +254,6 @@ def main(argv) :
         if uploadDir:
             tester.upload(uploadDir)
     return
-    
+
 if __name__ == '__main__' :
     main(sys.argv[1:])

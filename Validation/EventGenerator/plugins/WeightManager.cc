@@ -5,7 +5,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
-
+#include "Validation/EventGenerator/interface/DQMHelper.h"
 
 using namespace edm;
 
@@ -29,7 +29,7 @@ double WeightManager::weight(const Event& iEvent){
     const HepMC::GenEvent *myGenEvent = evt->GetEvent();
 
     double weight = 1.;
-    if (myGenEvent->weights().size() > 0)
+    if (!myGenEvent->weights().empty())
       weight = myGenEvent->weights()[0];
     return weight;
   } else {

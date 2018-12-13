@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 #===================================================================
 # So to get the list of input files. One must call :
@@ -32,19 +33,19 @@
 #import httplib, urllib, urllib2, types, string, os, sys
 import os, sys, re, das_client
 
-if not os.environ.has_key('DD_SOURCE'):
+if 'DD_SOURCE' not in os.environ:
   os.environ['DD_SOURCE'] = 'das'
-if not os.environ.has_key('DD_RELEASE'):
+if 'DD_RELEASE' not in os.environ:
   os.environ['DD_RELEASE'] = ''
-if not os.environ.has_key('DD_SAMPLE'):
+if 'DD_SAMPLE' not in os.environ:
   os.environ['DD_SAMPLE'] = ''
-if not os.environ.has_key('DD_COND'):
+if 'DD_COND' not in os.environ:
   os.environ['DD_COND'] = ''
-if not os.environ.has_key('DD_TIER'):
+if 'DD_TIER' not in os.environ:
   os.environ['DD_TIER'] = ''
-if not os.environ.has_key('DD_TIER_SECONDARY'):
+if 'DD_TIER_SECONDARY' not in os.environ:
   os.environ['DD_TIER_SECONDARY'] = ''
-if not os.environ.has_key('DD_RUN'):
+if 'DD_RUN' not in os.environ:
   os.environ['DD_RUN'] = ''
   
 dd_release_re = re.compile(os.environ['DD_RELEASE'].replace('*','.*')) ;
@@ -84,16 +85,16 @@ def common_search(dd_tier):
     data = das_client.json.loads(das_client.get_data('https://cmsweb.cern.ch',query,0,0,0))
             
     if data['nresults']==0:
-      print '[electronDataDiscovery.py] No DAS dataset for query:', query
+      print('[electronDataDiscovery.py] No DAS dataset for query:', query)
       return []
     while data['nresults']>1:
       if data['data'][0]['dataset'][0]['name']==data['data'][1]['dataset'][0]['name']:
         data['data'].pop(0)
         data['nresults'] -= 1
       else:
-        print '[electronDataDiscovery.py] Several DAS datasets for query:', query
+        print('[electronDataDiscovery.py] Several DAS datasets for query:', query)
         for i in range(data['nresults']):
-          print '[electronDataDiscovery.py] dataset['+str(i)+']: '+data['data'][i]['dataset'][0]['name']
+          print('[electronDataDiscovery.py] dataset['+str(i)+']: '+data['data'][i]['dataset'][0]['name'])
         return []
 
     dataset = data['data'][0]['dataset'][0]['name']
@@ -112,7 +113,7 @@ def common_search(dd_tier):
     data = das_client.json.loads(das_client.get_data('https://cmsweb.cern.ch',query,0,0,0))
     
     if data['nresults']==0:
-      print '[electronDataDiscovery.py] No DAS file in dataset:', dataset
+      print('[electronDataDiscovery.py] No DAS file in dataset:', dataset)
       return []
       
     result = []
@@ -175,10 +176,10 @@ def common_search(dd_tier):
     try:
       response = urllib2.urlopen(req)
       data = response.read()
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
       if e.code==201:
-        print e.headers       
-        print e.msg
+        print(e.headers)       
+        print(e.msg)
         pass
       else:
         raise e
@@ -195,7 +196,7 @@ def common_search(dd_tier):
   
     dbs_path = '/'+os.environ['DD_SAMPLE']+'/'+os.environ['DD_RELEASE']+'-'+os.environ['DD_COND']+'/'+os.environ['DD_TIER']+'"'
     if __name__ == "__main__":
-      print 'dbs path:',dbs_path
+      print('dbs path:',dbs_path)
     data = os.popen('dbs lsf --path="'+dbs_path+'"')
     datalines = data.readlines()
     data.close()
@@ -227,7 +228,7 @@ def common_search(dd_tier):
       
   elif os.environ['DD_SOURCE'].startswith('/eos/cms/'): # assumed to be an eos dir
   
-    data = os.popen('/afs/cern.ch/project/eos/installation/pro/bin/eos.select find -f '+os.environ['DD_SOURCE'])
+    data = os.popen('eos find -f '+os.environ['DD_SOURCE'])
     lines = data.readlines()
     data.close()
     result = []
@@ -258,7 +259,7 @@ def common_search(dd_tier):
       if os.environ['DD_COND']!='': diag += ' ' + os.environ['DD_COND']
       if dd_tier!='': diag += ' ' + dd_tier
       if os.environ['DD_RUN']!='': diag += ' ' + os.environ['DD_RUN']
-      print diag
+      print(diag)
       
   return result
 

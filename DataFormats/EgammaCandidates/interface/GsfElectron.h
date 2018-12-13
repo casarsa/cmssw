@@ -58,6 +58,7 @@ class GsfElectron : public RecoCandidate
     struct IsolationVariables ;
     struct ConversionRejection ;
     struct ClassificationVariables ;
+    struct SaturationInfo ;
 
     GsfElectron() ;
     GsfElectron( const GsfElectronCoreRef & ) ;
@@ -98,9 +99,10 @@ class GsfElectron : public RecoCandidate
       const FiducialFlags &,
       const ShowerShape &,
       const ShowerShape &,
-      const ConversionRejection &
+      const ConversionRejection &,
+      const SaturationInfo &
      ) ;
-    GsfElectron * clone() const ;
+    GsfElectron * clone() const override ;
     GsfElectron * clone
      (
       const GsfElectronCoreRef & core,
@@ -109,7 +111,7 @@ class GsfElectron : public RecoCandidate
       const TrackBaseRef & conversionPartner,
       const GsfTrackRefVector & ambiguousTracks
      ) const ;
-    virtual ~GsfElectron() {} ;
+    ~GsfElectron() override {} ;
 
   private:
 
@@ -155,8 +157,8 @@ class GsfElectron : public RecoCandidate
     const ChargeInfo & chargeInfo() const { return chargeInfo_ ; }
 
     // Candidate redefined methods
-    virtual bool isElectron() const { return true ; }
-    virtual bool overlap( const Candidate & ) const ;
+    bool isElectron() const override { return true ; }
+    bool overlap( const Candidate & ) const override ;
 
   private:
 
@@ -179,13 +181,13 @@ class GsfElectron : public RecoCandidate
     void setCore(const reco::GsfElectronCoreRef &core) { core_ = core; }
 
     // forward core methods
-    virtual SuperClusterRef superCluster() const { return core()->superCluster() ; }
-    virtual GsfTrackRef gsfTrack() const { return core()->gsfTrack() ; }
+    SuperClusterRef superCluster() const override { return core()->superCluster() ; }
+    GsfTrackRef gsfTrack() const override { return core()->gsfTrack() ; }
     virtual TrackRef closestTrack() const { return core()->ctfTrack() ; }
     float ctfGsfOverlap() const { return core()->ctfGsfOverlap() ; }
     bool ecalDrivenSeed() const { return core()->ecalDrivenSeed() ; }
     bool trackerDrivenSeed() const { return core()->trackerDrivenSeed() ; }
-    SuperClusterRef parentSuperCluster() const { return core()->parentSuperCluster() ; }
+    virtual SuperClusterRef parentSuperCluster() const { return core()->parentSuperCluster() ; }
 
     // backward compatibility
     struct ClosestCtfTrack
@@ -196,8 +198,8 @@ class GsfElectron : public RecoCandidate
       ClosestCtfTrack( TrackRef track, float sh ) : ctfTrack(track), shFracInnerHits(sh) {}
      } ;
     float shFracInnerHits() const { return core()->ctfGsfOverlap() ; }
-    TrackRef closestCtfTrackRef() const { return core()->ctfTrack() ; }
-    ClosestCtfTrack closestCtfTrack() const { return ClosestCtfTrack(core()->ctfTrack(),core()->ctfGsfOverlap()) ; }
+    virtual TrackRef closestCtfTrackRef() const { return core()->ctfTrack() ; }
+    virtual ClosestCtfTrack closestCtfTrack() const { return ClosestCtfTrack(core()->ctfTrack(),core()->ctfGsfOverlap()) ; }
 
   private:
 
@@ -358,7 +360,15 @@ class GsfElectron : public RecoCandidate
     bool isEEDeeGap() const { return fiducialFlags_.isEEDeeGap ; }
     bool isEERingGap() const { return fiducialFlags_.isEERingGap ; }
     const FiducialFlags & fiducialFlags() const { return fiducialFlags_ ; }
-
+    // setters... not necessary in regular situations
+    // but handy for late stage modifications of electron objects
+    void setFFlagIsEB(const bool b)        { fiducialFlags_.isEB = b; }
+    void setFFlagIsEE(const bool b)        { fiducialFlags_.isEE = b; }
+    void setFFlagIsEBEEGap(const bool b)   { fiducialFlags_.isEBEEGap = b; }
+    void setFFlagIsEBEtaGap(const bool b)  { fiducialFlags_.isEBEtaGap = b; }
+    void setFFlagIsEBPhiGap(const bool b)  { fiducialFlags_.isEBPhiGap = b; }
+    void setFFlagIsEEDeeGap(const bool b)  { fiducialFlags_.isEEDeeGap = b; }
+    void setFFlagIsEERingGap(const bool b) { fiducialFlags_.isEERingGap = b; }
 
   private:
 
@@ -386,6 +396,18 @@ class GsfElectron : public RecoCandidate
       std::vector<CaloTowerDetId> hcalTowersBehindClusters ; //
       float hcalDepth1OverEcalBc ; // hcal over ecal seed cluster energy using 1st hcal depth (using hcal towers behind clusters)
       float hcalDepth2OverEcalBc ; // hcal over ecal seed cluster energy using 2nd hcal depth (using hcal towers behind clusters)
+      bool  invalidHcal ;          // set to true if the hcal energy estimate is not valid (e.g. the corresponding tower was off or masked)
+      float sigmaIetaIphi;
+      float eMax;
+      float e2nd;
+      float eTop;
+      float eLeft;
+      float eRight;
+      float eBottom; 
+      float e2x5Top;
+      float e2x5Left;
+      float e2x5Right;
+      float e2x5Bottom; 
       ShowerShape()
        : sigmaEtaEta(std::numeric_limits<float>::max()),
        sigmaIetaIeta(std::numeric_limits<float>::max()),
@@ -393,7 +415,19 @@ class GsfElectron : public RecoCandidate
 	     e1x5(0.), e2x5Max(0.), e5x5(0.),
 	     r9(-std::numeric_limits<float>::max()),
        hcalDepth1OverEcal(0.), hcalDepth2OverEcal(0.),
-       hcalDepth1OverEcalBc(0.), hcalDepth2OverEcalBc(0.)
+       hcalDepth1OverEcalBc(0.), hcalDepth2OverEcalBc(0.),
+       invalidHcal(false),
+       sigmaIetaIphi(0.f),
+       eMax(0.f),
+       e2nd(0.f),
+       eTop(0.f),
+       eLeft(0.f),
+       eRight(0.f),
+       eBottom(0.f),
+       e2x5Top(0.f),
+       e2x5Left(0.f),
+       e2x5Right(0.f),
+       e2x5Bottom(0.f)
        {}
      } ;
 
@@ -411,7 +445,12 @@ class GsfElectron : public RecoCandidate
     const std::vector<CaloTowerDetId> & hcalTowersBehindClusters() const { return showerShape_.hcalTowersBehindClusters ; }
     float hcalDepth1OverEcalBc() const { return showerShape_.hcalDepth1OverEcalBc ; }
     float hcalDepth2OverEcalBc() const { return showerShape_.hcalDepth2OverEcalBc ; }
-    float hcalOverEcalBc() const { return hcalDepth1OverEcalBc() + hcalDepth2OverEcalBc() ; }
+    float hcalOverEcalBc() const { return hcalDepth1OverEcalBc() + hcalDepth2OverEcalBc() ; } 
+    float hcalOverEcalValid() const { return !showerShape_.invalidHcal; } 
+    float eLeft() const { return showerShape_.eLeft; }
+    float eRight() const { return showerShape_.eRight; }
+    float eTop() const { return showerShape_.eTop; }
+    float eBottom() const { return showerShape_.eBottom; }
     const ShowerShape & showerShape() const { return showerShape_ ; }
     // non-zero-suppressed and no-fractions shower shapes
     // ecal energy is always that from the full 5x5 
@@ -428,6 +467,15 @@ class GsfElectron : public RecoCandidate
     float full5x5_hcalDepth1OverEcalBc() const { return full5x5_showerShape_.hcalDepth1OverEcalBc ; }
     float full5x5_hcalDepth2OverEcalBc() const { return full5x5_showerShape_.hcalDepth2OverEcalBc ; }
     float full5x5_hcalOverEcalBc() const { return full5x5_hcalDepth1OverEcalBc() + full5x5_hcalDepth2OverEcalBc() ; }
+    float full5x5_hcalOverEcalValid() const { return !full5x5_showerShape_.invalidHcal; } 
+    float full5x5_e2x5Left() const { return full5x5_showerShape_.e2x5Left; }
+    float full5x5_e2x5Right() const { return full5x5_showerShape_.e2x5Right; }
+    float full5x5_e2x5Top() const { return full5x5_showerShape_.e2x5Top; }
+    float full5x5_e2x5Bottom() const { return full5x5_showerShape_.e2x5Bottom; }
+    float full5x5_eLeft() const { return full5x5_showerShape_.eLeft; }
+    float full5x5_eRight() const { return full5x5_showerShape_.eRight; }
+    float full5x5_eTop() const { return full5x5_showerShape_.eTop; }
+    float full5x5_eBottom() const { return full5x5_showerShape_.eBottom; }
     const ShowerShape & full5x5_showerShape() const { return full5x5_showerShape_ ; }
 
     // setters (if you know what you're doing)
@@ -451,6 +499,28 @@ class GsfElectron : public RecoCandidate
     ShowerShape showerShape_ ;
     ShowerShape full5x5_showerShape_ ;
 
+  //=======================================================
+  // SaturationInfo
+  //=======================================================
+
+  public :
+
+    struct SaturationInfo {
+      int nSaturatedXtals;
+      bool isSeedSaturated;
+      SaturationInfo() 
+      : nSaturatedXtals(0), isSeedSaturated(false) {};
+     } ;
+
+    // accessors
+    float nSaturatedXtals() const { return saturationInfo_.nSaturatedXtals; }
+    float isSeedSaturated() const { return saturationInfo_.isSeedSaturated; }
+    const SaturationInfo& saturationInfo() const { return saturationInfo_; }
+    void setSaturationInfo(const SaturationInfo &s) { saturationInfo_ = s; }
+
+  private:
+    
+    SaturationInfo saturationInfo_;
 
   //=======================================================
   // Isolation Variables
@@ -564,10 +634,13 @@ class GsfElectron : public RecoCandidate
        float sumNeutralHadronEtHighThreshold;  //!< sum pt of neutral hadrons with a higher threshold
        float sumPhotonEtHighThreshold;  //!< sum pt of PF photons with a higher threshold
        float sumPUPt;  //!< sum pt of charged Particles not from PV  (for Pu corrections)
-
+       //new pf cluster based isolation values
+       float sumEcalClusterEt; //sum pt of ecal clusters, vetoing clusters part of electron
+       float sumHcalClusterEt; //sum pt of hcal clusters, vetoing clusters part of electron
        PflowIsolationVariables() :
         sumChargedHadronPt(0),sumNeutralHadronEt(0),sumPhotonEt(0),sumChargedParticlePt(0),
-        sumNeutralHadronEtHighThreshold(0),sumPhotonEtHighThreshold(0),sumPUPt(0) {}; 
+        sumNeutralHadronEtHighThreshold(0),sumPhotonEtHighThreshold(0),sumPUPt(0),
+	sumEcalClusterEt(0),sumHcalClusterEt(0){}; 
       } ;
 
     struct MvaInput
@@ -601,13 +674,15 @@ class GsfElectron : public RecoCandidate
      } ;
 
     // accessors
-    const ShowerShape & pfShowerShape() const { return pfShowerShape_ ; }
     const PflowIsolationVariables & pfIsolationVariables() const { return pfIso_ ; }
+    //backwards compat functions for pat::Electron
+    float ecalPFClusterIso() const { return pfIso_.sumEcalClusterEt; };
+    float hcalPFClusterIso() const { return pfIso_.sumHcalClusterEt; };
+   
     const MvaInput & mvaInput() const { return mvaInput_ ; }
     const MvaOutput & mvaOutput() const { return mvaOutput_ ; }
 
     // setters
-    void setPfShowerShape( const ShowerShape & shape ) { pfShowerShape_ = shape ; }
     void setPfIsolationVariables( const PflowIsolationVariables & iso ) { pfIso_ = iso ; }
     void setMvaInput( const MvaInput & mi ) { mvaInput_ = mi ; }
     void setMvaOutput( const MvaOutput & mo ) { mvaOutput_ = mo ; }
@@ -618,7 +693,6 @@ class GsfElectron : public RecoCandidate
 
   private:
 
-    ShowerShape pfShowerShape_ ;
     PflowIsolationVariables pfIso_ ;
     MvaInput mvaInput_ ;
     MvaOutput mvaOutput_ ;
@@ -670,9 +744,8 @@ class GsfElectron : public RecoCandidate
       {
        float trackFbrem  ;       // the brem fraction from gsf fit: (track momentum in - track momentum out) / track momentum in
        float superClusterFbrem ; // the brem fraction from supercluster: (supercluster energy - electron cluster energy) / supercluster energy
-       float pfSuperClusterFbrem ; // the brem fraction from pflow supercluster
        ClassificationVariables()
-        : trackFbrem(-1.e30), superClusterFbrem(-1.e30), pfSuperClusterFbrem(-1.e30)
+        : trackFbrem(-1.e30), superClusterFbrem(-1.e30)
         {}
       } ;
     enum Classification { UNKNOWN=-1, GOLDEN=0, BIGBREM=1, BADTRACK=2, SHOWERING=3, GAP=4 } ;
@@ -680,7 +753,6 @@ class GsfElectron : public RecoCandidate
     // accessors
     float trackFbrem() const { return classVariables_.trackFbrem ; }
     float superClusterFbrem() const { return classVariables_.superClusterFbrem ; }
-    float pfSuperClusterFbrem() const { return classVariables_.pfSuperClusterFbrem ; }
     const ClassificationVariables & classificationVariables() const { return classVariables_ ; }
     Classification classification() const { return class_ ; }
 
@@ -691,7 +763,6 @@ class GsfElectron : public RecoCandidate
     // setters
     void setTrackFbrem( float fbrem ) { classVariables_.trackFbrem = fbrem ; }
     void setSuperClusterFbrem( float fbrem ) { classVariables_.superClusterFbrem = fbrem ; }
-    void setPfSuperClusterFbrem( float fbrem ) { classVariables_.pfSuperClusterFbrem = fbrem ; }
     void setClassificationVariables( const ClassificationVariables & cv ) { classVariables_ = cv ; }
     void setClassification( Classification myclass ) { class_ = myclass ; }
 
@@ -827,7 +898,7 @@ class GsfElectron : public RecoCandidate
   float pixelMatchDRz1 () const { return pixelMatchVariables_.dRz1  ; }
   float pixelMatchDRz2 () const { return pixelMatchVariables_.dRz2  ; }
   private:
-    PixelMatchVariables pixelMatchVariables_ ;
+    PixelMatchVariables pixelMatchVariables_ ;    
  } ;
 
  } // namespace reco

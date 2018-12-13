@@ -5,12 +5,12 @@
 
 #include "DataFormats/FWLite/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+#include "FWCore/FWLite/interface/FWLiteEnabler.h"
 
 #include "DataFormats/FWLite/interface/InputSource.h"
 #include "DataFormats/FWLite/interface/OutputFiles.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
+#include "FWCore/ParameterSetReader/interface/ParameterSetReader.h"
 
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
@@ -26,14 +26,14 @@ int main(int argc, char* argv[])
   // ----------------------------------------------------------------------
   // First Part: 
   //
-  //  * enable the AutoLibraryLoader 
+  //  * enable FWLite 
   //  * book the histograms of interest 
   //  * open the input file
   // ----------------------------------------------------------------------
 
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
-  AutoLibraryLoader::enable();
+  FWLiteEnabler::enable();
 
   // parse arguments
   if ( argc < 2 ) {
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
   edm::InputTag muons_( ana.getParameter<edm::InputTag>("muons") );
 
   // book a set of histograms
-  fwlite::TFileService fs = fwlite::TFileService(outputHandler_.file().c_str());
+  fwlite::TFileService fs = fwlite::TFileService(outputHandler_.file());
   TFileDirectory dir = fs.mkdir("analyzeBasicPat");
   TH1F* muonPt_  = dir.make<TH1F>("muonPt"  , "pt"  ,   100,   0.,  300.);
   TH1F* muonEta_ = dir.make<TH1F>("muonEta" , "eta" ,   100,  -3.,    3.);

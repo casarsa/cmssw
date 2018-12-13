@@ -5,6 +5,7 @@
 # Author:      Zhen Xie                                           #
 ###################################################################
 
+from __future__ import print_function
 import os,sys,time,json,coral
 from datetime import datetime
 from RecoLuminosity.LumiDB import sessionManager,argparse,nameDealer,revisionDML,dataDML,lumiParameters,lumiTime
@@ -45,7 +46,7 @@ def generateLumiLSdataForRun(lsdata,lumirundata,beamsta):
         instlumierror=0.0
         instlumiquality=0
         startorbit=(cmslsnum-1)*numorbit
-        if beamsta and beamsta.has_key(cmslsnum):
+        if beamsta and cmslsnum in beamsta:
             beamstatus=beamsta[cmslsnum]
         result[lumilsnum]=[cmslsnum,instlumi,instlumierror,instlumiquality,beamstatus,beamenergy,numorbit,startorbit]
     return result
@@ -74,13 +75,12 @@ def parseInputFile(filename,singlerun=None):
     strresult=json.load(json_data)
     json_data.close()
     strruns=strresult.keys()
-    rs=[int(x) for x in strruns]
-    rs.sort()
-    print rs
+    rs=sorted([int(x) for x in strruns])
+    print(rs)
     for runnum,perrundata in strresult.items():
         if singlerun:
             if int(runnum)!=int(singlerun):
-                print 'skip '+str(runnum)+' , is not single run ',singlerun
+                print('skip '+str(runnum)+' , is not single run ',singlerun)
                 continue
         allls=map(int,perrundata.keys())        
         for cmsls in range(1,max(allls)+1):
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         irunlsdict[run]=None
     session.transaction().start(True)
     (pixellumibranchid,pixellumibranchparent)=revisionDML.branchInfoByName(session.nominalSchema(),'DATA')
-    print 'pixellumibranchid ',pixellumibranchid,' pixellumibranchparent ',pixellumibranchparent
+    print('pixellumibranchid ',pixellumibranchid,' pixellumibranchparent ',pixellumibranchparent)
     pixellumibranchinfo=(pixellumibranchid,'DATA')
     (pixel_tagid,pixel_tagname)=revisionDML.currentDataTag(session.nominalSchema(),lumitype='PIXEL')
     (hf_tagid,hf_tagname)=revisionDML.currentDataTag(session.nominalSchema(),lumitype='HF')    
@@ -158,7 +158,7 @@ if __name__ == "__main__":
         trgdataid=hfdataidinfo[1]
         hltdataid=hfdataidinfo[2]
         beamsta={}
-        if beamstatusdata.has_key(runnum):
+        if runnum in beamstatusdata:
             beamsta=beamstatusdata[runnum]
         alllumilsdata[runnum]=generateLumiLSdataForRun(perrundata,alllumirundata[runnum],beamsta)#lumirundata [datasource,nominalenergy,ncollidingbunches,starttime,stoptime,nls]
         pixellumirundata=alllumirundata[runnum]

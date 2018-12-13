@@ -1,7 +1,7 @@
 #include "TkGluedMeasurementDet.h"
 #include "TrackingTools/MeasurementDet/interface/MeasurementDetException.h"
 #include "RecoTracker/TransientTrackingRecHit/interface/TSiStripMatchedRecHit.h"
-#include "Geometry/TrackerGeometryBuilder/interface/GluedGeomDet.h"
+#include "Geometry/CommonDetUnit/interface/GluedGeomDet.h"
 #include "RecoLocalTracker/SiStripRecHitConverter/interface/SiStripRecHitMatcher.h"
 #include "NonPropagatingDetMeasurements.h"
 #include "TrackingTools/PatternTools/interface/TrajectoryMeasurement.h"
@@ -9,12 +9,14 @@
 #include "RecoTracker/TransientTrackingRecHit/interface/ProjectedRecHit2D.h"
 #include "RecHitPropagator.h"
 #include "TrackingTools/TransientTrackingRecHit/interface/InvalidTransientRecHit.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include <iostream>
 #include <memory>
 
 #include <typeinfo>
+
 
 namespace {
   inline
@@ -50,15 +52,6 @@ namespace {
 
     return std::make_pair(projectedHitPos, rotatedError);
   }
-
-
-  inline
-  std::pair<LocalPoint,LocalError> projectedPos(const TrackingRecHit& hit,
-                           const GeomDet& det,
-                           const TrajectoryStateOnSurface& ts, const StripClusterParameterEstimator* cpe) {
-      GlobalVector gdir = ts.globalParameters().momentum();
-      return projectedPos(hit, det, gdir, cpe);
-  }
 }
 
 // #include "TrackingTools/KalmanUpdators/interface/Chi2MeasurementEstimator.h"
@@ -71,15 +64,18 @@ TkGluedMeasurementDet::TkGluedMeasurementDet( const GluedGeomDet* gdet,
                                               const StripClusterParameterEstimator* cpe) :
   MeasurementDet(gdet), 
   theMatcher(matcher),  theCPE(cpe),
-  theMonoDet(nullptr), theStereoDet(nullptr)
+  theMonoDet(nullptr), theStereoDet(nullptr),
+  theTopology(nullptr)
 {}
 
 void TkGluedMeasurementDet::init(const MeasurementDet* monoDet,
-				 const MeasurementDet* stereoDet) {
+				 const MeasurementDet* stereoDet,
+                                 const TrackerTopology* tTopo) {
   theMonoDet = dynamic_cast<const TkStripMeasurementDet *>(monoDet);
   theStereoDet = dynamic_cast<const TkStripMeasurementDet *>(stereoDet);
+  theTopology = tTopo;
   
-  if ((theMonoDet == 0) || (theStereoDet == 0)) {
+  if ((theMonoDet == nullptr) || (theStereoDet == nullptr)) {
     throw MeasurementDetException("TkGluedMeasurementDet ERROR: Trying to glue a det which is not a TkStripMeasurementDet");
   }
 }
@@ -99,7 +95,7 @@ TkGluedMeasurementDet::recHits( const TrajectoryStateOnSurface& ts, const Measur
 bool TkGluedMeasurementDet::recHits(SimpleHitContainer & result,  
 				    const TrajectoryStateOnSurface& stateOnThisDet, 
 				    const MeasurementEstimator& est, const MeasurementTrackerEvent & data) const {
-  if unlikely((!theMonoDet->isActive(data)) && (!theStereoDet->isActive(data))) return false;
+  if UNLIKELY((!theMonoDet->isActive(data)) && (!theStereoDet->isActive(data))) return false;
   auto oldSize = result.size();
   HitCollectorForSimpleHits collector( &fastGeomDet(), theMatcher, theCPE, stateOnThisDet, est, result);
   collectRecHits(stateOnThisDet, data, collector);
@@ -116,7 +112,7 @@ bool TkGluedMeasurementDet::measurements( const TrajectoryStateOnSurface& stateO
                                           const MeasurementTrackerEvent & data,
 					  TempMeasurements & result) const {
   
-  if unlikely((!theMonoDet->isActive(data)) && (!theStereoDet->isActive(data))) {
+  if UNLIKELY((!theMonoDet->isActive(data)) && (!theStereoDet->isActive(data))) {
        //     LogDebug("TkStripMeasurementDet") << " DetID " << geomDet().geographicalId().rawId() << " (glued) fully inactive";
        result.add(theInactiveHit, 0.F);
        return true;
@@ -130,6 +126,16 @@ bool TkGluedMeasurementDet::measurements( const TrajectoryStateOnSurface& stateO
    
    if (result.size()>oldSize) return true;
    
+   auto id = geomDet().geographicalId().subdetId()-3;
+   auto l = theTopology->tobLayer(geomDet().geographicalId());
+   bool killHIP = (1==l) && (2==id); //TOB1
+   killHIP &= stateOnThisDet.globalMomentum().perp2()>est.minPt2ForHitRecoveryInGluedDet();
+   if (killHIP) {
+        result.add(theInactiveHit, 0.F); 
+        return true;
+   }
+
+
    //LogDebug("TkStripMeasurementDet") << "No hit found on TkGlued. Testing strips...  ";
    const BoundPlane &gluedPlane = geomDet().surface();
    if (  // sorry for the big IF, but I want to exploit short-circuiting of logic
@@ -139,7 +145,8 @@ bool TkGluedMeasurementDet::measurements( const TrajectoryStateOnSurface& stateO
 				      (theMonoDet->hasAllGoodChannels() || 
 				       testStrips(stateOnThisDet,gluedPlane,*theMonoDet)
 				       )
-				      ) /*Mono OK*/ || 
+				      ) /*Mono OK*/ 
+                                     && // was || 
 				     (theStereoDet->isActive(data) && 
 				      (theStereoDet->hasAllGoodChannels() || 
 				       testStrips(stateOnThisDet,gluedPlane,*theStereoDet)
@@ -218,9 +225,12 @@ TkGluedMeasurementDet::collectRecHits( const TrajectoryStateOnSurface& ts, const
 #endif
 
 #include<cstdint>
+#ifdef VI_STAT
 #include<cstdio>
+#endif
 namespace {
   struct Stat {
+#ifdef VI_STAT
     double totCall=0;
     double totMono=0;
     double totStereo=0;
@@ -259,8 +269,15 @@ namespace {
 	       totMono/totCall,totStereo/totCall,totComb/totCall,totMatched/matchT,
 	       filtMono/totCall,filtStereo/totCall,filtComb/matchF);
     }
+#else
+   Stat(){}
+   void match(uint64_t) const{}
+   void operator()(uint64_t,uint64_t, uint64_t, uint64_t) const {}
+#endif
   };
-
+#ifndef VI_STAT
+  const
+#endif
   Stat stat;
 }
 
@@ -499,7 +516,7 @@ TkGluedMeasurementDet::HitCollectorForFastMeasurements::add(SiStripMatchedRecHit
 
   std::pair<bool,double> diffEst = est_.estimate( stateOnThisDet_, hit2d);
   if (diffEst.first)
-    target_.add(std::move(hit2d.cloneSH()),diffEst.second);
+    target_.add(hit2d.cloneSH(),diffEst.second);
 }
 
 

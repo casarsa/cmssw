@@ -19,12 +19,12 @@
 class RPCEfficiencySecond :public DQMEDHarvester{
    public:
       explicit RPCEfficiencySecond(const edm::ParameterSet&);
-      ~RPCEfficiencySecond();
+      ~RPCEfficiencySecond() override;
       int rollY(std::string shortname,const std::vector<std::string>& rollNames);
   
  protected:
-  void beginJob();
-  void dqmEndLuminosityBlock(DQMStore::IBooker &, DQMStore::IGetter &, edm::LuminosityBlock const &, edm::EventSetup const&); //performed in the endLumi
+  void beginJob() override;
+  void dqmEndLuminosityBlock(DQMStore::IBooker &, DQMStore::IGetter &, edm::LuminosityBlock const &, edm::EventSetup const&) override; //performed in the endLumi
   void dqmEndJob(DQMStore::IBooker &, DQMStore::IGetter &) override; //performed in the endJob
 
  private:
@@ -83,7 +83,7 @@ class RPCEfficiencySecond :public DQMEDHarvester{
       edm::ESHandle<RPCGeometry> rpcGeo_;
 	  
     
-      std::map<std::string, MonitorElement*> bookDetUnitSeg(DQMStore::IBooker & ,RPCDetId & ,int nstrips,std::string );
+
   std::map<int, std::map<std::string, MonitorElement*> >  meCollection;
   
   bool init_;

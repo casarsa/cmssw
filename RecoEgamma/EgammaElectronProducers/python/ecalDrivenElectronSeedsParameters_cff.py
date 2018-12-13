@@ -1,10 +1,14 @@
 import FWCore.ParameterSet.Config as cms
 
+from RecoTracker.IterativeTracking.ElectronSeeds_cff import newCombinedSeeds as _newCombinedSeeds
+
 ecalDrivenElectronSeedsParameters = cms.PSet(
 
     # steering
     fromTrackerSeeds = cms.bool(True),
-    initialSeeds = cms.InputTag("newCombinedSeeds"),
+    initialSeeds = cms.InputTag(""),
+    #skip newCombinedSeeds if it is a trivial seed merger
+    initialSeedsVector = _newCombinedSeeds.seedCollections,
     preFilteredSeeds = cms.bool(False),
     useRecoVertex = cms.bool(False),
     vertices = cms.InputTag("offlinePrimaryVerticesWithBS"),
@@ -22,6 +26,13 @@ ecalDrivenElectronSeedsParameters = cms.PSet(
     # H/E
     applyHOverECut = cms.bool(True),
     hOverEConeSize = cms.double(0.15),
+    # H/E equivalent for HGCal
+    allowHGCal = cms.bool(False),
+    HGCalConfig = cms.PSet(
+        HGCEEInput = cms.InputTag('HGCalRecHit:HGCEERecHits'),
+        HGCFHInput = cms.InputTag('HGCalRecHit:HGCHEFRecHits'),
+        HGCBHInput = cms.InputTag('HGCalRecHit:HGCHEBRecHits')
+        ),
     #maxHOverE = cms.double(0.1),
     maxHOverEBarrel = cms.double(0.15),
     maxHOverEEndcaps = cms.double(0.15),
@@ -34,7 +45,12 @@ ecalDrivenElectronSeedsParameters = cms.PSet(
     # H/E towers
     hcalTowers = cms.InputTag("towerMaker"),
     hOverEPtMin = cms.double(0.),
-    
+
+    # sigma_ietaieta
+    applySigmaIEtaIEtaCut = cms.bool(False),
+    maxSigmaIEtaIEtaBarrel = cms.double(0.5),
+    maxSigmaIEtaIEtaEndcaps = cms.double(0.5),    
+
     # r/z windows
     nSigmasDeltaZ1 = cms.double(5.), ## in case beam spot is used for the matching
     deltaZ1WithVertex = cms.double(25.), ## in case reco vertex is used for the matching
@@ -69,3 +85,5 @@ ecalDrivenElectronSeedsParameters = cms.PSet(
     
 )
 
+from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+pp_on_AA_2018.toModify(ecalDrivenElectronSeedsParameters, SCEtCut = 15.0)

@@ -4,6 +4,8 @@ from PhysicsTools.Heppy.analyzers.core.Analyzer import Analyzer
 from PhysicsTools.Heppy.analyzers.core.AutoHandle import AutoHandle
 from PhysicsTools.HeppyCore.statistics.average import Average
 from PhysicsTools.Heppy.physicsutils.PileUpSummaryInfo import PileUpSummaryInfo
+import PhysicsTools.HeppyCore.framework.config as cfg
+
 from ROOT import TFile, TH1F
 
 class PileUpAnalyzer( Analyzer ):
@@ -57,11 +59,11 @@ class PileUpAnalyzer( Analyzer ):
           self.cfg_comp.puFileData = None
           
         if self.cfg_comp.isMC or self.cfg_comp.isEmbed:
-            if self.cfg_comp.puFileMC is None and self.cfg_comp.puFileData is None:
+            if not hasattr(self.cfg_comp,"puFileMC") or (self.cfg_comp.puFileMC is None and self.cfg_comp.puFileData is None):
                 self.enable = False
             else:
-                assert( os.path.isfile(self.cfg_comp.puFileMC) )
-                assert( os.path.isfile(self.cfg_comp.puFileData) )
+                assert( os.path.isfile(os.path.expandvars(self.cfg_comp.puFileMC)) )
+                assert( os.path.isfile(os.path.expandvars(self.cfg_comp.puFileData)) )
 
                 self.mcfile = TFile( self.cfg_comp.puFileMC )
                 self.mchist = self.mcfile.Get('pileup')
@@ -81,27 +83,31 @@ class PileUpAnalyzer( Analyzer ):
     def declareHandles(self):
         super(PileUpAnalyzer, self).declareHandles()
         self.mchandles['pusi'] =  AutoHandle(
-            'addPileupInfo',
-            'std::vector<PileupSummaryInfo>' 
+            'slimmedAddPileupInfo',
+            'std::vector<PileupSummaryInfo>',
+            fallbackLabel="addPileupInfo"
             ) 
+
         if self.allVertices == '_AUTO_':
             self.handles['vertices'] =  AutoHandle( "offlineSlimmedPrimaryVertices", 'std::vector<reco::Vertex>', fallbackLabel="offlinePrimaryVertices" ) 
         else:
             self.handles['vertices'] =  AutoHandle( self.allVertices, 'std::vector<reco::Vertex>' ) 
 
-    def beginLoop(self):
-        super(PileUpAnalyzer,self).beginLoop()
-        self.averages.add('vertexWeight', Average('vertexWeight') )
+    def beginLoop(self, setup):
+        super(PileUpAnalyzer,self).beginLoop(setup)
+        self.averages.add('puWeight', Average('puWeight') )
 
 
-    def process(self, iEvent, event):
-        self.readCollections( iEvent )
+    def process(self, event):
+        self.readCollections( event.input )
         ## if component is embed return (has no trigger obj)
         if self.cfg_comp.isEmbed :
           return True
 
-        event.vertexWeight = 1
+        event.puWeight = 1
         event.nPU = None
+        event.pileUpVertex_z = []
+        event.pileUpVertex_ptHat = []
         if self.cfg_comp.isMC:
             event.pileUpInfo = map( PileUpSummaryInfo,
                                     self.mchandles['pusi'].product() )
@@ -116,6 +122,13 @@ class PileUpAnalyzer( Analyzer ):
                     if self.doHists:
                         self.rawmcpileup.hist.Fill( event.nPU )
 
+                    ##get z position of on-time pile-up sorted by pt-hat
+                    ptHat_zPositions = zip(puInfo.getPU_pT_hats(),puInfo.getPU_zpositions())
+                    ptHat_zPositions.sort(reverse=True)
+                    for ptHat_zPosition in ptHat_zPositions:
+                        event.pileUpVertex_z.append(ptHat_zPosition[1])
+                        event.pileUpVertex_ptHat.append(ptHat_zPosition[0])
+            
             if event.nPU is None:
                 raise ValueError('nPU cannot be None! means that no pu info has been found for bunch crossing 0.')
         elif self.cfg_comp.isEmbed:
@@ -127,21 +140,30 @@ class PileUpAnalyzer( Analyzer ):
         if self.enable:
             bin = self.datahist.FindBin(event.nPU)
             if bin<1 or bin>self.datahist.GetNbinsX():
-                event.vertexWeight = 0
+                event.puWeight = 0
             else:
                 data = self.datahist.GetBinContent(bin)
                 mc = self.mchist.GetBinContent(bin)
                 #Protect 0 division!!!!
                 if mc !=0.0:
-                    event.vertexWeight = data/mc
+                    event.puWeight = data/mc
                 else:
-                    event.vertexWeight = 1
+                    event.puWeight = 1
                 
-        event.eventWeight *= event.vertexWeight
-        self.averages['vertexWeight'].add( event.vertexWeight )
+        event.eventWeight *= event.puWeight
+        self.averages['puWeight'].add( event.puWeight )
         return True
         
-    def write(self):
-        super(PileUpAnalyzer, self).write()
+    def write(self, setup):
+        super(PileUpAnalyzer, self).write(setup)
         if self.cfg_comp.isMC and self.doHists:
             self.rawmcpileup.write()
+
+
+setattr(PileUpAnalyzer,"defaultConfig", cfg.Analyzer(
+    class_object = PileUpAnalyzer,
+    true = True,  # use number of true interactions for reweighting
+    makeHists=False
+)
+)
+

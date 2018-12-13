@@ -29,10 +29,9 @@ samples.num   = [1,
 # produce generated paricles in acceptance               #
 ##########################################################
 
-genp = cms.EDFilter("PdgIdAndStatusCandViewSelector",
-    status = cms.vint32(3),
+genp = cms.EDFilter("CandViewSelector",
     src = cms.InputTag("genParticles"),
-    pdgId = cms.vint32(11)  # replaced in loop
+    cut = cms.string("isPromptFinalState() & abs(pdgId) = 11")  # replaced in loop
 )
 
 fiducial = cms.EDFilter("EtaPtMinCandViewSelector",
@@ -55,7 +54,7 @@ for samplenum in range(len(samples.names)):
     # clone genparticles and select correct type
     genpartname = "genpart"+samples.names[samplenum]
     globals()[genpartname] = genp.clone()
-    setattr(globals()[genpartname],"pdgId",cms.vint32(samples.pdgid[samplenum]) ) # set pdgId
+    setattr(globals()[genpartname],"cut",cms.string("isPromptFinalState() & abs(pdgId) = "+str(samples.pdgid[samplenum])) ) # set pdgId
     egammaSelectors *= globals()[genpartname]                            # add to sequence
 
     # clone generator fiducial region
@@ -66,7 +65,8 @@ for samplenum in range(len(samples.names)):
 
 egammaSelectors.remove(tmp)  # remove the initial dummy
 
-emdqm = cms.EDAnalyzer('EmDQM',
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+emdqm = DQMEDAnalyzer('EmDQM',
                            #processname = cms.string("HLT"), # can be obtained from triggerobject
                            autoConfMode = cms.untracked.bool(True),
                            triggerobject = cms.InputTag("hltTriggerSummaryRAW","","HLT"),
@@ -82,4 +82,3 @@ emdqm = cms.EDAnalyzer('EmDQM',
 
 # selectors go into separate "prevalidation" sequence
 egammaValidationSequence   = cms.Sequence(emdqm)
-egammaValidationSequenceFS = cms.Sequence(emdqm)

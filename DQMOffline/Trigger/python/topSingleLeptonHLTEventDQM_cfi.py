@@ -1,6 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
-topSingleLeptonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+topSingleLeptonHLTOfflineDQM = DQMEDAnalyzer('TopSingleLeptonHLTOfflineDQM',
   ## ------------------------------------------------------
   ## SETUP
   ##
@@ -11,7 +12,7 @@ topSingleLeptonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## sub-directory to write the monitor histograms to
     ## [mandatory] : should not be changed w/o explicit 
     ## communication to TopCom!
-    directory = cms.string("HLT/TopHLTOffline/Top/SemiLeptonic/"),
+    directory = cms.string("HLT/TOP/SemiLeptonic/"),
     ## [mandatory]
     sources = cms.PSet(
       muons = cms.InputTag("muons"),
@@ -31,13 +32,14 @@ topSingleLeptonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## will be filled w/o extras
     elecExtras = cms.PSet(
       ## when omitted electron plots will be filled w/o cut on electronId
+      electronId = cms.PSet( src = cms.InputTag("egmGsfElectronIDsForDQM:cutBasedElectronID-Fall17-94X-V1-tight"), pattern = cms.int32(1) ),
       #electronId = cms.PSet( src = cms.InputTag("mvaTrigV0"), pattern = cms.int32(1) ),
       ## when omitted electron plots will be filled w/o additional pre-
       ## selection of the electron candidates                                                                                            
       select = cms.string("pt>30 & abs(eta)<2.5"),
       ## when omitted isolated electron multiplicity plot will be equi-
       ## valent to inclusive electron multiplicity plot 
-      isolation = cms.string("(dr03TkSumPt+dr04EcalRecHitSumEt+dr04HcalTowerSumEt)/pt<0.1"),
+      #isolation = cms.string("(dr03TkSumPt+dr04EcalRecHitSumEt+dr04HcalTowerSumEt)/pt<0.1"),
     ),
     ## [optional] : when omitted all monitoring plots for muons
     ## will be filled w/o extras
@@ -86,8 +88,15 @@ topSingleLeptonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
   preselection = cms.PSet(
    trigger = cms.PSet(
       src    = cms.InputTag("TriggerResults","","HLT"),
-      select = cms.vstring(['HLT_Ele27_eta2p1_WP85_Gsf_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele27_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele32_eta2p1_WP85_Gsf_v','HLT_IsoMu24_IterTrk02_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_IterTrk02_CentralPFJet30_BTagCSV_v' , 'HLT_IsoMu20_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu20_eta2p1_IterTrk02_v', 'HLT_IsoTkMu20_eta2p1_IterTrk02_v', 'HLT_IsoMu24_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_eta2p1_IterTrk02_v', 'HLT_IsoTkMu24_eta2p1_IterTrk02_v'])
-    ),
+### Updating to HLT paths to be monitored by TOP PAG in 2017  
+       select = cms.vstring(['HLT_IsoMu27_v',
+                             'HLT_Mu50_v'
+                             'HLT_Ele35_WPTight_Gsf_v',
+                             'HLT_Ele38_WPTight_Gsf_v',
+                             'HLT_Ele40_WPTight_Gsf_v',
+                             
+       ]),
+  ),
     ## [optional] : when omitted no preselection is applied
     vertex = cms.PSet(
       src    = cms.InputTag("offlinePrimaryVertices"),
@@ -120,7 +129,7 @@ topSingleLeptonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
   )
 )
 
-topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
+topSingleMuonHLTOfflineDQM = DQMEDAnalyzer('TopSingleLeptonHLTOfflineDQM',
   ## ------------------------------------------------------
   ## SETUP
   ##
@@ -131,7 +140,7 @@ topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## sub-directory to write the monitor histograms to
     ## [mandatory] : should not be changed w/o explicit
     ## communication to TopCom!
-    directory = cms.string("HLT/TopHLTOffline/Top/SemiMuonic/"),
+    directory = cms.string("HLT/TOP/SemiMuonic/"),
     ## [mandatory]
     sources = cms.PSet(
       muons = cms.InputTag("muons"),
@@ -171,16 +180,16 @@ topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
       ## when omitted monitor histograms for b-tagging will not be filled
       jetBTaggers  = cms.PSet(
          trackCountingEff = cms.PSet(
-           label = cms.InputTag("jetProbabilityBJetTags" ),
+           label = cms.InputTag("pfJetProbabilityBJetTags" ),
            workingPoint = cms.double(0.275)
          ),
-         trackCountingPur = cms.PSet(
-           label = cms.InputTag("trackCountingHighPurBJetTags" ),
-           workingPoint = cms.double(3.41)
-         ),
+#         trackCountingPur = cms.PSet(
+#           label = cms.InputTag("pfTrackCountingHighPurBJetTags" ),
+#           workingPoint = cms.double(3.41)
+#         ),
          secondaryVertex  = cms.PSet(
-           label = cms.InputTag("combinedSecondaryVertexBJetTags"),
-           workingPoint = cms.double(0.679)
+           label = cms.InputTag("pfCombinedInclusiveSecondaryVertexV2BJetTags"),
+           workingPoint = cms.double(0.890)
          )
        ),
     ),
@@ -194,7 +203,9 @@ topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## will be empty
     triggerExtras = cms.PSet(
       src   = cms.InputTag("TriggerResults","","HLT"),
-      paths = cms.vstring(['HLT_IsoMu24_IterTrk02_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu20_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu20_eta2p1_IterTrk02_v', 'HLT_IsoTkMu20_eta2p1_IterTrk02_v', 'HLT_IsoMu24_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_eta2p1_IterTrk02_v', 'HLT_IsoTkMu24_eta2p1_IterTrk02_v'])
+### Updating to HLT paths to be monitored by TOP PAG in 2017
+        paths = cms.vstring(['HLT_IsoMu27_v',
+                             'HLT_Mu50_v'])
     )
   ),
   ## ------------------------------------------------------
@@ -207,8 +218,10 @@ topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
   preselection = cms.PSet(
    trigger = cms.PSet(
       src    = cms.InputTag("TriggerResults","","HLT"),
-      select = cms.vstring(['HLT_IsoMu24_IterTrk02_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu20_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu20_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu20_eta2p1_IterTrk02_v', 'HLT_IsoTkMu20_eta2p1_IterTrk02_v', 'HLT_IsoMu24_eta2p1_IterTrk02_CentralPFJet30_BTagCSV_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet40_v', 'HLT_IsoMu24_eta2p1_IterTrk02_TriCentralPFJet60_50_35_v', 'HLT_IsoMu24_eta2p1_IterTrk02_v', 'HLT_IsoTkMu24_eta2p1_IterTrk02_v'])
-    ),
+### Updating to HLT paths to be monitored by TOP PAG in 2017
+    select = cms.vstring(['HLT_IsoMu27_v',
+                          'HLT_Mu50_v'])
+  ),
     ## [optional] : when omitted no preselection is applied
     vertex = cms.PSet(
       src    = cms.InputTag("offlinePrimaryVertices"),
@@ -270,7 +283,7 @@ topSingleMuonHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
   )
 )
 
-topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
+topSingleElectronHLTOfflineDQM = DQMEDAnalyzer('TopSingleLeptonHLTOfflineDQM',
   ## ------------------------------------------------------
   ## SETUP
   ##
@@ -281,7 +294,7 @@ topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## sub-directory to write the monitor histograms to
     ## [mandatory] : should not be changed w/o explicit
     ## communication to TopCom!
-    directory = cms.string("HLT/TopHLTOffline/Top/SemiElectronic/"),
+    directory = cms.string("HLT/TOP/SemiElectronic/"),
     ## [mandatory]
     sources = cms.PSet(
       muons = cms.InputTag("muons"),
@@ -302,13 +315,14 @@ topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## will be filled w/o extras
     elecExtras = cms.PSet(
       ## when omitted electron plots will be filled w/o cut on electronId
+      electronId = cms.PSet( src = cms.InputTag("egmGsfElectronIDsForDQM:cutBasedElectronID-Fall17-94X-V1-tight"), pattern = cms.int32(1) ),
       #electronId = cms.PSet( src = cms.InputTag("mvaTrigV0"), pattern = cms.int32(1) ),
       ## when omitted electron plots will be filled w/o additional pre-
       ## selection of the electron candidates
       select = cms.string("pt>30 & abs(eta)<2.5"),
       ## when omitted isolated electron multiplicity plot will be equi-
       ## valent to inclusive electron multiplicity plot 
-      isolation = cms.string("(dr03TkSumPt+dr04EcalRecHitSumEt+dr04HcalTowerSumEt)/pt<0.1"),
+      #isolation = cms.string("(dr03TkSumPt+dr04EcalRecHitSumEt+dr04HcalTowerSumEt)/pt<0.1"),
     ),
     ## [optional] : when omitted all monitoring plots for jets
     ## will be filled w/o extras
@@ -323,16 +337,16 @@ topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
       ## when omitted monitor histograms for b-tagging will not be filled
       jetBTaggers  = cms.PSet(
          trackCountingEff = cms.PSet(
-           label = cms.InputTag("jetProbabilityBJetTags" ),
+           label = cms.InputTag("pfJetProbabilityBJetTags" ),
            workingPoint = cms.double(0.275)
          ),
-         trackCountingPur = cms.PSet(
-           label = cms.InputTag("trackCountingHighPurBJetTags" ),
-           workingPoint = cms.double(3.41)
-         ),
+#         trackCountingPur = cms.PSet(
+#           label = cms.InputTag("pfTrackCountingHighPurBJetTags" ),
+#           workingPoint = cms.double(3.41)
+#         ),
          secondaryVertex  = cms.PSet(
-           label = cms.InputTag("combinedSecondaryVertexBJetTags"),
-           workingPoint = cms.double(0.679)
+           label = cms.InputTag("pfCombinedInclusiveSecondaryVertexV2BJetTags"),
+           workingPoint = cms.double(0.890)
          )
        ),
     ),
@@ -346,7 +360,10 @@ topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
     ## will be empty
     triggerExtras = cms.PSet(
       src   = cms.InputTag("TriggerResults","","HLT"),
-      paths = cms.vstring(['HLT_Ele27_eta2p1_WP85_Gsf_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele27_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele32_eta2p1_WP85_Gsf_v'])
+### Updating to HLT paths to be monitored by TOP PAG in 2017
+    paths = cms.vstring(['HLT_Ele35_WPTight_Gsf_v',
+                         'HLT_Ele38_WPTight_Gsf_v',
+                         'HLT_Ele40_WPTight_Gsf_v',])       
     )
   ),
   ## ------------------------------------------------------
@@ -359,8 +376,11 @@ topSingleElectronHLTOfflineDQM = cms.EDAnalyzer("TopSingleLeptonHLTOfflineDQM",
   preselection = cms.PSet(
    trigger = cms.PSet(
       src    = cms.InputTag("TriggerResults","","HLT"),
-      select = cms.vstring(['HLT_Ele27_eta2p1_WP85_Gsf_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele27_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele27_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_CentralPFJet30_BTagCSV_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet40_v', 'HLT_Ele32_eta2p1_WP85_Gsf_TriCentralPFJet60_50_35_v', 'HLT_Ele32_eta2p1_WP85_Gsf_v'])
-    ),
+### Updating to HLT paths to be monitored by TOP PAG in 2017                                                                                                                 
+     select = cms.vstring(['HLT_Ele35_WPTight_Gsf_v',
+                           'HLT_Ele38_WPTight_Gsf_v',
+                           'HLT_Ele40_WPTight_Gsf_v',])            
+  ),
     ## [optional] : when omitted no preselection is applied
     vertex = cms.PSet(
       src    = cms.InputTag("offlinePrimaryVertices"),

@@ -16,7 +16,7 @@ class dso_hidden CosmicNavigationSchool : public SimpleNavigationSchool {
 public:
   CosmicNavigationSchool(const GeometricSearchTracker* theTracker,
 			 const MagneticField* field);
-  ~CosmicNavigationSchool(){ cleanMemory();}
+  ~CosmicNavigationSchool() override{ cleanMemory();}
 
   class CosmicNavigationSchoolConfiguration{
   public:
@@ -42,8 +42,9 @@ protected:
 private:
 
   //FakeDetLayer* theFakeDetLayer;
-  void linkBarrelLayers( SymmetricLayerFinder& symFinder);
+  void linkBarrelLayers( SymmetricLayerFinder& symFinder) override;
   //void linkForwardLayers( SymmetricLayerFinder& symFinder); 
+  using SimpleNavigationSchool::establishInverseRelations;
   void establishInverseRelations( SymmetricLayerFinder& symFinder );
   void buildAdditionalBarrelLinks();
   void buildAdditionalForwardLinks(SymmetricLayerFinder& symFinder);
@@ -55,7 +56,6 @@ private:
 #include "SimpleBarrelNavigableLayer.h"
 #include "SimpleForwardNavigableLayer.h"
 #include "SimpleNavigableLayer.h"
-#include "DiskLessInnerRadius.h"
 #include "SymmetricLayerFinder.h"
 
 #include "TrackingTools/DetLayers/interface/BarrelDetLayer.h"
@@ -103,7 +103,7 @@ void CosmicNavigationSchool::build(const GeometricSearchTracker* theInputTracker
   // Get barrel layers
   vector<BarrelDetLayer const*> const& blc = theTracker->barrelLayers();
   for ( auto i = blc.begin(); i != blc.end(); i++) {
-    if (conf.noPXB && (*i)->subDetector() == GeomDetEnumerators::PixelBarrel) continue;
+    if (conf.noPXB && GeomDetEnumerators::isTrackerPixel((*i)->subDetector())) continue;
     if (conf.noTOB && (*i)->subDetector() == GeomDetEnumerators::TOB) continue;
     if (conf.noTIB && (*i)->subDetector() == GeomDetEnumerators::TIB) continue;
     theBarrelLayers.push_back( (*i) );
@@ -112,7 +112,7 @@ void CosmicNavigationSchool::build(const GeometricSearchTracker* theInputTracker
   // get forward layers
   vector<ForwardDetLayer const*> const& flc = theTracker->forwardLayers();
   for ( auto i = flc.begin(); i != flc.end(); i++) {
-    if (conf.noPXF && (*i)->subDetector() == GeomDetEnumerators::PixelEndcap) continue;
+    if (conf.noPXF && GeomDetEnumerators::isTrackerPixel((*i)->subDetector())) continue;
     if (conf.noTEC && (*i)->subDetector() == GeomDetEnumerators::TEC) continue;
     if (conf.noTID && (*i)->subDetector() == GeomDetEnumerators::TID) continue;
     theForwardLayers.push_back( (*i) );
@@ -137,7 +137,7 @@ void CosmicNavigationSchool::build(const GeometricSearchTracker* theInputTracker
 
     //add TOB1->TOB1 inward link
     const std::vector< const BarrelDetLayer * > &  tobL = theInputTracker->tobLayers();
-    if (tobL.size()>=1){
+    if (!tobL.empty()){
       if (conf.allSelf){
 	LogDebug("CosmicNavigationSchool")<<" adding all TOB self search.";
 	for (auto lIt = tobL.begin(); lIt!=tobL.end(); ++lIt)
@@ -150,7 +150,7 @@ void CosmicNavigationSchool::build(const GeometricSearchTracker* theInputTracker
       }
     }
     const std::vector< const BarrelDetLayer * > &  tibL = theInputTracker->tibLayers();
-    if (tibL.size()>=1){
+    if (!tibL.empty()){
       if (conf.allSelf){
 	LogDebug("CosmicNavigationSchool")<<" adding all TIB self search.";
 	for (auto lIt = tibL.begin(); lIt!=tibL.end(); ++lIt)
@@ -163,7 +163,7 @@ void CosmicNavigationSchool::build(const GeometricSearchTracker* theInputTracker
       }
     }
     const std::vector< const BarrelDetLayer * > &  pxbL = theInputTracker->pixelBarrelLayers();
-    if (pxbL.size()>=1){
+    if (!pxbL.empty()){
       if (conf.allSelf){
 	LogDebug("CosmicNavigationSchool")<<" adding all PXB self search.";
         for (auto lIt = pxbL.begin(); lIt!=pxbL.end(); ++lIt)
@@ -209,7 +209,6 @@ linkBarrelLayers( SymmetricLayerFinder& symFinder)
                                    rightFL,theField, 5.,false));
   }
 }
-
 
 // identical to  SimpleNavigationSchool but for the last additional stuff
 void CosmicNavigationSchool::establishInverseRelations(SymmetricLayerFinder& symFinder) {
@@ -320,7 +319,7 @@ public:
 				      const MagneticField* field,
 				      const CosmicNavigationSchoolConfiguration conf);
 
-  ~SkippingLayerCosmicNavigationSchool(){cleanMemory();};
+  ~SkippingLayerCosmicNavigationSchool() override{cleanMemory();};
 };
 
 
@@ -337,7 +336,6 @@ SkippingLayerCosmicNavigationSchool::SkippingLayerCosmicNavigationSchool(const G
 #include <FWCore/Utilities/interface/ESInputTag.h>
 
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
@@ -354,33 +352,28 @@ SkippingLayerCosmicNavigationSchool::SkippingLayerCosmicNavigationSchool(const G
 class dso_hidden SkippingLayerCosmicNavigationSchoolESProducer final : public edm::ESProducer {
  public:
   SkippingLayerCosmicNavigationSchoolESProducer(const edm::ParameterSet& iConfig) {
-  theNavigationPSet = iConfig;
-  theNavigationSchoolName = theNavigationPSet.getParameter<std::string>("ComponentName");
-  //the following line is needed to tell the framework what
-  // data is being produced
-  setWhatProduced(this, theNavigationSchoolName);
-  
-}
+    theNavigationPSet = iConfig;
+    theNavigationSchoolName = theNavigationPSet.getParameter<std::string>("ComponentName");
+    //the following line is needed to tell the framework what
+    // data is being produced
+    setWhatProduced(this, theNavigationSchoolName);
+  }
 
+  ~SkippingLayerCosmicNavigationSchoolESProducer() override{}
 
-  ~SkippingLayerCosmicNavigationSchoolESProducer(){}
-
-   typedef boost::shared_ptr<NavigationSchool> ReturnType;
-
+  using ReturnType = std::unique_ptr<NavigationSchool>;
 
   ReturnType produce(const NavigationSchoolRecord&);
 
   // ----------member data ---------------------------
   edm::ParameterSet theNavigationPSet;
   std::string theNavigationSchoolName;
-  boost::shared_ptr<NavigationSchool> theNavigationSchool ;
-
-
 };
 
+SkippingLayerCosmicNavigationSchoolESProducer::ReturnType
+SkippingLayerCosmicNavigationSchoolESProducer::produce(const NavigationSchoolRecord& iRecord) {
 
-SkippingLayerCosmicNavigationSchoolESProducer::ReturnType SkippingLayerCosmicNavigationSchoolESProducer::produce(const NavigationSchoolRecord& iRecord){
-  using namespace edm::es;
+  std::unique_ptr<NavigationSchool> theNavigationSchool ;
 
   // get the field
   edm::ESHandle<MagneticField>                field;

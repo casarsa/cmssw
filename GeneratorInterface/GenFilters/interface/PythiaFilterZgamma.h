@@ -22,17 +22,20 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+namespace edm {
+  class HepMCProduct;
+}
 
 class PythiaFilterZgamma : public edm::EDFilter {
    public:
       explicit PythiaFilterZgamma(const edm::ParameterSet&);
-      ~PythiaFilterZgamma();
+      ~PythiaFilterZgamma() override;
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
 
    private:
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        
        int selProc; // sel_Proc = 1 : ->Z->e+e-, sel_Proc = 2: Z->mu+mu-
        

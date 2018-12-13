@@ -11,7 +11,7 @@
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h" 
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "Geometry/CommonDetUnit/interface/GeomDetUnit.h"
+#include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "Geometry/CommonDetUnit/interface/GeomDetType.h"
 #include "Geometry/CommonTopologies/interface/StripTopology.h"
 #include "Geometry/TrackerGeometryBuilder/interface/StripGeomDetUnit.h"
@@ -38,9 +38,9 @@ SiStripBadStripFromASCIIFile::SiStripBadStripFromASCIIFile( const edm::Parameter
  }
 
 
-SiStripBadStrip *SiStripBadStripFromASCIIFile::getNewObject() {
+std::unique_ptr<SiStripBadStrip> SiStripBadStripFromASCIIFile::getNewObject() {
 
-  SiStripBadStrip* SiStripBadStrip_ = new SiStripBadStrip();
+  auto SiStripBadStrip_ = std::make_unique<SiStripBadStrip>();
 
    // open file and fill DB
   ifstream infile((fp_.fullPath()).c_str());

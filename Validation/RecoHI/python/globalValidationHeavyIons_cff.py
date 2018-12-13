@@ -2,13 +2,13 @@ import FWCore.ParameterSet.Config as cms
 
 from Validation.Configuration.globalValidation_cff import *
 from Validation.RecoHI.TrackValidationHeavyIons_cff import *
-from Validation.RecoHI.JetValidationHeavyIons_cff import *
+from Validation.RecoJets.JetValidationHeavyIons_cff import *
 from Validation.RecoHI.muonValidationHeavyIons_cff import *
 
 # change track label for rechits
 hiTracks = 'hiGeneralTracks'
 PixelTrackingRecHitsValid.src = hiTracks
-StripTrackingRecHitsValid.trajectoryInput = hiTracks
+StripTrackingRecHitsValid.tracksInput = hiTracks
 
 # change ecal labels for basic clusters and super-clusters
 egammaBasicClusterAnalyzer.barrelBasicClusterCollection = cms.InputTag("islandBasicClusters","islandBarrelBasicClusters")
@@ -23,10 +23,10 @@ egammaSuperClusterAnalyzer.endcapCorSuperClusterCollection = cms.InputTag("corre
 
 
 # prevalidation sequence for all EDFilters and EDProducers
+#
 globalPrevalidationHI = cms.Sequence(
     hiTrackPrevalidation
   * hiRecoMuonPrevalidation
-
 )
 
 
@@ -49,7 +49,6 @@ globalValidationHI = cms.Sequence(
     
     + hiTrackValidation         # validation of 'hiGeneralTracks'
     + hiJetValidation           # validation of pileup jet finders
-    + hiRecoMuonValidation      # validation of offline muon reco
-   
+    + hiRecoMuonValidation      # validation of offline muon reco   
     )
 

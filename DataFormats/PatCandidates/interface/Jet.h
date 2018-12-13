@@ -30,11 +30,13 @@
 #include "DataFormats/BTauReco/interface/TrackIPTagInfo.h"
 #include "DataFormats/BTauReco/interface/TrackProbabilityTagInfo.h"
 #include "DataFormats/BTauReco/interface/TrackCountingTagInfo.h"
+#include "DataFormats/BTauReco/interface/CandSoftLeptonTagInfo.h"
 #include "DataFormats/BTauReco/interface/SoftLeptonTagInfo.h"
 #include "SimDataFormats/JetMatching/interface/JetFlavourInfo.h"
 
 #include "DataFormats/BTauReco/interface/CandSecondaryVertexTagInfo.h"
 #include "DataFormats/BTauReco/interface/SecondaryVertexTagInfo.h"
+#include "DataFormats/BTauReco/interface/BoostedDoubleSVTagInfo.h"
 #include "DataFormats/PatCandidates/interface/JetCorrFactors.h"
 #include "DataFormats/JetReco/interface/JetID.h"
 
@@ -44,6 +46,8 @@
 #include "DataFormats/Common/interface/Ptr.h"
 #include "DataFormats/Common/interface/OwnVector.h"
 #include "DataFormats/Common/interface/AtomicPtrCache.h"
+
+#include <numeric>
 
 
 // Define typedefs for convenience
@@ -70,6 +74,7 @@ namespace pat {
   typedef std::vector<edm::FwdPtr<reco::BaseTagInfo> > TagInfoFwdPtrCollection;
   typedef std::vector<edm::FwdPtr<reco::PFCandidate> > PFCandidateFwdPtrCollection;
   typedef std::vector<edm::FwdPtr<CaloTower> > CaloTowerFwdPtrCollection;
+  typedef std::vector<edm::Ptr<pat::Jet> > JetPtrCollection;
 
 
   class Jet : public PATObject<reco::Jet> {
@@ -78,6 +83,7 @@ namespace pat {
     /// function, which should be non accessible to any other user
     friend class PATJetProducer;
     friend class PATJetSlimmer;
+    friend class PATJetUpdater;
 
     public:
 
@@ -89,10 +95,14 @@ namespace pat {
       Jet(const edm::RefToBase<reco::Jet> & aJetRef);
       /// constructor from ref to reco::Jet
       Jet(const edm::Ptr<reco::Jet> & aJetRef);
+      /// constructure from ref to pat::Jet
+      Jet(const edm::RefToBase<pat::Jet> & aJetRef);
+      /// constructure from ref to pat::Jet
+      Jet(const edm::Ptr<pat::Jet> & aJetRef);
       /// destructor
-      virtual ~Jet();
+      ~Jet() override;
       /// required reimplementation of the Candidate's clone method
-      virtual Jet * clone() const { return new Jet(*this); }
+      Jet * clone() const override { return new Jet(*this); }
 
       /// ---- methods for MC matching ----
 
@@ -145,10 +155,10 @@ namespace pat {
       Jet correctedJet(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const;
       /// p4 of the jet corrected up to the given level for the set
       /// of jet energy correction factors, which is currently in use
-      const LorentzVector& correctedP4(const std::string& level, const std::string& flavor="none", const std::string& set="") const { return correctedJet(level, flavor, set).p4(); };
+      const LorentzVector correctedP4(const std::string& level, const std::string& flavor="none", const std::string& set="") const { return correctedJet(level, flavor, set).p4(); };
       /// p4 of the jet corrected up to the given level for the set
       /// of jet energy correction factors, which is currently in use
-      const LorentzVector& correctedP4(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const { return correctedJet(level, flavor, set).p4(); };
+      const LorentzVector correctedP4(const unsigned int& level, const JetCorrFactors::Flavor& flavor=JetCorrFactors::NONE, const unsigned int& set=0) const { return correctedJet(level, flavor, set).p4(); };
 
   private:
       /// index of the set of jec factors with given label; returns -1 if no set
@@ -175,7 +185,7 @@ namespace pat {
       /// get list of tag info labels
       std::vector<std::string> const & tagInfoLabels() const { return tagInfoLabels_; }
       /// check to see if the given tag info is nonzero
-      bool hasTagInfo( const std::string label) const { return tagInfo(label) != 0; }
+      bool hasTagInfo( const std::string label) const { return tagInfo(label) != nullptr; }
       /// get a tagInfo with the given name, or NULL if none is found.
       /// You should omit the 'TagInfos' part from the label
       const reco::BaseTagInfo            * tagInfo(const std::string &label) const;
@@ -187,12 +197,14 @@ namespace pat {
       /// get a tagInfo with the given name and type or NULL if none is found.
       /// If the label is empty or not specified, it returns the first tagInfo of that type (if any one exists)
       /// you should omit the 'TagInfos' part from the label
+      const reco::CandSoftLeptonTagInfo  * tagInfoCandSoftLepton(const std::string &label="") const;
       const reco::SoftLeptonTagInfo      * tagInfoSoftLepton(const std::string &label="") const;
       /// get a tagInfo with the given name and type or NULL if none is found.
       /// If the label is empty or not specified, it returns the first tagInfo of that type (if any one exists)
       /// you should omit the 'TagInfos' part from the label
       const reco::CandSecondaryVertexTagInfo * tagInfoCandSecondaryVertex(const std::string &label="") const;
       const reco::SecondaryVertexTagInfo     * tagInfoSecondaryVertex(const std::string &label="") const;
+      const reco::BoostedDoubleSVTagInfo     * tagInfoBoostedDoubleSV(const std::string &label="") const;
       /// method to add a algolabel-discriminator pair
       void addBDiscriminatorPair(const std::pair<std::string, float> & thePair);
       /// sets a tagInfo with the given name from an edm::Ptr<T> to it.
@@ -253,6 +265,8 @@ namespace pat {
 	if (specificJPT_.empty()) throw cms::Exception("Type Mismatch") << "This PAT jet was not made from a JPTJet.\n";
 	return specificJPT_[0];
       }
+      /// check to see if the PFSpecific object is stored
+      bool hasPFSpecific() const { return !specificPF_.empty(); }
       /// retrieve the pf specific part of the jet
       const PFSpecific& pfSpecific() const {
 	if (specificPF_.empty()) throw cms::Exception("Type Mismatch") << "This PAT jet was not made from a PFJet.\n";
@@ -407,7 +421,12 @@ namespace pat {
       /// neutralMultiplicity
       int neutralMultiplicity () const {return pfSpecific().mNeutralMultiplicity;}
 
+      /// hoEnergy
+      float hoEnergy () const {return pfSpecific().mHOEnergy;}
+      /// hoEnergyFraction (relative to corrected jet energy)
+      float hoEnergyFraction () const {return hoEnergy()/((jecSetsAvailable() ? jecFactor(0) : 1.)*energy());}
       /// convert generic constituent to specific type
+
       //  static CaloTowerPtr caloTower (const reco::Candidate* fConstituent);
       /// get specific constituent of the CaloJet.
       /// if the caloTowers were embedded, this reference is transient only and must not be persisted
@@ -420,7 +439,10 @@ namespace pat {
       ///    If using refactorized PAT, return that. (constituents size > 0)
       ///    Else check the old version of PAT (embedded constituents size > 0)
       ///    Else return the reco Jet number of constituents
-      virtual const reco::Candidate * daughter(size_t i) const;
+      const reco::Candidate * daughter(size_t i) const override;
+
+      reco::CandidatePtr daughterPtr( size_t i ) const override;
+      const reco::CompositePtrCandidate::daughters & daughterPtrVector() const override;
 
       using reco::LeafCandidate::daughter; // avoid hiding the base implementation
 
@@ -428,7 +450,13 @@ namespace pat {
       ///    If using refactorized PAT, return that. (constituents size > 0)
       ///    Else check the old version of PAT (embedded constituents size > 0)
       ///    Else return the reco Jet number of constituents
-      virtual size_t numberOfDaughters() const;
+      size_t numberOfDaughters() const override;
+
+      /// clear daughter references
+      void clearDaughters() override {
+        PATObject<reco::Jet>::clearDaughters();
+        daughtersTemp_.reset(); // need to reset daughtersTemp_ as well
+      }
 
       /// accessing Jet ID information
       reco::JetID const & jetID () const { return jetID_;}
@@ -472,7 +500,46 @@ namespace pat {
       }
 
       /// pipe operator (introduced to use pat::Jet with PFTopProjectors)
-      friend std::ostream& reco::operator<<(std::ostream& out, const Jet& obj);
+      friend std::ostream& reco::operator<<(std::ostream& out, const pat::Jet& obj);
+
+
+
+      /// Access to subjet list
+      pat::JetPtrCollection const & subjets( unsigned int index = 0 ) const;
+
+
+      /// String access to subjet list
+      pat::JetPtrCollection const & subjets( std::string const & label ) const ;
+
+      /// Add new set of subjets
+      void addSubjets( pat::JetPtrCollection const & pieces, std::string const & label = ""  );
+
+      /// Check to see if the subjet collection exists
+      bool hasSubjets( std::string const & label ) const { return find( subjetLabels_.begin(), subjetLabels_.end(), label) != subjetLabels_.end(); }
+
+      /// Number of subjet collections
+      unsigned int nSubjetCollections(  ) const { return  subjetCollections_.size(); }
+
+      /// Subjet collection names
+      std::vector<std::string> const & subjetCollectionNames() const { return subjetLabels_; }
+
+      /// Access to mass of subjets
+      double groomedMass(unsigned int index = 0) const{
+	auto const& sub = subjets(index);
+	return nSubjetCollections() > index && !sub.empty() ?
+	  std::accumulate( sub.begin(), sub.end(),
+			   reco::Candidate::LorentzVector(),
+			   [] (reco::Candidate::LorentzVector const & a, reco::CandidatePtr const & b){return a + b->p4();}).mass() :
+	  -1.0;
+      }
+      double groomedMass(std::string const & label) const{
+	auto const& sub = subjets(label);
+	return hasSubjets(label) && !sub.empty() ?
+	  std::accumulate( sub.begin(), sub.end(),
+			   reco::Candidate::LorentzVector(),
+			   [] (reco::Candidate::LorentzVector const & a, reco::CandidatePtr const & b){return a + b->p4();}).mass() :
+	  -1.0;
+      }
 
     protected:
 
@@ -489,6 +556,11 @@ namespace pat {
       reco::PFCandidateCollection pfCandidates_; // Compatibility embedding
       reco::PFCandidateFwdPtrVector pfCandidatesFwdPtr_; // Refactorized content embedding
 
+
+      // ---- Jet Substructure ----
+      std::vector< pat::JetPtrCollection> subjetCollections_;
+      std::vector< std::string>          subjetLabels_;
+      edm::AtomicPtrCache<std::vector< reco::CandidatePtr > > daughtersTemp_;
 
       // ---- MC info ----
 
@@ -559,7 +631,7 @@ namespace pat {
             return static_cast<const T *>( baseTagInfo );
           }
         }
-        return 0;
+        return nullptr;
       }
 
       template<typename T> const T * tagInfoByTypeOrLabel(const std::string &label="") const
@@ -575,6 +647,7 @@ namespace pat {
       /// cache calo towers
       void cacheCaloTowers() const;
       void cachePFCandidates() const;
+      void cacheDaughters() const;
 
   };
 }

@@ -1,9 +1,6 @@
 #include "DataFormats/JetReco/interface/PileupJetIdentifier.h"
 
-#include <iostream>
-#include <sstream>
-#include <iomanip>
-#include <limits>
+#include <cstring>
 
 // ------------------------------------------------------------------------------------------
 StoredPileupJetIdentifier::StoredPileupJetIdentifier() 

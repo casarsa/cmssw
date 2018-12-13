@@ -1,6 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 
-from L1Trigger.L1TCalorimeter.caloStage1Params_cfi import *
+### CCLA include latest RCT calibrations from UCT
+from L1Trigger.L1TCalorimeter.caloStage1RCTLuts_cff import *
+RCTConfigProducers.eicIsolationThreshold = cms.uint32(7)
+RCTConfigProducers.hOeCut = cms.double(999)
+RCTConfigProducers.eMinForHoECut = cms.double(999)
+RCTConfigProducers.eMaxForHoECut = cms.double(999)
+RCTConfigProducers.hMinForHoECut = cms.double(999)
+RCTConfigProducers.eMinForFGCut = cms.double(999)
+
+from L1Trigger.L1TCalorimeter.caloStage1Params_HI_cfi import *
+
 from Configuration.StandardSequences.RawToDigi_Repacked_cff import ecalDigis, hcalDigis
 
 # RCT
@@ -10,15 +20,13 @@ simRctDigis.hcalDigis = cms.VInputTag(cms.InputTag('hcalDigis'))
 
 # stage 1 itself
 from L1Trigger.L1TCalorimeter.L1TCaloStage1_cff import *
-rctUpgradeFormatDigis.regionTag = cms.InputTag("simRctDigis")
-rctUpgradeFormatDigis.emTag = cms.InputTag("simRctDigis")
-caloStage1Digis.FirmwareVersion = cms.uint32(1) # 1=HI algos, 2=PP al
-caloStage1Params.jetSeedThreshold = cms.double(0.)
+simRctUpgradeFormatDigis.regionTag = cms.InputTag("simRctDigis")
+simRctUpgradeFormatDigis.emTag = cms.InputTag("simRctDigis")
 
 # GT
 from L1Trigger.Configuration.SimL1Emulator_cff import simGtDigis
-simGtDigis.GmtInputTag = 'gtDigis'
-simGtDigis.GctInputTag = 'caloStage1LegacyFormatDigis'
+simGtDigis.GmtInputTag = 'simGmtDigis'
+simGtDigis.GctInputTag = 'simCaloStage1LegacyFormatDigis'
 simGtDigis.TechnicalTriggersInputTags = cms.VInputTag( )
 
 # the sequence

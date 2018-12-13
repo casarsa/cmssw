@@ -18,12 +18,12 @@ public:
   RPCEventSummary(const edm::ParameterSet& ps);
   
   /// Destructor
-  virtual ~RPCEventSummary();
+  ~RPCEventSummary() override;
 
 
  protected:
-  void beginJob();
-  void dqmEndLuminosityBlock(DQMStore::IBooker &, DQMStore::IGetter &, edm::LuminosityBlock const &, edm::EventSetup const&); //performed in the endLumi
+  void beginJob() override;
+  void dqmEndLuminosityBlock(DQMStore::IBooker &, DQMStore::IGetter &, edm::LuminosityBlock const &, edm::EventSetup const&) override; //performed in the endLumi
   void dqmEndJob(DQMStore::IBooker &, DQMStore::IGetter &) override; //performed in the endJob
 
  
@@ -35,7 +35,7 @@ public:
   bool enableReportSummary_;
   int prescaleFactor_, minimumEvents_;
 
-  bool init_;
+  bool init_, isIn_;
    bool offlineDQM_;
   int lumiCounter_;
   std::string globalFolder_, prefixFolder_;

@@ -8,14 +8,11 @@ Forward declarations of types in the EDM.
 ----------------------------------------------------------------------*/
 #include <memory>
 
-#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
-
 namespace edm 
 {
   class BasicHandle;
   class EDProductGetter;
   class ProductID;
-  class OutputHandle;
   class RefCore;
   class WrapperBase;
 
@@ -42,9 +39,6 @@ namespace edm
     template <class T> class BaseVectorHolder;
     template <class T, class REFVECTOR> class VectorHolder;
   }
-  typedef std::shared_ptr<reftobase::RefHolderBase> helper_ptr;
-  typedef reftobase::RefVectorHolderBase helper_vector;
-  typedef std::shared_ptr<reftobase::RefVectorHolderBase> helper_vector_ptr;
 }
 
 #endif

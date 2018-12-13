@@ -1,3 +1,4 @@
+from __future__ import print_function
 import csv,os,sys,coral,array
 from RecoLuminosity.LumiDB import argparse,sessionManager,CommonUtil,idDealer,dbUtil,dataDML,revisionDML
 beamenergy=4.0e03
@@ -47,7 +48,7 @@ def fetchOldData(schema,oldlumidataid):
         qConditionStr='DATA_ID=:dataid'
         qCondition=coral.AttributeList()
         qCondition.extend('dataid','unsigned long long')
-        print 'oldlumidataid ',oldlumidataid
+        print('oldlumidataid ',oldlumidataid)
         qCondition['dataid'].setData(int(oldlumidataid))
         qResult=coral.AttributeList()
         qResult.extend('lumilsnum','unsigned int')
@@ -70,7 +71,7 @@ def fetchOldData(schema,oldlumidataid):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             lumilsnum=cursor.currentRow()['lumilsnum'].data()
             beamstatus=cursor.currentRow()['beamstatus'].data()
             beamenergy=cursor.currentRow()['beamenergy'].data()
@@ -156,7 +157,7 @@ def insertLumischemaV2(dbsession,runnum,datasource,perlsrawdata,perbunchrawdata,
             beam2intensityArray=array.array('f')
             for bxidx in range(1,3565):
                 lumifraction=0.0
-                if perbunchrawdata.has_key(bxidx):
+                if bxidx in perbunchrawdata:
                     lumifraction=perbunchrawdata[bxidx]
                 bxlumivalue=float(instlumi*lumifraction)
                 bxdataArray.append(bxlumivalue)
@@ -183,7 +184,7 @@ def insertLumischemaV2(dbsession,runnum,datasource,perlsrawdata,perbunchrawdata,
             perlsdata=[cmslsnum,float(instlumi),instlumierror,instlumiquality,beamstatus,beamenergy,numorbit,mystartorbit,cmsbxindexblob,beam1intensityblob,beam2intensityblob,bxdataocc1blob,bxerrorocc1blob,bxqualityocc1blob,bxdataocc2blob,bxerrorocc2blob,bxqualityocc2blob,bxdataetblob,bxerroretblob,bxqualityetblob]
         lumilsdata[cmslsnum]=perlsdata
     #print 'toinsert from scratch',lumilsdata
-    print lumilsdata
+    print(lumilsdata)
     dbsession.transaction().start(False)
     (revision_id,entry_id,data_id)=dataDML.addLumiRunDataToBranch(dbsession.nominalSchema(),runnum,lumirundata,branchinfo,'LUMIDATA')
     dataDML.bulkInsertLumiLSSummary(dbsession,runnum,data_id,lumilsdata,'LUMISUMMARYV2',withDetails=withDetails)
@@ -204,7 +205,7 @@ def parsebunchFile(ifilename):
         for i in convertlist(result):
             perbunchdata[i[0]]=i[1]
         return perbunchdata
-    except Exception,e:
+    except Exception as e:
         raise RuntimeError(str(e))
     
 def parseLSFile(ifilename):
@@ -219,7 +220,7 @@ def parseLSFile(ifilename):
         for i in convertlist(result):
             perlsdata[i[0]]=i[1]/constfactor
         return perlsdata
-    except Exception,e:
+    except Exception as e:
         raise RuntimeError(str(e))
 
 def main(*args):

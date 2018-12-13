@@ -1,8 +1,10 @@
-from Mixins import PrintOptions, _SimpleParameterTypeBase, _ParameterTypeBase, _Parameterizable, _ConfigureComponent, _Labelable, _TypedParameterizable, _Unlabelable
+from Mixins import PrintOptions, _SimpleParameterTypeBase, _ParameterTypeBase, _Parameterizable, _ConfigureComponent, _Labelable, _TypedParameterizable, _Unlabelable, _modifyParametersFromDict
 from Mixins import _ValidatingParameterListBase
 from ExceptionHandling import format_typename, format_outerframe
 
 import copy
+import math
+import six
 
 class _Untracked(object):
     """Class type for 'untracked' to allow nice syntax"""
@@ -101,11 +103,7 @@ class uint64(_SimpleParameterTypeBase):
 class double(_SimpleParameterTypeBase):
     @staticmethod
     def _isValid(value):
-        try:
-            tmp = float(value)
-            return True
-        except:
-            return False
+        return isinstance(value, (int, long, float))
     @staticmethod
     def _valueFromString(value):
         """only used for cfg-parsing"""
@@ -114,13 +112,26 @@ class double(_SimpleParameterTypeBase):
         parameterSet.addDouble(self.isTracked(), myname, float(self.value()))
     def __nonzero__(self):
         return self.value()!=0.
+    def configValue(self, options=PrintOptions()):
+        return double._pythonValue(self._value)
+    @staticmethod
+    def _pythonValue(value):
+        if math.isinf(value):
+            if value > 0:
+                return "float('inf')"
+            else:
+                return "-float('inf')"
+        if math.isnan(value):
+            return "float('nan')"
+        return str(value)
+
 
 
 import __builtin__
 class bool(_SimpleParameterTypeBase):
     @staticmethod
     def _isValid(value):
-        return (isinstance(value,type(False)) or isinstance(value(type(True))))
+        return (isinstance(value,type(False)) or isinstance(value,type(True)))
     @staticmethod
     def _valueFromString(value):
         """only used for cfg-parsing"""
@@ -178,7 +189,7 @@ class string(_SimpleParameterTypeBase):
 class EventID(_ParameterTypeBase):
     def __init__(self, run, *args):
         super(EventID,self).__init__()
-        if isinstance(run, basestring):
+        if isinstance(run, str):
             self.__run = self._valueFromString(run).__run
             self.__luminosityBlock = self._valueFromString(run).__luminosityBlock
             self.__event = self._valueFromString(run).__event
@@ -223,7 +234,7 @@ class EventID(_ParameterTypeBase):
 class LuminosityBlockID(_ParameterTypeBase):
     def __init__(self, run, block=None):
         super(LuminosityBlockID,self).__init__()
-        if isinstance(run, basestring):
+        if isinstance(run, str):
             self.__run = self._valueFromString(run).__run
             self.__block = self._valueFromString(run).__block
         else:
@@ -242,7 +253,7 @@ class LuminosityBlockID(_ParameterTypeBase):
         parts = value.split(":")
         return LuminosityBlockID(int(parts[0]), int(parts[1]))
     def pythonValue(self, options=PrintOptions()):
-          return str(self.__run)+ ', '+str(self.__block)
+        return str(self.__run)+ ', '+str(self.__block)
     def cppID(self, parameterSet):
         return parameterSet.newLuminosityBlockID(self.run(), self.luminosityBlock())
     def insertInto(self, parameterSet, myname):
@@ -252,7 +263,7 @@ class LuminosityBlockID(_ParameterTypeBase):
 class LuminosityBlockRange(_ParameterTypeBase):
     def __init__(self, start, startSub=None, end=None, endSub=None):
         super(LuminosityBlockRange,self).__init__()
-        if isinstance(start, basestring):
+        if isinstance(start, str):
             parsed = self._valueFromString(start)
             self.__start    = parsed.__start
             self.__startSub = parsed.__startSub
@@ -266,7 +277,7 @@ class LuminosityBlockRange(_ParameterTypeBase):
         if self.__end < self.__start:
             raise RuntimeError('LuminosityBlockRange '+str(self.__start)+':'+str(self.__startSub)+'-'+str(self.__end)+':'+str(self.__endSub)+' out of order')
         # 0 luminosity block number is a special case that means no limit
-        if self.__end == self.__start and (self.__endSub <> 0 and self.__endSub < self.__startSub):
+        if self.__end == self.__start and (self.__endSub != 0 and self.__endSub < self.__startSub):
             raise RuntimeError('LuminosityBlockRange '+str(self.__start)+':'+str(self.__startSub)+'-'+str(self.__end)+':'+str(self.__endSub)+' out of order')
     def start(self):
         return self.__start
@@ -303,8 +314,8 @@ class LuminosityBlockRange(_ParameterTypeBase):
         return LuminosityBlockRange(int(startParts[0]), int(startParts[1]),
                         int(endParts[0]), int(endParts[1]))
     def pythonValue(self, options=PrintOptions()):
-          return str(self.__start) + ', ' + str(self.__startSub) + ', ' \
-               + str(self.__end)   + ', ' + str(self.__endSub)
+        return str(self.__start) + ', ' + str(self.__startSub) + ', ' \
+             + str(self.__end)   + ', ' + str(self.__endSub)
     def cppID(self, parameterSet):
         return parameterSet.newLuminosityBlockRange(self.start(), self.startSub(),self.end(), self.endSub())
     def insertInto(self, parameterSet, myname):
@@ -313,7 +324,7 @@ class LuminosityBlockRange(_ParameterTypeBase):
 class EventRange(_ParameterTypeBase):
     def __init__(self, start, *args):
         super(EventRange,self).__init__()
-        if isinstance(start, basestring):
+        if isinstance(start, str):
             parsed = self._valueFromString(start)
             self.__start     = parsed.__start
             self.__startLumi = parsed.__startLumi
@@ -340,7 +351,7 @@ class EventRange(_ParameterTypeBase):
         if self.__end < self.__start or (self.__end == self.__start and self.__endLumi < self.__startLumi):
             raise RuntimeError('EventRange '+str(self.__start)+':'+str(self.__startLumi)+':'+str(self.__startSub)+'-'+str(self.__end)+':'+str(self.__endLumi)+':'+str(self.__endSub)+' out of order')
         # 0 event number is a special case that means no limit
-        if self.__end == self.__start and self.__endLumi == self.__startLumi and (self.__endSub <> 0 and self.__endSub < self.__startSub):
+        if self.__end == self.__start and self.__endLumi == self.__startLumi and (self.__endSub != 0 and self.__endSub < self.__startSub):
             raise RuntimeError('EventRange '+str(self.__start)+':'+str(self.__startLumi)+':'+str(self.__startSub)+'-'+str(self.__end)+':'+str(self.__endLumi)+':'+str(self.__endSub)+' out of order')
     def start(self):
         return self.__start
@@ -368,11 +379,11 @@ class EventRange(_ParameterTypeBase):
         except IndexError:
             endParts = parts[0].split(":") # If just "1:2" turn into "1:2-1:2"
 
-	brun = startParts[0]
-	erun = endParts[0]
+        brun = startParts[0]
+        erun = endParts[0]
         s = len(startParts)
-	e = len(endParts)
-	if s != e or s < 2 or s > 3:
+        e = len(endParts)
+        if s != e or s < 2 or s > 3:
             raise RuntimeError('EventRange ctor must have 4 or 6 arguments')
         i = s - 1
         if startParts[i].lower() == "0":
@@ -441,6 +452,12 @@ class InputTag(_ParameterTypeBase):
             when looking backwards in time for the data product.
         """
         return "@skipCurrentProcess"
+    @staticmethod
+    def currentProcess():
+        """When used as the process name this value will make the framework use the current process
+            as the process when looking for the data product.
+        """
+        return "@currentProcess"
     def configValue(self, options=PrintOptions()):
         result = self.__moduleLabel
         if self.__productInstance != "" or self.__processName != "":
@@ -462,11 +479,11 @@ class InputTag(_ParameterTypeBase):
     def _isValid(value):
         return True
     def __cmp__(self,other):
-        v = self.__moduleLabel <> other.__moduleLabel
+        v = self.__moduleLabel != other.__moduleLabel
         if not v:
-            v= self.__productInstance <> other.__productInstance
+            v= self.__productInstance != other.__productInstance
             if not v:
-                v=self.__processName <> other.__processName
+                v=self.__processName != other.__processName
         return v
     def value(self):
         "Return the string rep"
@@ -538,9 +555,9 @@ class ESInputTag(_ParameterTypeBase):
     def _isValid(value):
         return True
     def __cmp__(self,other):
-        v = self.__moduleLabel <> other.__moduleLabel
+        v = self.__moduleLabel != other.__moduleLabel
         if not v:
-            v= self.__data <> other.__data
+            v= self.__data != other.__data
         return v
     def value(self):
         "Return the string rep"
@@ -564,9 +581,9 @@ class ESInputTag(_ParameterTypeBase):
             toks = moduleLabel.split(":")
             self.__moduleLabel = toks[0]
             if len(toks) > 1:
-               self.__data = toks[1]
+                self.__data = toks[1]
             if len(toks) > 2:
-               raise RuntimeError("an ESInputTag was passed the value'"+moduleLabel+"' which contains more than one ':'")
+                raise RuntimeError("an ESInputTag was passed the value'"+moduleLabel+"' which contains more than one ':'")
 
     # convert to the wrapper class for C++ ESInputTags
     def cppTag(self, parameterSet):
@@ -590,7 +607,7 @@ class FileInPath(_SimpleParameterTypeBase):
     def _valueFromString(value):
         return FileInPath(value)
     def insertInto(self, parameterSet, myname):
-      parameterSet.addNewFileInPath( self.isTracked(), myname, self.value() )
+        parameterSet.addNewFileInPath( self.isTracked(), myname, self.value() )
 
 class SecSource(_ParameterTypeBase,_TypedParameterizable,_ConfigureComponent,_Labelable):
     def __init__(self,type_,*arg,**args):
@@ -604,7 +621,7 @@ class SecSource(_ParameterTypeBase,_TypedParameterizable,_ConfigureComponent,_La
     def configTypeName(self):
         return "secsource"
     def configValue(self, options=PrintOptions()):
-       return self.dumpConfig(options)
+        return self.dumpConfig(options)
     def dumpPython(self, options=PrintOptions()):
         return _TypedParameterizable.dumpPython(self, options)
     def copy(self):
@@ -641,21 +658,9 @@ class PSet(_ParameterTypeBase,_Parameterizable,_ConfigureComponent,_Labelable):
         return config
     def dumpPython(self, options=PrintOptions()):
         return self.pythonTypeName()+"(\n"+_Parameterizable.dumpPython(self, options)+options.indentation()+")"
-    def clone(self, *args, **params):
+    def clone(self, **params):
         myparams = self.parameters_()
-        if len(params):
-            #need to treat items both in params and myparams specially
-            for key,value in params.iteritems():
-                if key in myparams:
-                    if isinstance(value,_ParameterTypeBase):
-                        myparams[key] =value
-                    else:
-                        myparams[key].setValue(value)
-                else:
-                    if isinstance(value,_ParameterTypeBase):
-                        myparams[key]=value
-                    else:
-                        self._Parameterizable__raiseBadSetAttr(key)
+        _modifyParametersFromDict(myparams, params, self._Parameterizable__raiseBadSetAttr)
         returnValue = PSet(**myparams)
         returnValue.setIsTracked(self.isTracked())
         returnValue._isModified = False
@@ -747,6 +752,9 @@ class vdouble(_ValidatingParameterListBase):
         return vdouble(*_ValidatingParameterListBase._itemsFromStrings(value,double._valueFromString))
     def insertInto(self, parameterSet, myname):
         parameterSet.addVDouble(self.isTracked(), myname, self.value())
+    def pythonValueForItem(self,item, options):
+        return double._pythonValue(item)
+
 
 
 
@@ -796,7 +804,7 @@ class VLuminosityBlockID(_ValidatingParameterListBase):
         cppIDs = list()
         for i in self:
             item = i
-            if isinstance(item, basestring):
+            if isinstance(item, str):
                 item = LuminosityBlockID._valueFromString(item)
             cppIDs.append(item.cppID(parameterSet))
         parameterSet.addVLuminosityBlockID(self.isTracked(), myname, cppIDs)
@@ -809,11 +817,11 @@ class VInputTag(_ValidatingParameterListBase):
     def _itemIsValid(item):
         return InputTag._isValid(item)
     def configValueForItem(self,item,options):
-       # we tolerate strings as members
-       if isinstance(item, str):
-         return '"'+item+'"'
-       else:
-         return InputTag.formatValueForConfig(item)
+        # we tolerate strings as members
+        if isinstance(item, str):
+            return '"'+item+'"'
+        else:
+            return InputTag.formatValueForConfig(item)
     def pythonValueForItem(self,item, options):
         # we tolerate strings as members
         if isinstance(item, str):
@@ -839,11 +847,11 @@ class VESInputTag(_ValidatingParameterListBase):
     def _itemIsValid(item):
         return ESInputTag._isValid(item)
     def configValueForItem(self,item,options):
-       # we tolerate strings as members
-       if isinstance(item, str):
-         return '"'+item+'"'
-       else:
-         return ESInputTag.formatValueForConfig(item)
+        # we tolerate strings as members
+        if isinstance(item, str):
+            return '"'+item+'"'
+        else:
+            return ESInputTag.formatValueForConfig(item)
     def pythonValueForItem(self,item, options):
         # we tolerate strings as members
         if isinstance(item, str):
@@ -872,7 +880,7 @@ class VEventID(_ValidatingParameterListBase):
         return EventID.formatValueForConfig(item)
     def pythonValueForItem(self,item, options):
         # we tolerate strings as members
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             return '"'+item+'"'
         else:
             return item.dumpPython(options)
@@ -883,7 +891,7 @@ class VEventID(_ValidatingParameterListBase):
         cppIDs = list()
         for i in self:
             item = i
-            if isinstance(item, basestring):
+            if isinstance(item, str):
                 item = EventID._valueFromString(item)
             cppIDs.append(item.cppID(parameterSet))
         parameterSet.addVEventID(self.isTracked(), myname, cppIDs)
@@ -898,7 +906,7 @@ class VLuminosityBlockRange(_ValidatingParameterListBase):
     def configValueForItem(self,item,options):
         return LuminosityBlockRange.formatValueForConfig(item)
     def pythonValueForItem(self,item, options):
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             return '"'+item+'"'
         else:
             return item.dumpPython(options)
@@ -909,7 +917,7 @@ class VLuminosityBlockRange(_ValidatingParameterListBase):
         cppIDs = list()
         for i in self:
             item = i
-            if isinstance(item, basestring):
+            if isinstance(item, str):
                 item = LuminosityBlockRange._valueFromString(item)
             cppIDs.append(item.cppID(parameterSet))
         parameterSet.addVLuminosityBlockRange(self.isTracked(), myname, cppIDs)
@@ -924,7 +932,7 @@ class VEventRange(_ValidatingParameterListBase):
     def configValueForItem(self,item,options):
         return EventRange.formatValueForConfig(item)
     def pythonValueForItem(self,item, options):
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             return '"'+item+'"'
         else:
             return item.dumpPython(options)
@@ -935,7 +943,7 @@ class VEventRange(_ValidatingParameterListBase):
         cppIDs = list()
         for i in self:
             item = i
-            if isinstance(item, basestring):
+            if isinstance(item, str):
                 item = EventRange._valueFromString(item)
             cppIDs.append(item.cppID(parameterSet))
         parameterSet.addVEventRange(self.isTracked(), myname, cppIDs)
@@ -973,8 +981,8 @@ def makeCppPSet(module,cppPSetMaker):
     # if this isn't a dictionary, treat it as an object which holds PSets
     if not isinstance(module,dict):
         module = dict( ( (x,getattr(module,x)) for x in dir(module)) )  
-        
-    for x,p in module.iteritems():
+
+    for x,p in six.iteritems(module):
         if isinstance(p,PSet):
             p.insertInto(cppPSetMaker,x)
     return cppPSetMaker
@@ -1123,7 +1131,7 @@ def convertToPSet(name,module):
 
 def convertToVPSet( **kw ):
     returnValue = VPSet()
-    for name,module in kw.iteritems():
+    for name,module in six.iteritems(kw):
         returnValue.append(convertToPSet(name,module))
     return returnValue
 
@@ -1144,8 +1152,13 @@ class EDAlias(_ConfigureComponent,_Labelable):
         self.__dict__[name]=value
         self.__parameterNames.append(name)
 
+    def __delattr__(self,attr):
+        if attr in self.__parameterNames:
+            self.__parameterNames.remove(attr)
+        return super(EDAlias,self).__delattr__(attr)
+
     def __setParameters(self,parameters):
-        for name,value in parameters.iteritems():
+        for name,value in six.iteritems(parameters):
             self.__addParameter(name, value)
 
     def _place(self,name,proc):
@@ -1230,6 +1243,32 @@ if __name__ == "__main__":
             i = uint32._valueFromString("0xA")
             self.assertEqual(i.value(),10)
 
+        def testdouble(self):
+            d = double(1)
+            self.assertEqual(d.value(),1)
+            self.assertEqual(d.pythonValue(),'1')
+            d = double(float('Inf'))
+            self.assertEqual(d,float('Inf'))
+            self.assertEqual(d.pythonValue(),"float('inf')")
+            d = double(-float('Inf'))
+            self.assertEqual(d,-float('Inf'))
+            self.assertEqual(d.pythonValue(),"-float('inf')")
+            d = double(float('Nan'))
+            self.assert_(math.isnan(d.value()))
+            self.assertEqual(d.pythonValue(),"float('nan')")
+        def testvdouble(self):
+            d = vdouble(1)
+            self.assertEqual(d.value(),[1])
+            self.assertEqual(d.dumpPython(),'cms.vdouble(1)')
+            d = vdouble(float('inf'))
+            self.assertEqual(d,[float('inf')])
+            self.assertEqual(d.dumpPython(),"cms.vdouble(float('inf'))")
+            d = vdouble(-float('Inf'))
+            self.assertEqual(d,[-float('inf')])
+            self.assertEqual(d.dumpPython(),"cms.vdouble(-float('inf'))")
+            d = vdouble(float('nan'))
+            self.assert_(math.isnan(d[0]))
+            self.assertEqual(d.dumpPython(),"cms.vdouble(float('nan'))")
         def testvint32(self):
             v = vint32()
             self.assertEqual(len(v),0)
@@ -1258,6 +1297,7 @@ if __name__ == "__main__":
             b = bool._valueFromString("2")
             self.assertEqual(b.value(),True)
             self.assertEqual(repr(b), "cms.bool(True)")
+            self.assertRaises(ValueError, lambda: bool("False"))
         def testString(self):
             s=string('this is a test')
             self.assertEqual(s.value(),'this is a test')
@@ -1370,6 +1410,17 @@ if __name__ == "__main__":
             self.assertFalse(p4.b.isTracked())
             self.assertFalse(p4.a.b.isTracked())
             self.assert_(p4.b.b.isTracked())
+            p4 = p3.clone( i = None, b = dict(b = 5))
+            self.assertEqual(p3.i.value(), 1)
+            self.assertEqual(hasattr(p4,"i"), False)
+            self.assertEqual(p3.b.b.value(), 1)
+            self.assertEqual(p4.b.b.value(), 5)
+            self.assertEqual(p4.a.b.value(), 1)
+            self.assertEqual(p4.ui.value(), 2)
+            # couple of cases of "weird" arguments
+            self.assertRaises(TypeError, p4.clone, dict(b = None))
+            self.assertRaises(TypeError, p4.clone, [])
+            self.assertRaises(TypeError, p4.clone, 42)
         def testVPSet(self):
             p1 = VPSet(PSet(anInt = int32(1)), PSet(anInt=int32(2)))
             self.assertEqual(len(p1),2)
@@ -1380,22 +1431,26 @@ if __name__ == "__main__":
             self.assertRaises(SyntaxError, lambda : VPSet(foo=PSet()))
         def testEDAlias(self):
             aliasfoo2 = EDAlias(foo2 = VPSet(PSet(type = string("Foo2"))))
+            self.assert_(hasattr(aliasfoo2,"foo2"))
+            del aliasfoo2.foo2
+            self.assert_(not hasattr(aliasfoo2,"foo2"))
+            self.assert_("foo2" not in aliasfoo2.parameterNames_())
 
         def testFileInPath(self):
             f = FileInPath("FWCore/ParameterSet/python/Types.py")
             self.assertEqual(f.configValue(), "'FWCore/ParameterSet/python/Types.py'")
         def testSecSource(self):
-            s1 = SecSource("PoolSource", fileNames = vstring("foo.root"))
-            self.assertEqual(s1.type_(), "PoolSource")
+            s1 = SecSource("EmbeddedRootSource", fileNames = vstring("foo.root"))
+            self.assertEqual(s1.type_(), "EmbeddedRootSource")
             self.assertEqual(s1.configValue(),
-"""PoolSource { """+"""
+"""EmbeddedRootSource { """+"""
     vstring fileNames = {
         'foo.root'
     }
 
 }
 """)
-            s1=SecSource("PoolSource",type=int32(1))
+            s1=SecSource("EmbeddedRootSource",type=int32(1))
             self.assertEqual(s1.type.value(),1)
         def testEventID(self):
             eid = EventID(2, 0, 3)
@@ -1506,7 +1561,7 @@ if __name__ == "__main__":
             self.assert_(hasattr(convert.pset.q.p,'a'))
             self.assertEqual(p.a,convert.pset.q.p.a)
             for i in p.parameterNames_():
-              self.assertEqual(str(getattr(p,i)),str(getattr(convert.pset.p,i)))
+                self.assertEqual(str(getattr(p,i)),str(getattr(convert.pset.p,i)))
         def testVPSetConversion(self):
             p = PSet(a = untracked.int32(7))
             q = PSet(b = int32(1), p = p)
@@ -1518,5 +1573,44 @@ if __name__ == "__main__":
             self.assertEqual(v[0].a,convert.pset.v[0].a)
             self.assertEqual(v[1].b,convert.pset.v[1].b)
             self.assertEqual(v[1].p.a, convert.pset.v[1].p.a)
+
+    class testInequalities(unittest.TestCase):
+        def testnumbers(self):
+            self.assertGreater(int32(5), int32(-1))
+            self.assertGreater(int64(100), 99)
+            self.assertLess(3, uint32(4))
+            self.assertLess(6.999999999, uint64(7))
+            self.assertLessEqual(-5, int32(-5))
+            self.assertLessEqual(int32(-5), uint32(1))
+            self.assertGreaterEqual(double(5.3), uint32(5))
+            self.assertGreater(double(5.3), uint64(5))
+            self.assertGreater(double(5.3), uint64(5))
+            self.assertGreater(6, double(5))
+            self.assertLess(uint64(0xFFFFFFFFFFFFFFFF), 0xFFFFFFFFFFFFFFFF+1)
+            self.assertEqual(double(5.0), double(5))
+        def teststring(self):
+            self.assertGreater(string("I am a string"), "I am a strinf")
+            self.assertGreaterEqual("I am a string", string("I am a string"))
+            self.assertLess(5, string("I am a string"))
+        def testincompatibletypes(self):
+            import sys
+            if sys.version_info < (3, 0): #python 2, comparing incompatible types compares the class name
+                self.assertLess(double(3), "I am a string")
+                self.assertLess(3, string("I am a string"))
+                self.assertLess(double(5), "4")
+            else:                         #python 3, comparing incompatible types fails
+                with self.assertRaises(TypeError):
+                    double(3) < "I am a string"
+                with self.assertRaises(TypeError):
+                    3 < string("I am a string")
+        def testinfinity(self):
+            self.assertLess(1e99, double(float("inf")))
+            self.assertLess(double(1e99), float("inf"))
+            self.assertGreater(1e99, double(float("-inf")))
+            self.assertEqual(double(float("inf")), float("inf"))
+        def testnan(self):
+            nan = double(float("nan"))
+            self.assertNotEqual(nan, nan)
+            self.assertFalse(nan > 3 or nan < 3 or nan == 3)
 
     unittest.main()

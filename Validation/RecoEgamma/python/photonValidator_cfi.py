@@ -1,15 +1,15 @@
 import FWCore.ParameterSet.Config as cms
 
-import SimTracker.TrackAssociation.TrackAssociatorByHits_cfi
-trackAssociatorByHitsForPhotonValidation = SimTracker.TrackAssociation.TrackAssociatorByHits_cfi.TrackAssociatorByHits.clone()
-trackAssociatorByHitsForPhotonValidation.ComponentName = cms.string('trackAssociatorByHitsForPhotonValidation')
+import SimTracker.TrackAssociatorProducers.trackAssociatorByHits_cfi as tabh
+trackAssociatorByHitsForPhotonValidation = tabh.trackAssociatorByHits.clone()
 trackAssociatorByHitsForPhotonValidation.Cut_RecoToSim = 0.5
 trackAssociatorByHitsForPhotonValidation.Quality_SimToReco = 0.5
 trackAssociatorByHitsForPhotonValidation.Purity_SimToReco = 0.5
 trackAssociatorByHitsForPhotonValidation.SimToRecoDenominator = 'reco'
 
 
-photonValidation = cms.EDAnalyzer("PhotonValidator",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+photonValidation = DQMEDAnalyzer('PhotonValidator',
     ComponentName = cms.string('photonValidation'),
     OutputFileName = cms.string('PhotonValidationHistos.root'),
     scEndcapProducer = cms.string('correctedMulti5x5SuperClustersWithPreshower'),
@@ -140,4 +140,6 @@ photonValidation = cms.EDAnalyzer("PhotonValidator",
  
 )
 
+from Configuration.Eras.Modifier_fastSim_cff import fastSim
+fastSim.toModify(photonValidation, fastSim = True)
 

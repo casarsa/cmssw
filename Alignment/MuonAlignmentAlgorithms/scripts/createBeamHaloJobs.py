@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os, sys, re, optparse, math
 
 copyargs = sys.argv[:]
@@ -19,7 +20,7 @@ dependencies.
 DIRNAME        directories will be named DIRNAME01, DIRNAME02, etc.
 PATTERN        a quoted combination of "phiy", "phipos", "phiz"
 INITIALGEOM    SQLite file containing muon geometry with tag names
-               CSCAlignmentRcd, CSCAlignmentErrorRcd
+               CSCAlignmentRcd, CSCAlignmentErrorExtendedRcd
 INPUTFILES     Python file defining 'fileNames', a list of input files as
                strings"""
 
@@ -153,7 +154,7 @@ parser.add_option("--json",
                   dest="json")
 
 if len(sys.argv) < 5:
-    raise SystemError, "Too few arguments.\n\n"+parser.format_help()
+    raise SystemError("Too few arguments.\n\n"+parser.format_help())
 
 DIRNAME = sys.argv[1]
 PATTERN = re.split("\s+", sys.argv[2])
@@ -194,13 +195,13 @@ fileNamesBlocks=[]
 execfile(INPUTFILES)
 njobs = options.subjobs
 if (options.inputInBlocks):
-  njobs = len(fileNamesBlocks)
-  if njobs==0:
-    print "while --inputInBlocks is specified, the INPUTFILES has no blocks!"
-    sys.exit()
+    njobs = len(fileNamesBlocks)
+    if njobs==0:
+        print("while --inputInBlocks is specified, the INPUTFILES has no blocks!")
+        sys.exit()
 
 stepsize = int(math.ceil(1.*len(fileNames)/options.subjobs))
-pwd = str(os.getcwdu())
+pwd = str(os.getcwd())
 
 bsubfile = ["#!/bin/sh", ""]
 bsubnames = []
@@ -274,9 +275,9 @@ python $ALIGNMENT_AFSDIR/Alignment/MuonAlignmentAlgorithms/scripts/relativeConst
     for jobnumber in range(njobs):
         gather_fileName = "%sgather%03d.sh" % (directory, jobnumber)
         if not options.inputInBlocks:
-          inputfiles = " ".join(fileNames[jobnumber*stepsize:(jobnumber+1)*stepsize])
+            inputfiles = " ".join(fileNames[jobnumber*stepsize:(jobnumber+1)*stepsize])
         else:
-          inputfiles = " ".join(fileNamesBlocks[jobnumber])
+            inputfiles = " ".join(fileNamesBlocks[jobnumber])
 
         if len(inputfiles) > 0:
             file(gather_fileName, "w").write("""#/bin/sh
@@ -340,10 +341,10 @@ cp -f *.tmp *.root $ALIGNMENT_AFSDIR/%(directory)s
             else: waiter = "-w \"ended(%s)\"" % last_align
             if options.big: queue = "cmscaf1nd"
             else: queue = "cmscaf1nh"
-            
-	    if user_mail: bsubfile.append("bsub -R \"type==SLC5_64\" -q %s -J \"%s_gather%03d\" -u %s %s gather%03d.sh" % (queue, director, jobnumber, user_mail, waiter, jobnumber))
+
+            if user_mail: bsubfile.append("bsub -R \"type==SLC5_64\" -q %s -J \"%s_gather%03d\" -u %s %s gather%03d.sh" % (queue, director, jobnumber, user_mail, waiter, jobnumber))
             else: bsubfile.append("bsub -R \"type==SLC5_64\" -q %s -J \"%s_gather%03d\" %s gather%03d.sh" % (queue, director, jobnumber, waiter, jobnumber))
-	    
+
             bsubnames.append("ended(%s_gather%03d)" % (director, jobnumber))
 
     file("%sconvert-db-to-xml_cfg.py" % directory, "w").write("""from Alignment.MuonAlignment.convertSQLitetoXML_cfg import *
@@ -359,9 +360,9 @@ process.MuonGeometryDBConverter.outputXML.suppressCSCLayers = True
 process.MuonGeometryDBConverter.getAPEs = True
 process.PoolDBESSource.toGet = cms.VPSet(
     cms.PSet(record = cms.string(\"DTAlignmentRcd\"), tag = cms.string(\"DTAlignmentRcd\")),
-    cms.PSet(record = cms.string(\"DTAlignmentErrorRcd\"), tag = cms.string(\"DTAlignmentErrorRcd\")),
+    cms.PSet(record = cms.string(\"DTAlignmentErrorExtendedRcd\"), tag = cms.string(\"DTAlignmentErrorExtendedRcd\")),
     cms.PSet(record = cms.string(\"CSCAlignmentRcd\"), tag = cms.string(\"CSCAlignmentRcd\")),
-    cms.PSet(record = cms.string(\"CSCAlignmentErrorRcd\"), tag = cms.string(\"CSCAlignmentErrorRcd\")),
+    cms.PSet(record = cms.string(\"CSCAlignmentErrorExtendedRcd\"), tag = cms.string(\"CSCAlignmentErrorExtendedRcd\")),
       )
 """ % vars())
 
@@ -434,10 +435,10 @@ fi
     os.system("chmod +x %salign.sh" % directory)
 
     bsubfile.append("echo %salign.sh" % directory)
-    
+
     if user_mail: bsubfile.append("bsub -R \"type==SLC5_64\" -q cmscaf1nd -J \"%s_align\" -u %s -w \"%s\" align.sh" % (director, user_mail, " && ".join(bsubnames)))
     else: bsubfile.append("bsub -R \"type==SLC5_64\" -q cmscaf1nd -J \"%s_align\" -w \"%s\" align.sh" % (director, " && ".join(bsubnames)))
-    
+
     bsubfile.append("cd ..")
     bsubnames = []
     last_align = "%s_align" % director

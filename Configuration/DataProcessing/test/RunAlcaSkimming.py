@@ -6,9 +6,11 @@ Test wrapper to generate an alca skimming config and push it into cmsRun for
 testing with a few input files etc from the command line
 
 """
+from __future__ import print_function
 
 import sys
 import getopt
+import pickle
 
 from Configuration.DataProcessing.GetScenario import getScenario
 
@@ -24,41 +26,41 @@ class RunAlcaSkimming:
     def __call__(self):
         if self.scenario == None:
             msg = "No --scenario specified"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
         if self.inputLFN == None:
             msg = "No --lfn specified"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         if len(self.skims) == 0:
             msg = "No --skims provided, need at least one"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         if self.globalTag == None:
             msg = "No --global-tag specified"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         try:
             scenario = getScenario(self.scenario)
-        except Exception, ex:
+        except Exception as ex:
             msg = "Error getting Scenario implementation for %s\n" % (
                 self.scenario,)
             msg += str(ex)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
-        print "Retrieved Scenario: %s" % self.scenario
-        print "Creating ALCA skimming config with skims:"
+        print("Retrieved Scenario: %s" % self.scenario)
+        print("Creating ALCA skimming config with skims:")
         for skim in self.skims:
-            print " => %s" % skim
+            print(" => %s" % skim)
             
         try:
             process = scenario.alcaSkim(self.skims, globaltag = self.globalTag)
-        except NotImplementedError, ex:
-            print "This scenario does not support Alca Skimming:\n"
+        except NotImplementedError as ex:
+            print("This scenario does not support Alca Skimming:\n")
             return
-        except Exception, ex:
+        except Exception as ex:
             msg = "Error creating Alca Skimming config:\n"
             msg += str(ex)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         process.source.fileNames.append(self.inputLFN)
 
@@ -66,11 +68,26 @@ class RunAlcaSkimming:
 
         process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 
+        pklFile = open("RunAlcaSkimmingCfg.pkl", "w")
         psetFile = open("RunAlcaSkimmingCfg.py", "w")
-        psetFile.write(process.dumpPython())
-        psetFile.close()
+        try:
+            pickle.dump(process, pklFile)
+            psetFile.write("import FWCore.ParameterSet.Config as cms\n")
+            psetFile.write("import pickle\n")
+            psetFile.write("handle = open('RunAlcaSkimmingCfg.pkl')\n")
+            psetFile.write("process = pickle.load(handle)\n")
+            psetFile.write("handle.close()\n")
+            psetFile.close()
+        except Exception as ex:
+            print("Error writing out PSet:")
+            print(traceback.format_exc())
+            raise ex
+        finally:
+            psetFile.close()
+            pklFile.close()
+
         cmsRun = "cmsRun -e RunAlcaSkimmingCfg.py"
-        print "Now do:\n%s" % cmsRun
+        print("Now do:\n%s" % cmsRun)
 
 
 
@@ -93,9 +110,9 @@ python2.4 RunAlcaSkimming.py --scenario=Cosmics --lfn=/store/whatever --skims=Mu
 """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "", valid)
-    except getopt.GetoptError, ex:
-        print usage
-        print str(ex)
+    except getopt.GetoptError as ex:
+        print(usage)
+        print(str(ex))
         sys.exit(1)
 
 

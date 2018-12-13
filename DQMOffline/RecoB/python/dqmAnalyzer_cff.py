@@ -1,10 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-#not useful anymore for b-tagging but used in some other sequences
-from JetMETCorrections.Configuration.JetCorrectionServices_cff import ak4PFL2L3,ak4PFL2Relative,ak4PFL3Absolute
-
-#JEC for CHS
-from JetMETCorrections.Configuration.JetCorrectionServices_cff import ak4PFCHSL1Fastjet, ak4PFCHSL2Relative, ak4PFCHSL3Absolute, ak4PFCHSResidual, ak4PFCHSL1FastL2L3, ak4PFCHSL1FastL2L3Residual
+from RecoBTag.Combined.pfDeepCSVDiscriminatorsJetTags_cfi import pfDeepCSVDiscriminatorsJetTags
 
 ######### DATA ############
 from DQMOffline.RecoB.bTagAnalysisData_cfi import *
@@ -12,13 +8,26 @@ bTagAnalysis.ptRanges = cms.vdouble(0.0)
 bTagAnalysis.doJetID = True
 bTagAnalysis.doJEC = True
 #Residual correction will be added inside the c++ code only for data (checking the presence of genParticles collection), not explicit here as this sequence also ran on MC FullSim
-bTagAnalysis.JECsource = cms.string("ak4PFCHSL1FastL2L3") 
-bTagPlotsDATA = cms.Sequence(bTagAnalysis)
+bTagPlotsDATA = cms.Sequence(pfDeepCSVDiscriminatorsJetTags * bTagAnalysis)
+
+## customizations for the pp_on_AA eras
+from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
+from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+(pp_on_XeXe_2017 | pp_on_AA_2018).toModify(bTagAnalysis,
+                                           doJEC=False
+                                           )
+
 
 ########## MC ############
 #Matching
-from PhysicsTools.JetMCAlgos.CaloJetsMCFlavour_cfi import *
-AK4byRef.jets = cms.InputTag("ak4PFJetsCHS")
+from PhysicsTools.JetMCAlgos.HadronAndPartonSelector_cfi import selectedHadronsAndPartons
+from PhysicsTools.JetMCAlgos.AK4PFJetsMCFlavourInfos_cfi import ak4JetFlavourInfos
+myak4JetFlavourInfos = ak4JetFlavourInfos.clone(
+    jets = cms.InputTag("ak4PFJetsCHS"),
+    partons = cms.InputTag("selectedHadronsAndPartons","algorithmicPartons"),
+    hadronFlavourHasPriority = cms.bool(True)
+    )
+
 #Get gen jet collection for real jets
 ak4GenJetsForPUid = cms.EDFilter("GenJetSelector",
                                  src = cms.InputTag("ak4GenJets"),
@@ -36,16 +45,20 @@ newpatJetGenJetMatch = patJetGenJetMatch.clone(
 
 # Module execution for MC
 from Validation.RecoB.bTagAnalysis_cfi import *
-bTagValidation.jetMCSrc = 'AK4byValAlgo'
+bTagValidation.jetMCSrc = 'myak4JetFlavourInfos'
 bTagValidation.ptRanges = cms.vdouble(0.0)
 bTagValidation.etaRanges = cms.vdouble(0.0)
 bTagValidation.doJetID = True
 bTagValidation.doJEC = True
-bTagValidation.JECsource = cms.string("ak4PFCHSL1FastL2L3")
 bTagValidation.genJetsMatched = cms.InputTag("newpatJetGenJetMatch")
 #to run on fastsim
-prebTagSequenceMC = cms.Sequence(ak4GenJetsForPUid*newpatJetGenJetMatch*myPartons*AK4Flavour)
+prebTagSequenceMC = cms.Sequence(ak4GenJetsForPUid*newpatJetGenJetMatch*selectedHadronsAndPartons*myak4JetFlavourInfos*pfDeepCSVDiscriminatorsJetTags)
 bTagPlotsMC = cms.Sequence(bTagValidation)
+
+## customizations for the pp_on_AA eras
+(pp_on_XeXe_2017 | pp_on_AA_2018).toModify(bTagValidation,
+                                           doJEC=False
+                                           )
 
 #to run on fullsim in the validation sequence, all histograms produced in the dqmoffline sequence
 bTagValidationNoall = bTagValidation.clone(flavPlots="bcl")

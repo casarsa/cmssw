@@ -17,7 +17,6 @@
 // Original Author:  Eric Vaandering
 //         Created:  Wed Jan 13 15:01:20 EDT 2007
 //
-#if !defined(__CINT__) && !defined(__MAKECINT__)
 // system include files
 #include <typeinfo>
 #include <map>
@@ -36,7 +35,6 @@
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "FWCore/FWLite/interface/BranchMapReader.h"
 #include "DataFormats/FWLite/interface/DataGetterHelper.h"
-#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
 
 // forward declarations
 namespace edm {
@@ -60,15 +58,15 @@ namespace fwlite {
          // at least as long as Run
          Run(TFile* iFile);
          Run(std::shared_ptr<BranchMapReader> branchMap);
-         virtual ~Run();
+         ~Run() override;
 
-         const Run& operator++();
+         const Run& operator++() override;
 
          /// Go to event by Run & Run number
          bool to (edm::RunNumber_t run);
 
          // Go to the very first Event.
-         const Run& toBegin();
+         const Run& toBegin() override;
 
          // ---------- const member functions ---------------------
          virtual std::string const getBranchNameFor(std::type_info const&,
@@ -78,16 +76,16 @@ namespace fwlite {
 
          // This function should only be called by fwlite::Handle<>
          using fwlite::RunBase::getByLabel;
-         virtual bool getByLabel(std::type_info const&, char const*, char const*, char const*, void*) const;
+         bool getByLabel(std::type_info const&, char const*, char const*, char const*, void*) const override;
          //void getByBranchName(std::type_info const&, char const*, void*&) const;
 
          bool isValid() const;
          operator bool () const;
-         virtual bool atEnd() const;
+         bool atEnd() const override;
 
          Long64_t size() const;
 
-         virtual edm::RunAuxiliary const& runAuxiliary() const;
+         edm::RunAuxiliary const& runAuxiliary() const override;
 
          std::vector<edm::BranchDescription> const& getBranchDescriptions() const {
             return branchMap_->getBranchDescriptions();
@@ -106,9 +104,9 @@ namespace fwlite {
          friend class internal::ProductGetter;
          friend class RunHistoryGetter;
 
-         Run(const Run&); // stop default
+         Run(const Run&) = delete; // stop default
 
-         const Run& operator=(const Run&); // stop default
+         const Run& operator=(const Run&) = delete; // stop default
 
          const edm::ProcessHistory& history() const;
          void updateAux(Long_t runIndex) const;
@@ -122,8 +120,8 @@ namespace fwlite {
          mutable std::vector<std::string> procHistoryNames_;
          mutable edm::RunAuxiliary aux_;
          mutable EntryFinder entryFinder_;
-         edm::RunAuxiliary* pAux_;
-         edm::RunAux* pOldAux_;
+         edm::RunAuxiliary const* pAux_;
+         edm::RunAux const* pOldAux_;
          TBranch* auxBranch_;
          int fileVersion_;
 
@@ -131,5 +129,4 @@ namespace fwlite {
    };
 
 }
-#endif /*__CINT__ */
 #endif

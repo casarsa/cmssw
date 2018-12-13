@@ -14,33 +14,47 @@
 #define Stage2Layer2JetAlgorithmFirmware_H
 
 #include "L1Trigger/L1TCalorimeter/interface/Stage2Layer2JetAlgorithm.h"
-#include "CondFormats/L1TObjects/interface/CaloParams.h"
+#include "L1Trigger/L1TCalorimeter/interface/CaloParamsHelper.h"
 
 namespace l1t {
 
   // Imp1 is for v1 and v2
   class Stage2Layer2JetAlgorithmFirmwareImp1 : public Stage2Layer2JetAlgorithm {
   public:
-    Stage2Layer2JetAlgorithmFirmwareImp1(CaloParams* params);
-    virtual ~Stage2Layer2JetAlgorithmFirmwareImp1();
-    virtual void processEvent(const std::vector<CaloTower> & towers,
-			      std::vector<Jet> & jets);
+    Stage2Layer2JetAlgorithmFirmwareImp1(CaloParamsHelper const* params);
+    ~Stage2Layer2JetAlgorithmFirmwareImp1() override = default;
+    void processEvent(const std::vector<CaloTower> & towers,
+			      std::vector<Jet> & jets, std::vector<Jet> & alljets) override;
 
     void create(const std::vector<CaloTower> & towers,
-		std::vector<Jet> & jets, bool doDonutSubtraction);
-    
-    void filter(std::vector<Jet> & jets);
-    
-    void sort(std::vector<Jet> & jets);
+	                      std::vector<Jet> & jets, std::vector<Jet> & alljets, std::string PUSubMethod);
 
-    bool jetIsZero(l1t::Jet jet);
+    void accuSort(std::vector<Jet> & jets);
 
-    void pusRing(int jetEta, int jetPhi, int size, std::vector<int>& ring, 
-        const std::vector<l1t::CaloTower> & towers);
+    void calibrate(std::vector<Jet> & jets, int calibThreshold, bool isAllJets);
+
+    double calibFit(double, double*);
+    double calibFitErr(double,double*);
+
+    int donutPUEstimate(int jetEta, int jetPhi, int size,
+                        const std::vector<l1t::CaloTower> & towers);
+
+    std::vector<int> getChunkyRing(Jet & jet, int pos,
+				   const std::vector<l1t::CaloTower> & towers,
+				   const std::string chunkyString);
+
+    int chunkyDonutPUEstimate(Jet & jet, int pos,
+                              const std::vector<l1t::CaloTower> & towers);
+
+    //Adding chunky sandwich, chunkydonut variant using only phiflaps. Useful for simple handiling of calorimeter hardware ieta strips, and in high pu environment like PbPb
+    int chunkySandwichPUEstimate(Jet & jet, int pos,
+				 const std::vector<l1t::CaloTower> & towers,
+				 const std::string chunkySandwichStr);
+    std::map<int,int> getSumEtEtaMap(const std::vector<l1t::CaloTower> & towers);
 
   private:
 
-    CaloParams* const params_;
+    CaloParamsHelper const* const params_;
 
   };
 

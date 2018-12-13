@@ -35,8 +35,7 @@ void JetExtender::produce(edm::Event& fEvent, const edm::EventSetup& fSetup) {
   edm::Handle <reco::JetTracksAssociation::Container> j2tCALO_h;
   if (!(mJet2TracksAtCALO.label().empty())) fEvent.getByToken (token_mJet2TracksAtCALO, j2tCALO_h);
   
-  std::auto_ptr<reco::JetExtendedAssociation::Container> 
-    jetExtender (new reco::JetExtendedAssociation::Container (reco::JetRefBaseProd(jets_h)));
+  auto jetExtender = std::make_unique<reco::JetExtendedAssociation::Container>(reco::JetRefBaseProd(jets_h));
   
   // loop over jets (make sure jets in associations are the same as in collection
 
@@ -48,11 +47,11 @@ void JetExtender::produce(edm::Event& fEvent, const edm::EventSetup& fSetup) {
 	extendedData.mTracksAtVertexNumber = reco::JetTracksAssociation::tracksNumber (*j2tVX_h, jet);
 	extendedData.mTracksAtVertexP4 = reco::JetTracksAssociation::tracksP4 (*j2tVX_h, jet);
       }
-      catch (cms::Exception e) {
+      catch (cms::Exception const&) {
 	edm::LogError ("MismatchedJets") << "Jets in original collection " << mJets 
 				    << " mismatch jets in j2t VX association " << mJet2TracksAtVX
 				    << ". Wrong collections?";
-	throw e;
+	throw;
       }
     }
     if (j2tCALO_h.isValid ()) { // fill tracks@CALO  summary
@@ -60,14 +59,14 @@ void JetExtender::produce(edm::Event& fEvent, const edm::EventSetup& fSetup) {
 	extendedData.mTracksAtCaloNumber = reco::JetTracksAssociation::tracksNumber (*j2tCALO_h, jet);
 	extendedData.mTracksAtCaloP4 = reco::JetTracksAssociation::tracksP4 (*j2tCALO_h, jet);
       }
-      catch (cms::Exception e) {
+      catch (cms::Exception const&) {
 	edm::LogError ("MismatchedJets") << "Jets in original collection " << mJets 
 				    << " mismatch jets in j2t CALO association " << mJet2TracksAtCALO
 				    << ". Wrong collections?";
-	throw e;
+	throw;
       }
     }
     reco::JetExtendedAssociation::setValue (&*jetExtender, jet, extendedData);
   }
-  fEvent.put (jetExtender);
+  fEvent.put(std::move(jetExtender));
 }

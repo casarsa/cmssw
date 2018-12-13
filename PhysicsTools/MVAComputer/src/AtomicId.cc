@@ -1,11 +1,11 @@
 #include <algorithm>
-#include <cstdlib>
 #include <cstddef>
+#include <cstdlib>
 #include <cstring>
+#include <mutex>
 #include <set>
 
-#include <boost/thread.hpp>
-
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 #include "PhysicsTools/MVAComputer/interface/AtomicId.h"
 
 namespace { // anonymous
@@ -23,13 +23,11 @@ namespace { // anonymous
 	    private:
 		typedef std::multiset<const char *, StringLess> IdSet;
 
-		IdSet				idSet;
-		static std::allocator<char>	stringAllocator;
-		mutable boost::mutex		mutex;
+		IdSet			idSet;
+		std::allocator<char>	stringAllocator;
+                std::mutex	        mutex;
 	};
 } // anonymous namespace
-
-std::allocator<char> IdCache::stringAllocator;
 
 IdCache::~IdCache()
 {
@@ -41,7 +39,7 @@ IdCache::~IdCache()
 
 const char *IdCache::findOrInsert(const char *string) throw()
 {
-	boost::mutex::scoped_lock scoped_lock(mutex);
+	std::lock_guard<std::mutex> scoped_lock(mutex);
 
 	IdSet::iterator pos = idSet.lower_bound(string);
 	if (pos != idSet.end() && std::strcmp(*pos, string) == 0)
@@ -60,7 +58,7 @@ namespace PhysicsTools {
 
 static IdCache &getAtomicIdCache()
 {
-	static IdCache atomicIdCache;
+	CMS_THREAD_SAFE static IdCache atomicIdCache;
 	return atomicIdCache;
 }
 
@@ -69,7 +67,7 @@ const char *AtomicId::lookup(const char *string) throw()
 	if (string)
 		return getAtomicIdCache().findOrInsert(string);
 
-	return 0;
+	return nullptr;
 }
 
 } // namespace PhysicsTools

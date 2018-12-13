@@ -11,6 +11,7 @@
  *    <TODO: enter implementation details>
  *
  * \author: Vasile Mihai Ghete - HEPHY Vienna
+ *          Vladimir Rekovic - extend for indexing
  *
  * $Date$
  * $Revision$
@@ -24,12 +25,12 @@
 // user include files
 
 //   base class
-#include "L1Trigger/L1TGlobal/interface/GtCondition.h"
+#include "L1Trigger/L1TGlobal/interface/GlobalCondition.h"
 
 // forward declarations
 
 // class declaration
-class MuonTemplate : public GtCondition
+class MuonTemplate : public GlobalCondition
 {
 
 public:
@@ -47,7 +48,7 @@ public:
     MuonTemplate( const MuonTemplate& );
 
     // destructor
-    virtual ~MuonTemplate();
+    ~MuonTemplate() override;
 
     // assign operator
     MuonTemplate& operator= (const MuonTemplate&);
@@ -59,23 +60,28 @@ public:
     {
         unsigned int ptHighThreshold;
         unsigned int ptLowThreshold;
+        unsigned int indexHigh;
+        unsigned int indexLow;
         bool enableMip;
         bool enableIso;
         bool requestIso;
-        unsigned int qualityRange;
+        unsigned int qualityLUT;
+        unsigned int isolationLUT;
         unsigned long long etaRange;
         unsigned int phiHigh;
         unsigned int phiLow;
 
-      unsigned int etaWindowLower;
-      unsigned int etaWindowUpper;
-      unsigned int etaWindowVetoLower;
-      unsigned int etaWindowVetoUpper;
+	int charge;
 
-      unsigned int phiWindowLower;
-      unsigned int phiWindowUpper;
-      unsigned int phiWindowVetoLower;
-      unsigned int phiWindowVetoUpper;
+      unsigned int etaWindow1Lower;
+      unsigned int etaWindow1Upper;
+      unsigned int etaWindow2Lower;
+      unsigned int etaWindow2Upper;
+
+      unsigned int phiWindow1Lower;
+      unsigned int phiWindow1Upper;
+      unsigned int phiWindow2Lower;
+      unsigned int phiWindow2Upper;
     };
 
     // typedef for correlation parameters
@@ -122,7 +128,7 @@ public:
 
 
     /// print the condition
-    virtual void print(std::ostream& myCout) const;
+    void print(std::ostream& myCout) const override;
 
     /// output stream operator
     friend std::ostream& operator<<(std::ostream&, const MuonTemplate&);

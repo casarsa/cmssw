@@ -2,7 +2,8 @@ import FWCore.ParameterSet.Config as cms
 
 from math import pi
 
-B2GDQM = cms.EDAnalyzer(
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+B2GDQM = DQMEDAnalyzer(
     "B2GDQM",
 
     #Trigger Results
@@ -13,8 +14,8 @@ B2GDQM = cms.EDAnalyzer(
     jetLabels = cms.VInputTag(
         'ak4PFJets',
         'ak4PFJetsCHS',
-        'ca8PFJetsCHS',
-        'ca8PFJetsCHSPruned',
+        'ak8PFJetsCHS',
+        'ak8PFJetsCHSSoftDrop',
         'cmsTopTagPFJetsCHS'
         ),
     jetPtMins = cms.vdouble(

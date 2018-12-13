@@ -31,6 +31,7 @@ see the setup_harvesting_info() and option_handler_list_types()
 methods.
 
 """
+from __future__ import print_function
 
 ###########################################################################
 
@@ -97,11 +98,13 @@ import copy
 from inspect import getargspec
 from random import choice
 
+import six
 
 # These we need to communicate with DBS global DBSAPI
 from DBSAPI.dbsApi import DbsApi
 import DBSAPI.dbsException
 import DBSAPI.dbsApiException
+from functools import reduce
 # and these we need to parse the DBS output.
 global xml
 global SAXParseException
@@ -246,7 +249,7 @@ class DBSXMLHandler(xml.sax.handler.ContentHandler):
 
         if self.current_element() in self.tag_names:
             contents = "".join(self.current_value)
-            if self.results.has_key(self.current_element()):
+            if self.current_element() in self.results:
                 self.results[self.current_element()].append(contents)
             else:
                 self.results[self.current_element()] = [contents]
@@ -405,10 +408,10 @@ class CMSHarvester(object):
         self.input_name["runs"]["use"] = None
         self.input_name["runs"]["ignore"] = None
 
-	self.Jsonlumi = False
-	self.Jsonfilename = "YourJSON.txt"
-     	self.Jsonrunfilename = "YourJSON.txt"
-	self.todofile = "YourToDofile.txt"
+        self.Jsonlumi = False
+        self.Jsonfilename = "YourJSON.txt"
+        self.Jsonrunfilename = "YourJSON.txt"
+        self.todofile = "YourToDofile.txt"
 
         # If this is true, we're running in `force mode'. In this case
         # the sanity checks are performed but failure will not halt
@@ -443,12 +446,12 @@ class CMSHarvester(object):
         # the --no-t1access flag can be used. This variable keeps
         # track of that special mode.
         self.non_t1access = False
-	self.caf_access = False
+        self.caf_access = False
         self.saveByLumiSection = False
         self.crab_submission = False
         self.nr_max_sites = 1
 
-	self.preferred_site = "no preference"
+        self.preferred_site = "no preference"
 
         # This will become the list of datasets and runs to consider
         self.datasets_to_use = {}
@@ -814,7 +817,7 @@ class CMSHarvester(object):
         self.logger.warning("Switching off all use of reference histograms")
 
         # End of option_handler_no_ref_hists.
-        
+
      ##########
 
     def option_handler_frontier_connection(self, option, opt_str,
@@ -1094,7 +1097,7 @@ class CMSHarvester(object):
                             "further promises...")
 
         # End of option_handler_no_t1access.
-       
+
     ##########
 
     def option_handler_caf_access(self, option, opt_str, value, parser):
@@ -1110,7 +1113,7 @@ class CMSHarvester(object):
                             "further promises...")
 
         # End of option_handler_caf_access.
-        
+
    ##########
 
     def option_handler_saveByLumiSection(self, option, opt_str, value, parser):
@@ -1127,12 +1130,12 @@ class CMSHarvester(object):
 
     def option_handler_crab_submission(self, option, opt_str, value, parser):
         """Crab jobs are not created and
-	"submitted automatically",
+        "submitted automatically",
         """
         self.crab_submission = True
 
         # End of option_handler_crab_submission.
-       
+
     ##########
 
     def option_handler_sites(self, option, opt_str, value, parser):
@@ -1165,34 +1168,34 @@ class CMSHarvester(object):
         sep_line = "-" * 50
         sep_line_short = "-" * 20
 
-        print sep_line
-        print "The following harvesting types are available:"
-        print sep_line
+        print(sep_line)
+        print("The following harvesting types are available:")
+        print(sep_line)
 
-        print "`RelVal' maps to:"
-        print "  pre-3_3_0           : HARVESTING:validationHarvesting"
-        print "  3_4_0_pre2 and later: HARVESTING:validationHarvesting+dqmHarvesting"
-        print "  Exceptions:"
-        print "    3_3_0_pre1-4        : HARVESTING:validationHarvesting"
-        print "    3_3_0_pre6          : HARVESTING:validationHarvesting"
-        print "    3_4_0_pre1          : HARVESTING:validationHarvesting"
+        print("`RelVal' maps to:")
+        print("  pre-3_3_0           : HARVESTING:validationHarvesting")
+        print("  3_4_0_pre2 and later: HARVESTING:validationHarvesting+dqmHarvesting")
+        print("  Exceptions:")
+        print("    3_3_0_pre1-4        : HARVESTING:validationHarvesting")
+        print("    3_3_0_pre6          : HARVESTING:validationHarvesting")
+        print("    3_4_0_pre1          : HARVESTING:validationHarvesting")
 
-        print sep_line_short
+        print(sep_line_short)
 
-        print "`RelValFS' maps to:"
-        print "  always              : HARVESTING:validationHarvestingFS"
+        print("`RelValFS' maps to:")
+        print("  always              : HARVESTING:validationHarvestingFS")
 
-        print sep_line_short
+        print(sep_line_short)
 
-        print "`MC' maps to:"
-        print "    always          : HARVESTING:validationprodHarvesting"
+        print("`MC' maps to:")
+        print("    always          : HARVESTING:validationprodHarvesting")
 
-        print sep_line_short
+        print(sep_line_short)
 
-        print "`DQMOffline' maps to:"
-        print "  always              : HARVESTING:dqmHarvesting"
+        print("`DQMOffline' maps to:")
+        print("  always              : HARVESTING:dqmHarvesting")
 
-        print sep_line
+        print(sep_line)
 
         # We're done, let's quit. (This is the same thing optparse
         # does after printing the help.)
@@ -1441,13 +1444,12 @@ class CMSHarvester(object):
 
         # Now call the checker for all (unique) subdirs.
         castor_dirs = []
-        for (dataset_name, runs) in self.datasets_to_use.iteritems():
+        for (dataset_name, runs) in six.iteritems(self.datasets_to_use):
 
-	    for run in runs:
+            for run in runs:
                 castor_dirs.append(self.datasets_information[dataset_name] \
                                    ["castor_path"][run])
-        castor_dirs_unique = list(set(castor_dirs))
-        castor_dirs_unique.sort()
+        castor_dirs_unique = sorted(set(castor_dirs))
         # This can take some time. E.g. CRAFT08 has > 300 runs, each
         # of which will get a new directory. So we show some (rough)
         # info in between.
@@ -1564,8 +1566,7 @@ class CMSHarvester(object):
         # permissions are set correctly and b) the final destination
         # exists.
         path = ""
-        check_sizes = castor_paths_dont_touch.keys()
-        check_sizes.sort()
+        check_sizes = sorted(castor_paths_dont_touch.keys())
         len_castor_path_pieces = len(castor_path_pieces)
         for piece_index in xrange (len_castor_path_pieces):
             skip_this_path_piece = False
@@ -1704,14 +1705,14 @@ class CMSHarvester(object):
 
     def pick_a_site(self, sites, cmssw_version):
 
-	# Create list of forbidden sites
+        # Create list of forbidden sites
         sites_forbidden = []
 
-	if (self.preferred_site == "CAF") or (self.preferred_site == "caf.cern.ch"):
-	    self.caf_access = True
+        if (self.preferred_site == "CAF") or (self.preferred_site == "caf.cern.ch"):
+            self.caf_access = True
 
-	if self.caf_access == False:
-	    sites_forbidden.append("caf.cern.ch")
+        if self.caf_access == False:
+            sites_forbidden.append("caf.cern.ch")
 
         # These are the T1 sites. These are only forbidden if we're
         # running in non-T1 mode.
@@ -1732,19 +1733,19 @@ class CMSHarvester(object):
                 "storm-fe-cms.cr.cnaf.infn.it"
                 ]
 
-	country_codes = {
-	      "CAF" : "caf.cern.ch",
-	      "CH" : "srm-cms.cern.ch",
-	      "FR" : "ccsrm.in2p3.fr",
-	      "DE" : "cmssrm-fzk.gridka.de",
-	      "GOV" : "cmssrm.fnal.gov",
-	      "DE2" : "gridka-dCache.fzk.de",
-	      "UK" : "srm-cms.gridpp.rl.ac.uk",
-	      "TW" : "srm.grid.sinica.edu.tw",
-	      "TW2" : "srm2.grid.sinica.edu.tw",
-	      "ES" : "srmcms.pic.es",
-	      "IT" : "storm-fe-cms.cr.cnaf.infn.it"
-	        }
+        country_codes = {
+              "CAF" : "caf.cern.ch",
+              "CH" : "srm-cms.cern.ch",
+              "FR" : "ccsrm.in2p3.fr",
+              "DE" : "cmssrm-fzk.gridka.de",
+              "GOV" : "cmssrm.fnal.gov",
+              "DE2" : "gridka-dCache.fzk.de",
+              "UK" : "srm-cms.gridpp.rl.ac.uk",
+              "TW" : "srm.grid.sinica.edu.tw",
+              "TW2" : "srm2.grid.sinica.edu.tw",
+              "ES" : "srmcms.pic.es",
+              "IT" : "storm-fe-cms.cr.cnaf.infn.it"
+                }
 
         if self.non_t1access: 
             sites_forbidden.extend(all_t1)
@@ -1753,17 +1754,17 @@ class CMSHarvester(object):
             if site in sites:
                 sites.remove(site)
 
-	if self.preferred_site in country_codes:
-	    self.preferred_site = country_codes[self.preferred_site]
+        if self.preferred_site in country_codes:
+            self.preferred_site = country_codes[self.preferred_site]
 
-	if self.preferred_site != "no preference":
-	    if self.preferred_site in sites:
-	        sites = [self.preferred_site]
-	    else:
-		sites= []
+        if self.preferred_site != "no preference":
+            if self.preferred_site in sites:
+                sites = [self.preferred_site]
+            else:
+                sites= []
 
-	#print sites
- 
+        #print sites
+
         # Looks like we have to do some caching here, otherwise things
         # become waaaay toooo sloooooow. So that's what the
         # sites_and_versions_cache does.
@@ -1774,17 +1775,17 @@ class CMSHarvester(object):
         while len(sites) > 0 and \
               site_name is None:
 
-	    # Create list of t1_sites
-	    t1_sites = []
-	    for site in sites:
-	        if site in all_t1:
+            # Create list of t1_sites
+            t1_sites = []
+            for site in sites:
+                if site in all_t1:
                     t1_sites.append(site)
-	        if site == "caf.cern.ch":
+                if site == "caf.cern.ch":
                     t1_sites.append(site)
 
-	    # If avilable pick preferred site
-	    #if self.preferred_site in sites:
-	    #  se_name = self.preferred_site
+            # If avilable pick preferred site
+            #if self.preferred_site in sites:
+            #  se_name = self.preferred_site
             # Else, if available pick t1 site
 
             if len(t1_sites) > 0:
@@ -1795,8 +1796,8 @@ class CMSHarvester(object):
 
             # But check that it hosts the CMSSW version we want.
 
-            if self.sites_and_versions_cache.has_key(se_name) and \
-                   self.sites_and_versions_cache[se_name].has_key(cmssw_version):
+            if se_name in self.sites_and_versions_cache and \
+                   cmssw_version in self.sites_and_versions_cache[se_name]:
                 if self.sites_and_versions_cache[se_name][cmssw_version]:
                     site_name = se_name
                     break
@@ -2048,7 +2049,7 @@ class CMSHarvester(object):
                           metavar="RUNSLISTFILE-IGNORE")
 
         # Option to specify a Jsonfile contaning a list of runs
-	# to be used.
+        # to be used.
         parser.add_option("", "--Jsonrunfile",
                           help="Jsonfile containing dictionary of run/lumisections pairs. " \
                           "All lumisections of runs contained in dictionary are processed.",
@@ -2058,7 +2059,7 @@ class CMSHarvester(object):
                           metavar="JSONRUNFILE")
 
         # Option to specify a Jsonfile contaning a dictionary of run/lumisections pairs
-	# to be used.
+        # to be used.
         parser.add_option("", "--Jsonfile",
                           help="Jsonfile containing dictionary of run/lumisections pairs. " \
                           "Only specified lumisections of runs contained in dictionary are processed.",
@@ -2068,7 +2069,7 @@ class CMSHarvester(object):
                           metavar="JSONFILE")
 
         # Option to specify a ToDo file contaning a list of runs
-	# to be used.
+        # to be used.
         parser.add_option("", "--todo-file",
                           help="Todo file containing a list of runs to process.",
                           action="callback",
@@ -2106,14 +2107,14 @@ class CMSHarvester(object):
                           "without special `t1access' role",
                           action="callback",
                           callback=self.option_handler_no_t1access)
-                        
+
         # Use this to create jobs that may run on CAF
         parser.add_option("", "--caf-access",
                           help="Crab jobs may run " \
                           "on CAF",
                           action="callback",
                           callback=self.option_handler_caf_access)
-                          
+
         # set process.dqmSaver.saveByLumiSection=1 in harvesting cfg file
         parser.add_option("", "--saveByLumiSection",
                           help="set saveByLumiSection=1 in harvesting cfg file",
@@ -2123,7 +2124,7 @@ class CMSHarvester(object):
         # Use this to enable automatic creation and submission of crab jobs
         parser.add_option("", "--automatic-crab-submission",
                           help="Crab jobs are created and " \
-			  "submitted automatically",
+                          "submitted automatically",
                           action="callback",
                           callback=self.option_handler_crab_submission)
 
@@ -2308,7 +2309,7 @@ class CMSHarvester(object):
         ###
 
         # Dump some info about the Frontier connections used.
-        for (key, value) in self.frontier_connection_name.iteritems():
+        for (key, value) in six.iteritems(self.frontier_connection_name):
             frontier_type_str = "unknown"
             if key == "globaltag":
                 frontier_type_str = "the GlobalTag"
@@ -2404,7 +2405,7 @@ class CMSHarvester(object):
             api = DbsApi(args)
             self.dbs_api = api
 
-        except DBSAPI.dbsApiException.DbsApiException, ex:
+        except DBSAPI.dbsApiException.DbsApiException as ex:
             self.logger.fatal("Caught DBS API exception %s: %s "  % \
                               (ex.getClassName(), ex.getErrorMessage()))
             if ex.getErrorCode() not in (None, ""):
@@ -2615,8 +2616,7 @@ class CMSHarvester(object):
 
         runs = handler.results.values()[0]
         # Turn strings into integers.
-        runs = [int(i) for i in runs]
-        runs.sort()
+        runs = sorted([int(i) for i in runs])
 
         # End of dbs_resolve_runs.
         return runs
@@ -2923,7 +2923,7 @@ class CMSHarvester(object):
 
 ##        # Now translate this into a slightly more usable mapping.
 ##        sites = {}
-##        for (run_number, site_info) in sample_info.iteritems():
+##        for (run_number, site_info) in six.iteritems(sample_info):
 ##            # Quick-n-dirty trick to see if all file counts are the
 ##            # same.
 ##            unique_file_counts = set([i[1] for i in site_info])
@@ -3042,7 +3042,7 @@ class CMSHarvester(object):
 
 ##        # Now translate this into a slightly more usable mapping.
 ##        sites = {}
-##        for (run_number, site_info) in sample_info.iteritems():
+##        for (run_number, site_info) in six.iteritems(sample_info):
 ##            # Quick-n-dirty trick to see if all file counts are the
 ##            # same.
 ##            unique_file_counts = set([i[1] for i in site_info])
@@ -3176,12 +3176,12 @@ class CMSHarvester(object):
             nevents = int(handler.results["file.numevents"][index])
 
             # I know, this is a bit of a kludge.
-            if not files_info.has_key(run_number):
+            if run_number not in files_info:
                 # New run.
                 files_info[run_number] = {}
                 files_info[run_number][file_name] = (nevents,
                                                      [site_name])
-            elif not files_info[run_number].has_key(file_name):
+            elif file_name not in files_info[run_number]:
                 # New file for a known run.
                 files_info[run_number][file_name] = (nevents,
                                                      [site_name])
@@ -3382,7 +3382,7 @@ class CMSHarvester(object):
                              input_name)
             try:
                 listfile = open("/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/harvesting/bin/%s" %input_name, "r")
-		print "open listfile"
+                print("open listfile")
                 for dataset in listfile:
                     # Skip empty lines.
                     dataset_stripped = dataset.strip()
@@ -3408,10 +3408,9 @@ class CMSHarvester(object):
         # NOTE: There should not be any duplicates in any list coming
         # from DBS, but maybe the user provided a list file with less
         # care.
-        dataset_names = list(set(dataset_names))
-
         # Store for later use.
-        dataset_names.sort()
+        dataset_names = sorted(set(dataset_names))
+
 
         # End of build_dataset_list.
         return dataset_names
@@ -3429,8 +3428,8 @@ class CMSHarvester(object):
         input_name = self.input_name["datasets"]["use"]
         dataset_names = self.build_dataset_list(input_method,
                                                 input_name)
-        self.datasets_to_use = dict(zip(dataset_names,
-                                        [None] * len(dataset_names)))
+        self.datasets_to_use = dict(list(zip(dataset_names,
+                                        [None] * len(dataset_names))))
 
         self.logger.info("  found %d dataset(s) to process:" % \
                          len(dataset_names))
@@ -3455,8 +3454,8 @@ class CMSHarvester(object):
         input_name = self.input_name["datasets"]["ignore"]
         dataset_names = self.build_dataset_list(input_method,
                                                 input_name)
-        self.datasets_to_ignore = dict(zip(dataset_names,
-                                           [None] * len(dataset_names)))
+        self.datasets_to_ignore = dict(list(zip(dataset_names,
+                                           [None] * len(dataset_names))))
 
         self.logger.info("  found %d dataset(s) to ignore:" % \
                          len(dataset_names))
@@ -3512,7 +3511,7 @@ class CMSHarvester(object):
 
         # Remove duplicates, sort and done.
         runs = list(set(runs))
-	
+
         # End of build_runs_list().
         return runs
 
@@ -3528,7 +3527,7 @@ class CMSHarvester(object):
         input_method = self.input_method["runs"]["use"]
         input_name = self.input_name["runs"]["use"]
         runs = self.build_runs_list(input_method, input_name)
-        self.runs_to_use = dict(zip(runs, [None] * len(runs)))
+        self.runs_to_use = dict(list(zip(runs, [None] * len(runs))))
 
         self.logger.info("  found %d run(s) to process:" % \
                          len(runs))
@@ -3552,7 +3551,7 @@ class CMSHarvester(object):
         input_method = self.input_method["runs"]["ignore"]
         input_name = self.input_name["runs"]["ignore"]
         runs = self.build_runs_list(input_method, input_name)
-        self.runs_to_ignore = dict(zip(runs, [None] * len(runs)))
+        self.runs_to_ignore = dict(list(zip(runs, [None] * len(runs))))
 
         self.logger.info("  found %d run(s) to ignore:" % \
                          len(runs))
@@ -3662,76 +3661,76 @@ class CMSHarvester(object):
                 runs = runs_tmp
 
             if self.todofile != "YourToDofile.txt":
-		runs_todo = []
-                print "Reading runs from file /afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/harvesting/%s" %self.todofile
+                runs_todo = []
+                print("Reading runs from file /afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/harvesting/%s" %self.todofile)
                 cmd="grep %s /afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/harvesting/%s | cut -f5 -d' '" %(dataset_name,self.todofile)
                 (status, output)=commands.getstatusoutput(cmd)
-		for run in runs:
-		    run_str="%s" %run
-		    if run_str in output:
-			runs_todo.append(run)
+                for run in runs:
+                    run_str="%s" %run
+                    if run_str in output:
+                        runs_todo.append(run)
                 self.logger.info("Using %d runs " \
                                  "of dataset `%s'" % \
                                  (len(runs_todo),
                                   dataset_name))
-		runs=runs_todo
+                runs=runs_todo
 
-	    Json_runs = []
-	    if self.Jsonfilename != "YourJSON.txt":
-		good_runs = []
-		self.Jsonlumi = True
-		# We were passed a Jsonfile containing a dictionary of
-		# run/lunisection-pairs
-		self.logger.info("Reading runs and lumisections from file `%s'" % \
-				self.Jsonfilename)
-		try:
-		    Jsonfile = open(self.Jsonfilename, "r")
-		    for names in Jsonfile:
-			dictNames= eval(str(names))
-			for key in dictNames:
-			    intkey=int(key)
-			    Json_runs.append(intkey)
-		    Jsonfile.close()
-		except IOError:
-		    msg = "ERROR: Could not open Jsonfile `%s'" % \
-			  input_name
-		    self.logger.fatal(msg)
-		    raise Error(msg)
-		for run in runs:
-		    if run in Json_runs:
-			good_runs.append(run)
-		self.logger.info("Using %d runs " \
-                                 "of dataset `%s'" % \
-                                 (len(good_runs),
-                                  dataset_name))
-		runs=good_runs
-            if (self.Jsonrunfilename != "YourJSON.txt") and (self.Jsonfilename == "YourJSON.txt"):
-		good_runs = []
+            Json_runs = []
+            if self.Jsonfilename != "YourJSON.txt":
+                good_runs = []
+                self.Jsonlumi = True
                 # We were passed a Jsonfile containing a dictionary of
-		# run/lunisection-pairs
-	        self.logger.info("Reading runs from file `%s'" % \
-				self.Jsonrunfilename)
-		try:
-		    Jsonfile = open(self.Jsonrunfilename, "r")
-		    for names in Jsonfile:
-	                dictNames= eval(str(names))
-			for key in dictNames:
-			    intkey=int(key)
-			    Json_runs.append(intkey)
-		    Jsonfile.close()
-		except IOError:
-		    msg = "ERROR: Could not open Jsonfile `%s'" % \
-			  input_name
-		    self.logger.fatal(msg)
-		    raise Error(msg)
-	    	for run in runs:
-	            if run in Json_runs: 
+                # run/lunisection-pairs
+                self.logger.info("Reading runs and lumisections from file `%s'" % \
+                                self.Jsonfilename)
+                try:
+                    Jsonfile = open(self.Jsonfilename, "r")
+                    for names in Jsonfile:
+                        dictNames= eval(str(names))
+                        for key in dictNames:
+                            intkey=int(key)
+                            Json_runs.append(intkey)
+                    Jsonfile.close()
+                except IOError:
+                    msg = "ERROR: Could not open Jsonfile `%s'" % \
+                          input_name
+                    self.logger.fatal(msg)
+                    raise Error(msg)
+                for run in runs:
+                    if run in Json_runs:
                         good_runs.append(run)
                 self.logger.info("Using %d runs " \
                                  "of dataset `%s'" % \
                                  (len(good_runs),
                                   dataset_name))
-		runs=good_runs
+                runs=good_runs
+            if (self.Jsonrunfilename != "YourJSON.txt") and (self.Jsonfilename == "YourJSON.txt"):
+                good_runs = []
+                # We were passed a Jsonfile containing a dictionary of
+                # run/lunisection-pairs
+                self.logger.info("Reading runs from file `%s'" % \
+                                self.Jsonrunfilename)
+                try:
+                    Jsonfile = open(self.Jsonrunfilename, "r")
+                    for names in Jsonfile:
+                        dictNames= eval(str(names))
+                        for key in dictNames:
+                            intkey=int(key)
+                            Json_runs.append(intkey)
+                    Jsonfile.close()
+                except IOError:
+                    msg = "ERROR: Could not open Jsonfile `%s'" % \
+                          input_name
+                    self.logger.fatal(msg)
+                    raise Error(msg)
+                for run in runs:
+                    if run in Json_runs: 
+                        good_runs.append(run)
+                self.logger.info("Using %d runs " \
+                                 "of dataset `%s'" % \
+                                 (len(good_runs),
+                                  dataset_name))
+                runs=good_runs
 
             self.datasets_to_use[dataset_name] = runs
 
@@ -4000,7 +3999,7 @@ class CMSHarvester(object):
                 #self.book_keeping_information[dataset_name] = self.datasets_information \
                 #                                              [dataset_name]["num_events"]
                 continue
-	      
+
             tmp = [i for i in \
                    self.datasets_information[dataset_name] \
                    ["num_events"].items() if i[1] < 1]
@@ -4022,7 +4021,7 @@ class CMSHarvester(object):
         # If we emptied out a complete dataset, remove the whole
         # thing.
         dataset_names_after_checks_tmp = copy.deepcopy(dataset_names_after_checks)
-        for (dataset_name, runs) in dataset_names_after_checks.iteritems():
+        for (dataset_name, runs) in six.iteritems(dataset_names_after_checks):
             if len(runs) < 1:
                 self.logger.warning("  Removing dataset without any runs " \
                                     "(left) `%s'" % \
@@ -4261,35 +4260,35 @@ class CMSHarvester(object):
         tmp.append(self.config_file_header())
         tmp.append("")
 
-	## CRAB
-	##------
+        ## CRAB
+        ##------
         tmp.append("[CRAB]")
         tmp.append("jobtype = cmssw")
         tmp.append("")
 
-	## GRID
-	##------
+        ## GRID
+        ##------
         tmp.append("[GRID]")
         tmp.append("virtual_organization=cms")
         tmp.append("")
 
-	## USER
-	##------
+        ## USER
+        ##------
         tmp.append("[USER]")
         tmp.append("copy_data = 1")
         tmp.append("")
 
-	## CMSSW
-	##-------
+        ## CMSSW
+        ##-------
         tmp.append("[CMSSW]")
         tmp.append("# This reveals data hosted on T1 sites,")
         tmp.append("# which is normally hidden by CRAB.")
         tmp.append("show_prod = 1")
         tmp.append("number_of_jobs = 1")
-	if self.Jsonlumi == True:
-	    tmp.append("lumi_mask = %s" % self.Jsonfilename)
-	    tmp.append("total_number_of_lumis = -1")
-	else:
+        if self.Jsonlumi == True:
+            tmp.append("lumi_mask = %s" % self.Jsonfilename)
+            tmp.append("total_number_of_lumis = -1")
+        else:
             if self.harvesting_type == "DQMOffline":
                 tmp.append("total_number_of_lumis = -1")
             else:
@@ -4299,8 +4298,8 @@ class CMSHarvester(object):
             tmp.append("no_block_boundary = 1")
         tmp.append("")
 
-	## CAF
-	##-----
+        ## CAF
+        ##-----
         tmp.append("[CAF]")
 
         crab_config = "\n".join(tmp)
@@ -4326,12 +4325,12 @@ class CMSHarvester(object):
 
         """
 
-	cmd="who i am | cut -f1 -d' '"
-	(status, output)=commands.getstatusoutput(cmd)
-	UserName = output
+        cmd="who i am | cut -f1 -d' '"
+        (status, output)=commands.getstatusoutput(cmd)
+        UserName = output
 
-	if self.caf_access == True:
-	    print "Extracting %s as user name" %UserName 
+        if self.caf_access == True:
+            print("Extracting %s as user name" %UserName) 
 
         number_max_sites = self.nr_max_sites + 1
 
@@ -4342,8 +4341,7 @@ class CMSHarvester(object):
         multicrab_config_lines.append("cfg = crab.cfg")
         multicrab_config_lines.append("")
 
-        dataset_names = self.datasets_to_use.keys()
-        dataset_names.sort()
+        dataset_names = sorted(self.datasets_to_use.keys())
 
         for dataset_name in dataset_names:
             runs = self.datasets_to_use[dataset_name]
@@ -4409,57 +4407,57 @@ class CMSHarvester(object):
                                     break
 
                             nevents = self.datasets_information[dataset_name]["num_events"][run]
-    
+
                             # The block name.
                             multicrab_block_name = self.create_multicrab_block_name( \
                                 dataset_name, run, index)
                             multicrab_config_lines.append("[%s]" % \
                                                       multicrab_block_name)
 
-			    ## CRAB
-			    ##------
-			    if site_name == "caf.cern.ch":
-				multicrab_config_lines.append("CRAB.use_server=0")
-				multicrab_config_lines.append("CRAB.scheduler=caf")
-			    else:
-				multicrab_config_lines.append("scheduler = glite")
-
-			    ## GRID
-			    ##------
-			    if site_name == "caf.cern.ch":
-			        pass
+                            ## CRAB
+                            ##------
+                            if site_name == "caf.cern.ch":
+                                multicrab_config_lines.append("CRAB.use_server=0")
+                                multicrab_config_lines.append("CRAB.scheduler=caf")
                             else:
-			        multicrab_config_lines.append("GRID.se_white_list = %s" % \
+                                multicrab_config_lines.append("scheduler = glite")
+
+                            ## GRID
+                            ##------
+                            if site_name == "caf.cern.ch":
+                                pass
+                            else:
+                                multicrab_config_lines.append("GRID.se_white_list = %s" % \
                                                       site_name)
-				multicrab_config_lines.append("# This removes the default blacklisting of T1 sites.")
-				multicrab_config_lines.append("GRID.remove_default_blacklist = 1")
-				multicrab_config_lines.append("GRID.rb = CERN")
-				if not self.non_t1access:
-				    multicrab_config_lines.append("GRID.role = t1access")
+                                multicrab_config_lines.append("# This removes the default blacklisting of T1 sites.")
+                                multicrab_config_lines.append("GRID.remove_default_blacklist = 1")
+                                multicrab_config_lines.append("GRID.rb = CERN")
+                                if not self.non_t1access:
+                                    multicrab_config_lines.append("GRID.role = t1access")
 
-			    ## USER
-			    ##------
+                            ## USER
+                            ##------
 
-			    castor_dir = castor_dir.replace(castor_prefix, "")
-			    multicrab_config_lines.append("USER.storage_element=srm-cms.cern.ch")
-			    multicrab_config_lines.append("USER.user_remote_dir = %s" % \
-						      castor_dir)
-			    multicrab_config_lines.append("USER.check_user_remote_dir=0")
+                            castor_dir = castor_dir.replace(castor_prefix, "")
+                            multicrab_config_lines.append("USER.storage_element=srm-cms.cern.ch")
+                            multicrab_config_lines.append("USER.user_remote_dir = %s" % \
+                                                      castor_dir)
+                            multicrab_config_lines.append("USER.check_user_remote_dir=0")
 
-			    if site_name == "caf.cern.ch":
-				multicrab_config_lines.append("USER.storage_path=%s" % castor_prefix)
-			        #multicrab_config_lines.append("USER.storage_element=T2_CH_CAF")
-				#castor_dir = castor_dir.replace("/cms/store/caf/user/%s" %UserName, "")
-				#multicrab_config_lines.append("USER.user_remote_dir = %s" % \
-				#		      castor_dir)
-			    else:
+                            if site_name == "caf.cern.ch":
+                                multicrab_config_lines.append("USER.storage_path=%s" % castor_prefix)
+                                #multicrab_config_lines.append("USER.storage_element=T2_CH_CAF")
+                                #castor_dir = castor_dir.replace("/cms/store/caf/user/%s" %UserName, "")
+                                #multicrab_config_lines.append("USER.user_remote_dir = %s" % \
+                                #		      castor_dir)
+                            else:
                                 multicrab_config_lines.append("USER.storage_path=/srm/managerv2?SFN=%s" % castor_prefix)
-				#multicrab_config_lines.append("USER.user_remote_dir = %s" % \
-				#		      castor_dir)
-				#multicrab_config_lines.append("USER.storage_element=srm-cms.cern.ch")
+                                #multicrab_config_lines.append("USER.user_remote_dir = %s" % \
+                                #		      castor_dir)
+                                #multicrab_config_lines.append("USER.storage_element=srm-cms.cern.ch")
 
-			    ## CMSSW
-			    ##-------
+                            ## CMSSW
+                            ##-------
                             multicrab_config_lines.append("CMSSW.pset = %s" % \
                                                        config_file_name)
                             multicrab_config_lines.append("CMSSW.datasetpath = %s" % \
@@ -4467,9 +4465,9 @@ class CMSHarvester(object):
                             multicrab_config_lines.append("CMSSW.runselection = %d" % \
                                                   run)
 
-			    if self.Jsonlumi == True:
-				pass
-			    else:
+                            if self.Jsonlumi == True:
+                                pass
+                            else:
                                 if self.harvesting_type == "DQMOffline":
                                     pass
                                 else:
@@ -4479,10 +4477,10 @@ class CMSHarvester(object):
                             multicrab_config_lines.append("CMSSW.output_file = %s" % \
                                                       output_file_name)
 
-			    ## CAF
-			    ##-----
-			    if site_name == "caf.cern.ch":
-			        multicrab_config_lines.append("CAF.queue=cmscaf1nd")
+                            ## CAF
+                            ##-----
+                            if site_name == "caf.cern.ch":
+                                multicrab_config_lines.append("CAF.queue=cmscaf1nd")
 
 
                             # End of block.
@@ -4492,7 +4490,7 @@ class CMSHarvester(object):
 
                             self.all_sites_found = True
 
-	multicrab_config = "\n".join(multicrab_config_lines)
+        multicrab_config = "\n".join(multicrab_config_lines)
 
         # End of create_multicrab_config.
         return multicrab_config
@@ -4757,7 +4755,7 @@ class CMSHarvester(object):
         # This seems to be new in CMSSW 3.3.0.pre6, no clue what it
         # does.
         #config_options.himix = "dummy_value"
-	config_options.dbsquery = ""
+        config_options.dbsquery = ""
 
         ###
 
@@ -4835,12 +4833,12 @@ class CMSHarvester(object):
         customisations.append("process.GlobalTag.connect = \"%s\"" % \
                               connect_name)
 
-        
+
         if self.saveByLumiSection == True:
             customisations.append("process.dqmSaver.saveByLumiSection = 1")
         ##
         ##
-        
+
         customisations.append("")
 
         # About the reference histograms... For data there is only one
@@ -4869,7 +4867,7 @@ class CMSHarvester(object):
             # exists.
             customisations.append("print \"Not using reference histograms\"")
             customisations.append("if hasattr(process, \"dqmRefHistoRootFileGetter\"):")
-            customisations.append("    for (sequence_name, sequence) in process.sequences.iteritems():")
+            customisations.append("    for (sequence_name, sequence) in six.iteritems(process.sequences):")
             customisations.append("        if sequence.remove(process.dqmRefHistoRootFileGetter):")
             customisations.append("            print \"Removed process.dqmRefHistoRootFileGetter from sequence `%s'\" % \\")
             customisations.append("                  sequence_name")
@@ -5168,7 +5166,7 @@ class CMSHarvester(object):
 
     ##########
 
-    
+
     def ref_hist_mappings_needed(self, dataset_name=None):
         """Check if we need to load and check the reference mappings.
 
@@ -5256,7 +5254,7 @@ class CMSHarvester(object):
                     # We don't want people to accidentally specify
                     # multiple mappings for the same dataset. Just
                     # don't accept those cases.
-                    if self.ref_hist_mappings.has_key(dataset_name):
+                    if dataset_name in self.ref_hist_mappings:
                         msg = "ERROR: The reference histogram mapping " \
                               "file contains multiple mappings for " \
                               "dataset `%s'."
@@ -5271,7 +5269,7 @@ class CMSHarvester(object):
         self.logger.info("  Successfully loaded %d mapping(s)" % \
                          len(self.ref_hist_mappings))
         max_len = max([len(i) for i in self.ref_hist_mappings.keys()])
-        for (map_from, map_to) in self.ref_hist_mappings.iteritems():
+        for (map_from, map_to) in six.iteritems(self.ref_hist_mappings):
             self.logger.info("    %-*s -> %s" % \
                               (max_len, map_from, map_to))
 
@@ -5341,8 +5339,7 @@ class CMSHarvester(object):
         # to be easier to follow, sacrificing a bit of efficiency.
         self.datasets_information = {}
         self.logger.info("Collecting information for all datasets to process")
-        dataset_names = self.datasets_to_use.keys()
-        dataset_names.sort()
+        dataset_names = sorted(self.datasets_to_use.keys())
         for dataset_name in dataset_names:
 
             # Tell the user which dataset: nice with many datasets.
@@ -5456,9 +5453,9 @@ class CMSHarvester(object):
             self.logger.info("    output will go into `%s'" % \
                              castor_path_common)
 
-            castor_paths = dict(zip(runs,
+            castor_paths = dict(list(zip(runs,
                                     [self.create_castor_path_name_special(dataset_name, i, castor_path_common) \
-                                     for i in runs]))
+                                     for i in runs])))
             for path_name in castor_paths.values():
                 self.logger.debug("      %s" % path_name)
             self.datasets_information[dataset_name]["castor_path"] = \
@@ -5674,8 +5671,7 @@ class CMSHarvester(object):
                             for run_number in self.datasets_to_use[dataset_name]:
                                 tmp[run_number] = self.datasets_information \
                                                   [dataset_name]["num_events"][run_number]
-                            if self.book_keeping_information. \
-                                   has_key(dataset_name):
+                            if dataset_name in self.book_keeping_information:
                                 self.book_keeping_information[dataset_name].update(tmp)
                             else:
                                 self.book_keeping_information[dataset_name] = tmp
@@ -5683,16 +5679,16 @@ class CMSHarvester(object):
                     # Explain the user what to do now.
                     self.show_exit_message()
 
-            except Usage, err:
+            except Usage as err:
                 # self.logger.fatal(err.msg)
                 # self.option_parser.print_help()
                 pass
 
-            except Error, err:
+            except Error as err:
                 # self.logger.fatal(err.msg)
                 exit_code = 1
 
-            except Exception, err:
+            except Exception as err:
                 # Hmmm, ignore keyboard interrupts from the
                 # user. These are not a `serious problem'. We also
                 # skip SystemExit, which is the exception thrown when

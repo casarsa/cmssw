@@ -32,18 +32,23 @@
 //
 // class declaration
 //
+namespace edm {
+  class HepMCProduct;
+}
 
 class MCSmartSingleParticleFilter : public edm::EDFilter {
    public:
       explicit MCSmartSingleParticleFilter(const edm::ParameterSet&);
-      ~MCSmartSingleParticleFilter();
+      ~MCSmartSingleParticleFilter() override;
 
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
    private:
+      // ----------memeber function----------------------
+
       // ----------member data ---------------------------
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        std::vector<int> particleID;  
        std::vector<double> pMin;
        std::vector<double> ptMin;
@@ -54,5 +59,6 @@ class MCSmartSingleParticleFilter : public edm::EDFilter {
        std::vector<double> decayRadiusMax;
        std::vector<double> decayZMin;  
        std::vector<double> decayZMax;
+       double betaBoost;
 };
 #endif

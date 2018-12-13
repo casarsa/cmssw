@@ -19,7 +19,6 @@
 //
 
 // system include files
-#include <mutex>
 
 // user include files
 #include "FWCore/Framework/interface/ProducerBase.h"
@@ -37,6 +36,7 @@ namespace edm {
   class ActivityRegistry;
   class ProductRegistry;
   class ThinnedAssociationsHelper;
+  class WaitingTask;
 
   namespace maker {
     template<typename T> class ModuleHolderT;
@@ -54,7 +54,7 @@ namespace edm {
 
       
       EDProducerBase();
-      virtual ~EDProducerBase();
+      ~EDProducerBase() override;
       
       static void fillDescriptions(ConfigurationDescriptions& descriptions);
       static void prevalidate(ConfigurationDescriptions& descriptions);
@@ -63,25 +63,34 @@ namespace edm {
       // Warning: the returned moduleDescription will be invalid during construction
       ModuleDescription const& moduleDescription() const { return moduleDescription_; }
 
+      virtual bool wantsGlobalRuns() const =0;
+      virtual bool wantsGlobalLuminosityBlocks() const =0;
+      bool wantsStreamRuns() const {return false;}
+      bool wantsStreamLuminosityBlocks() const {return false;};
+
+      virtual SerialTaskQueue* globalRunsQueue();
+      virtual SerialTaskQueue* globalLuminosityBlocksQueue();
+
     private:
-      bool doEvent(EventPrincipal& ep, EventSetup const& c,
+      bool doEvent(EventPrincipal const& ep, EventSetup const& c,
                    ActivityRegistry*,
                    ModuleCallingContext const*);
-      void doPreallocate(PreallocationConfiguration const&) {}
+      //For now this is a placeholder
+      /*virtual*/ void preActionBeforeRunEventAsync(WaitingTask* iTask, ModuleCallingContext const& iModuleCallingContext, Principal const& iPrincipal) const {}
+
+      void doPreallocate(PreallocationConfiguration const&);
+      virtual void preallocLumis(unsigned int);
       void doBeginJob();
       void doEndJob();
 
-      void doBeginRun(RunPrincipal& rp, EventSetup const& c,
+      void doBeginRun(RunPrincipal const& rp, EventSetup const& c,
                       ModuleCallingContext const*);
-      void doEndRun(RunPrincipal& rp, EventSetup const& c,
+      void doEndRun(RunPrincipal const& rp, EventSetup const& c,
                     ModuleCallingContext const*);
-      void doBeginLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+      void doBeginLuminosityBlock(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                   ModuleCallingContext const*);
-      void doEndLuminosityBlock(LuminosityBlockPrincipal& lbp, EventSetup const& c,
+      void doEndLuminosityBlock(LuminosityBlockPrincipal const& lbp, EventSetup const& c,
                                 ModuleCallingContext const*);
-
-      void doPreForkReleaseResources();
-      void doPostForkReacquireResources(unsigned int iChildIndex, unsigned int iNumberOfChildren);
 
       //For now, the following are just dummy implemenations with no ability for users to override
       void doRespondToOpenInputFile(FileBlock const& fb);
@@ -94,12 +103,15 @@ namespace edm {
       }
       std::string workerType() const {return "WorkerT<EDProducer>";}
       
+      SharedResourcesAcquirer& sharedResourcesAcquirer() {
+        return resourcesAcquirer_;
+      }
+      
       virtual void produce(Event&, EventSetup const&) = 0;
       virtual void beginJob() {}
       virtual void endJob(){}
 
-      virtual void preForkReleaseResources() {}
-      virtual void postForkReacquireResources(unsigned int /*iChildIndex*/, unsigned int /*iNumberOfChildren*/) {}
+      virtual void preallocThreads(unsigned int) {}
 
       virtual void doBeginRun_(Run const& rp, EventSetup const& c);
       virtual void doEndRun_(Run const& rp, EventSetup const& c);
@@ -111,6 +123,10 @@ namespace edm {
       virtual void doBeginLuminosityBlockProduce_(LuminosityBlock& lbp, EventSetup const& c);
       virtual void doEndLuminosityBlockProduce_(LuminosityBlock& lbp, EventSetup const& c);
 
+      virtual bool hasAccumulator() const { return false; }
+
+      bool hasAcquire() const { return false; }
+
       virtual SharedResourcesAcquirer createAcquirer();
       
       void setModuleDescription(ModuleDescription const& md) {
@@ -121,7 +137,6 @@ namespace edm {
       ParentageID previousParentageId_;
 
       SharedResourcesAcquirer resourcesAcquirer_;
-      std::mutex mutex_;
     };
     
   }

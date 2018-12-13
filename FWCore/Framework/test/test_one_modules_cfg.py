@@ -2,14 +2,16 @@ import FWCore.ParameterSet.Config as cms
 
 nEvtLumi = 4
 nEvtRun = 2*nEvtLumi
-nStreams = 16
-nEvt = nStreams*nEvtRun*nEvtLumi
+nRuns = 64
+nStreams = 4
+nEvt = nRuns*nEvtRun
 
 process = cms.Process("TESTONEMODULES")
 
 import FWCore.Framework.test.cmsExceptionsFatalOption_cff
 process.options = cms.untracked.PSet(
-    numberOfStreams = cms.untracked.uint32(nStreams)
+    numberOfStreams = cms.untracked.uint32(nStreams),
+    numberOfThreads = cms.untracked.uint32(nStreams)
 )
 
 process.maxEvents = cms.untracked.PSet(
@@ -37,6 +39,14 @@ process.WatchRunProd = cms.EDProducer("edmtest::one::WatchRunsProducer",
 process.WatchLumiBlockProd = cms.EDProducer("edmtest::one::WatchLumiBlocksProducer",
     transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
 )
+
+process.RunCacheProd = cms.EDProducer("edmtest::one::RunCacheProducer",
+                                    transitions = cms.int32(nEvt+2*(nEvt/nEvtRun))
+                                    )
+
+process.LumiBlockCacheProd = cms.EDProducer("edmtest::one::LumiBlockCacheProducer",
+                                          transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
+                                          )
 
 process.BeginRunProd = cms.EDProducer("edmtest::one::TestBeginRunProducer",
     transitions = cms.int32(nEvt+(nEvt/nEvtRun))
@@ -67,6 +77,14 @@ process.WatchLumiBlockAn = cms.EDAnalyzer("edmtest::one::WatchLumiBlocksAnalyzer
     transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
 )
 
+process.RunCacheAn = cms.EDAnalyzer("edmtest::one::RunCacheAnalyzer",
+                                    transitions = cms.int32(nEvt+2*(nEvt/nEvtRun))
+                                    )
+
+process.LumiBlockCacheAn = cms.EDAnalyzer("edmtest::one::LumiBlockCacheAnalyzer",
+                                          transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
+                                          )
+
 process.SharedResFil = cms.EDFilter("edmtest::one::SharedResourcesFilter",
     transitions = cms.int32(nEvt)
 )
@@ -78,6 +96,13 @@ process.WatchRunFil = cms.EDFilter("edmtest::one::WatchRunsFilter",
 process.WatchLumiBlockFil = cms.EDFilter("edmtest::one::WatchLumiBlocksFilter",
     transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
 )
+process.RunCacheFil = cms.EDFilter("edmtest::one::RunCacheFilter",
+                                    transitions = cms.int32(nEvt+2*(nEvt/nEvtRun))
+                                    )
+
+process.LumiBlockCacheFil = cms.EDFilter("edmtest::one::LumiBlockCacheFilter",
+                                          transitions = cms.int32(nEvt+2*(nEvt/nEvtLumi))
+                                          )
 
 process.BeginRunFil = cms.EDFilter("edmtest::one::BeginRunFilter",
     transitions = cms.int32(nEvt+(nEvt/nEvtRun))
@@ -95,7 +120,22 @@ process.EndLumiBlockFil = cms.EDFilter("edmtest::one::EndLumiBlockFilter",
     transitions = cms.int32(nEvt+(nEvt/nEvtLumi))
 )
 
+process.TestAccumulator1 = cms.EDProducer("edmtest::one::TestAccumulator",
+  expectedCount = cms.uint32(512)
+)
 
-process.p = cms.Path(process.SharedResProd+process.WatchRunProd+process.WatchLumiBlockProd+process.BeginRunProd+process.BeginLumiBlockProd+process.EndRunProd+process.EndLumiBlockProd+process.SharedResAn+process.WatchRunAn+process.WatchLumiBlockAn+process.SharedResFil+process.WatchRunFil+process.WatchLumiBlockFil+process.BeginRunFil+process.BeginLumiBlockFil+process.EndRunFil+process.EndLumiBlockFil)
+process.TestAccumulator2 = cms.EDProducer("edmtest::one::TestAccumulator",
+  expectedCount = cms.uint32(35)
+)
+
+process.testFilterModule = cms.EDFilter("TestFilterModule",
+  acceptValue = cms.untracked.int32(5),
+  onlyOne = cms.untracked.bool(False)
+)
+
+process.task = cms.Task(process.TestAccumulator1)
+
+
+process.p = cms.Path(process.SharedResProd+process.WatchRunProd+process.WatchLumiBlockProd+process.RunCacheProd+process.LumiBlockCacheProd+process.BeginRunProd+process.BeginLumiBlockProd+process.EndRunProd+process.EndLumiBlockProd+process.SharedResAn+process.WatchRunAn+process.WatchLumiBlockAn+process.RunCacheAn+process.LumiBlockCacheAn+process.SharedResFil+process.WatchRunFil+process.WatchLumiBlockFil+process.RunCacheFil+process.LumiBlockCacheFil+process.BeginRunFil+process.BeginLumiBlockFil+process.EndRunFil+process.EndLumiBlockFil+process.testFilterModule+process.TestAccumulator2, process.task)
 
 

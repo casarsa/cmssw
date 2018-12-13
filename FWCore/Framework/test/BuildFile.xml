@@ -19,7 +19,7 @@
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
 </library>
-<library   file="stubs/TestTBBTasksAnalyzer.cc" name="TestTBBTasksAnalyzer">
+<library   file="stubs/TestTBBTasksAnalyzer.cc,stubs/TestNThreadsChecker.cc" name="TestTBBTasksAnalyzer">
   <flags   EDM_PLUGIN="1"/>
   <use   name="tbb"/>
   <use   name="DataFormats/Common"/>
@@ -67,7 +67,12 @@
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
 </library>
-<library   file="stubs/TestGlobalProducers.cc,stubs/TestGlobalAnalyzers.cc,stubs/TestGlobalFilters.cc" name="TestGlobalModules">
+<library   file="stubs/TestGlobalProducers.cc,stubs/TestGlobalAnalyzers.cc,stubs/TestGlobalFilters.cc,stubs/TestGetPathStatus.cc" name="TestGlobalModules">
+  <flags   EDM_PLUGIN="1"/>
+  <use   name="FWCore/Framework"/>
+  <use   name="FWCore/ParameterSet"/>
+</library>
+<library   file="stubs/TestLimitedProducers.cc,stubs/TestLimitedAnalyzers.cc,stubs/TestLimitedFilters.cc" name="TestLimitedModules">
   <flags   EDM_PLUGIN="1"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
@@ -148,23 +153,22 @@
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
 </library>
-<bin   name="TestFWCoreFramework" file="testRunner.cpp,maker2_t.cppunit.cc,maker_t.cppunit.cc,productregistry.cppunit.cc,edproducer_productregistry_callback.cc,event_getrefbeforeput_t.cppunit.cc,generichandle_t.cppunit.cc,edconsumerbase_t.cppunit.cc,global_module_t.cppunit.cc,one_outputmodule_t.cppunit.cc,stream_module_t.cppunit.cc">
+<bin   name="TestFWCoreFramework" file="testRunner.cpp,maker2_t.cppunit.cc,maker_t.cppunit.cc,productregistry.cppunit.cc,edproducer_productregistry_callback.cc,event_getrefbeforeput_t.cppunit.cc,generichandle_t.cppunit.cc,edconsumerbase_t.cppunit.cc,global_module_t.cppunit.cc,one_outputmodule_t.cppunit.cc,global_outputmodule_t.cppunit.cc,stream_module_t.cppunit.cc,limited_module_t.cppunit.cc,limited_outputmodule_t.cppunit.cc,throwIfImproperDependencies_t.cppunit.cc">
   <use   name="DataFormats/Common"/>
   <use   name="DataFormats/Provenance"/>
   <use   name="DataFormats/TestObjects"/>
   <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
-  <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/Utilities"/>
   <use   name="FWCore/Version"/>
+  <use   name="FWCore/ParameterSetReader"/>
   <use   name="cppunit"/>
 </bin>
 <bin   name="TestFWCoreFrameworkeventsetup" file="testRunner.cpp,callback_t.cppunit.cc,datakey_t.cppunit.cc,dependentrecord_t.cppunit.cc,esproducer_t.cppunit.cc,esproducts_t.cppunit.cc,eventsetupplugin_t.cppunit.cc,eventsetuprecord_t.cppunit.cc,eventsetup_t.cppunit.cc,fullchain_t.cppunit.cc,interval_t.cppunit.cc,proxyfactoryproducer_t.cppunit.cc,iovsyncvalue_t.cppunit.cc,intersectingiovrecordintervalfinder_t.cppunit.cc,eventsetupscontroller_t.cppunit.cc">
   <lib   name="FWCoreFrameworkTestDummyForEventSetup"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
-  <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/Utilities"/>
   <use   name="FWCore/Version"/>
   <use   name="cppunit"/>
@@ -174,9 +178,9 @@
   <use   name="DataFormats/Provenance"/>
   <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Framework"/>
-  <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/ServiceRegistry"/>
   <use   name="FWCore/Utilities"/>
+  <use   name="FWCore/ParameterSetReader"/>
   <use   name="cppunit"/>
 </bin>
 <bin   name="TestFWCoreFrameworkeventprincipal" file="testRunner.cpp,eventprincipal_t.cppunit.cc,sharedresourcesregistry_t.cppunit.cc">
@@ -185,7 +189,6 @@
   <use   name="DataFormats/TestObjects"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
-  <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/Utilities"/>
   <use   name="FWCore/Version"/>
   <use   name="cppunit"/>
@@ -197,10 +200,8 @@
   <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Framework"/>
   <use   name="FWCore/ParameterSet"/>
-  <use   name="FWCore/RootAutoLibraryLoader"/>
   <use   name="FWCore/Utilities"/>
   <use   name="FWCore/Version"/>
-  <use   name="rootcintex"/>
   <use   name="cppunit"/>
 </bin>
 <bin   name="TestFWCoreFrameworkView" file="View_t.cpp">
@@ -221,6 +222,11 @@
 </bin>
 <bin   name="TestFWCoreFrameworkGlobalStreamOne" file="TestDriver.cpp">
   <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test run_global_stream_one.sh"/>
+  <use   name="DataFormats/WrappedStdDictionaries"/>
+  <use   name="FWCore/Utilities"/>
+</bin>
+<bin   name="TestFWCoreFrameworkMayConsumesDeadlock" file="TestDriver.cpp">
+  <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test run_deadlock_test.sh"/>
   <use   name="DataFormats/WrappedStdDictionaries"/>
   <use   name="FWCore/Utilities"/>
 </bin>
@@ -306,4 +312,16 @@
 <bin   name="TestFWCoreFrameworkEarlyTerminationSignal" file="TestDriver.cpp">
   <flags TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test test_earlyTerminationSignal.sh"/>
   <use name="FWCore/Utilities"/>
+</bin>
+<bin   name="TestFWCoreFrameworkPrintDependencies" file="TestDriver.cpp">
+  <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test run_PrintDependencies.sh"/>
+  <use name="FWCore/Utilities"/>
+</bin>
+<bin   name="TestFWCoreFrameworkTransitions" file="TestDriver.cpp">
+  <flags   TEST_RUNNER_ARGS=" /bin/bash FWCore/Framework/test transition_test.sh"/>
+  <use   name="FWCore/Utilities"/>
+</bin>
+<bin file="test_catch2_main.cc,test_catch2notTP_*.cc" name="TestFWCoreFrameworkCatch2notTP">
+  <use name="catch2"/>
+  <use   name="FWCore/Framework"/>
 </bin>

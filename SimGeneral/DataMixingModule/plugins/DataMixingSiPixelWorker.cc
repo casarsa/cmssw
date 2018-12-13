@@ -7,12 +7,7 @@
 #include <map>
 #include <memory>
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Framework/interface/ConstProductRegistry.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/Provenance/interface/Provenance.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
 //
 //
 #include "DataMixingSiPixelWorker.h"
@@ -226,11 +221,11 @@ namespace edm
 
     // make new digi collection
     
-    std::auto_ptr< edm::DetSetVector<PixelDigi> > MyPixelDigis(new edm::DetSetVector<PixelDigi>(vPixelDigi) );
+    std::unique_ptr< edm::DetSetVector<PixelDigi> > MyPixelDigis(new edm::DetSetVector<PixelDigi>(vPixelDigi) );
 
     // put collection
 
-    e.put( MyPixelDigis, PixelDigiCollectionDM_ );
+    e.put(std::move(MyPixelDigis), PixelDigiCollectionDM_ );
 
     // clear local storage for this event
     SiHitStorage_.clear();

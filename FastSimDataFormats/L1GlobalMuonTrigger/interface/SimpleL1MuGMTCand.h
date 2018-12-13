@@ -49,7 +49,7 @@ class SimpleL1MuGMTCand : public L1MuGMTExtendedCand {
 		      float pTValue);    
 
     /// destructor
-    virtual ~SimpleL1MuGMTCand();
+    ~SimpleL1MuGMTCand() override;
 
     /// reset muon candidate
     void reset();
@@ -132,14 +132,11 @@ class SimpleL1MuGMTCand : public L1MuGMTExtendedCand {
     friend std::ostream& operator<<(std::ostream&, const SimpleL1MuGMTCand&);
 
     /// define a rank for muon candidates
-    class Rank : std::binary_function< const SimpleL1MuGMTCand*, const SimpleL1MuGMTCand*, bool> {
-      public :
-        bool operator()( const SimpleL1MuGMTCand* first, const SimpleL1MuGMTCand* second ) const {
-          unsigned int rank_f = (first) ? first->rank(): 0;
-          unsigned int rank_s = (second) ? second->rank() : 0;
-          return rank_f > rank_s;
-        }
-    };
+    bool getRank( const SimpleL1MuGMTCand* first, const SimpleL1MuGMTCand* second ) const {
+      unsigned int rank_f = (first) ? first->rank(): 0;
+      unsigned int rank_s = (second) ? second->rank() : 0;
+      return rank_f > rank_s;
+    }
 
     static const float ptScale[32];
     static const float etaScale[63];

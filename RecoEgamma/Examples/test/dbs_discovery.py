@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import httplib, urllib, urllib2, types, string, os, sys
 
 # return the list of files obtained from the data discovery and based upon environnement variables:
@@ -42,10 +43,10 @@ def search():
     try:
       response = urllib2.urlopen(req)
       data = response.read()
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
       if e.code==201:
-        print e.headers       
-        print e.msg
+        print(e.headers)       
+        print(e.msg)
         pass
       else:
         raise e
@@ -59,7 +60,7 @@ def search():
 
 if __name__ == "__main__":
   for file in search():
-    print file
+    print(file)
 
 	
 	

@@ -1,4 +1,4 @@
-#include "../interface/RawDataTask.h"
+#include "DQM/EcalMonitorTasks/interface/RawDataTask.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Run.h"
@@ -37,8 +37,10 @@ namespace ecaldqm {
   void
   RawDataTask::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
   {
+    // Reset by LS plots at beginning of every LS
     MEs_.at("DesyncByLumi").reset();
     MEs_.at("FEByLumi").reset();
+    MEs_.at("FEStatusErrMapByLumi").reset();
   }
 
   void
@@ -59,7 +61,7 @@ namespace ecaldqm {
     // Get GT L1 info
     const FEDRawData &gtFED(_fedRaw.FEDData(812));
     if(gtFED.size() > sizeof(uint64_t)){ // FED header is one 64 bit word
-      uint32_t *halfHeader((uint32_t *)gtFED.data());
+      const uint32_t *halfHeader = reinterpret_cast<const uint32_t *>(gtFED.data());
       l1A_ = *(halfHeader + 1) & 0xffffff;
     }
 
@@ -90,6 +92,7 @@ namespace ecaldqm {
     MESet& meBXFEInvalid(MEs_.at("BXFEInvalid"));
     MESet& meL1AFE(MEs_.at("L1AFE"));
     MESet& meFEStatus(MEs_.at("FEStatus"));
+    MESet& meFEStatusErrMapByLumi(MEs_.at("FEStatusErrMapByLumi"));
     MESet& meDesyncByLumi(MEs_.at("DesyncByLumi"));
     MESet& meDesyncTotal(MEs_.at("DesyncTotal"));
     MESet& meFEByLumi(MEs_.at("FEByLumi"));
@@ -169,6 +172,10 @@ namespace ecaldqm {
 
         DetId id(getElectronicsMap()->dccTowerConstituents(dccId, iFE + 1).at(0));
         meFEStatus.fill(id, status);
+        // Fill FE Status Error Map with error states only
+        if(status != Enabled && status != Suppressed && 
+           status != FIFOFull && status != FIFOFullL1ADesync && status != ForcedZS)
+          meFEStatusErrMapByLumi.fill(id, status);
 
         switch(status){
         case Timeout:

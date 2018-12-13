@@ -2,7 +2,7 @@
 #define EventFilter_EcalRecHitsMerger_H
 
 #include <FWCore/Framework/interface/MakerMacros.h>
-#include <FWCore/Framework/interface/EDProducer.h>
+#include <FWCore/Framework/interface/global/EDProducer.h>
                                                                                              
 #include <DataFormats/Common/interface/Handle.h>
 #include <FWCore/Framework/interface/Event.h>
@@ -18,14 +18,14 @@ namespace edm {
   class ConfigurationDescriptions;
 }
 
-class EcalRecHitsMerger : public edm::EDProducer {
+class EcalRecHitsMerger : public edm::global::EDProducer<> {
 
 public:
 	EcalRecHitsMerger(const edm::ParameterSet& pset);
-	virtual ~EcalRecHitsMerger();
-	void produce(edm::Event & e, const edm::EventSetup& c);
-	void beginJob(void);
-	void endJob(void);
+	~EcalRecHitsMerger() override;
+	void produce(edm::StreamID sid, edm::Event & e, const edm::EventSetup& c) const override;
+	void beginJob(void) override;
+	void endJob(void) override;
 	static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:

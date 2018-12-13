@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import optparse
 import re
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     # required parameters
     (options, args) = parser.parse_args()
     if len (args) != 3:
-        raise RuntimeError, "Must provide an input JSON file, an input CSV file, and an output CSV file"
+        raise RuntimeError("Must provide an input JSON file, an input CSV file, and an output CSV file")
 
     sepRE = re.compile (r'[\s,;:]+')
     runLumiDict = {}
@@ -36,16 +37,16 @@ if __name__ == '__main__':
         pieces = sepRE.split (copy.strip())
         if len (pieces) < minPieces:
             if not options.noWarnings:
-                print "Saving line '%s' since no identifiable run and lumi info" \
-                      % copy
+                print("Saving line '%s' since no identifiable run and lumi info" \
+                      % copy)
             target.write (line)
             continue
         try:
             run, lumi = int( pieces[runIndex] ), int( pieces[lumiIndex] )
         except:
             if not options.noWarnings:
-                print "Saving line '%s' since no identifiable run,lumi info" \
-                      % copy
+                print("Saving line '%s' since no identifiable run,lumi info" \
+                      % copy)
             target.write (line)
             continue
         # OK.  We recognize this line as containing a valid run and

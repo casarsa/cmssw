@@ -58,7 +58,7 @@ typedef math::XYZTLorentzVector LorentzVector;
 
 //____________________________________________________________________________||
 TCMETAlgo::TCMETAlgo()
-  : response_function_(0), showerRF_(0)
+  : response_function_(nullptr), showerRF_(nullptr)
 { }
 
 //____________________________________________________________________________||
@@ -120,7 +120,10 @@ void TCMETAlgo::configure(const edm::ParameterSet& iConfig, edm::ConsumesCollect
   maxchi2_tight_          = iConfig.getParameter<double>("chi2_tight_max" );
   minhits_tight_          = iConfig.getParameter<double>("nhits_tight_min");
   maxPtErr_tight_         = iConfig.getParameter<double>("ptErr_tight_max");
-  maxTrackAlgo_           = iConfig.getParameter<int>   ("maxTrackAlgo");
+  std::vector<std::string> trackAlgoNames = iConfig.getParameter<std::vector<std::string>>("trackAlgos");
+  std::transform(trackAlgoNames.begin(), trackAlgoNames.end(), std::back_inserter(trackAlgos_), [](const std::string& name) {
+      return reco::TrackBase::algoByName(name);
+    });
 
   isCosmics_ = iConfig.getParameter<bool>  ("isCosmics");
   minpt_     = iConfig.getParameter<double>("pt_min"   );
@@ -132,10 +135,14 @@ void TCMETAlgo::configure(const edm::ParameterSet& iConfig, edm::ConsumesCollect
   hOverECut_ = iConfig.getParameter<double>("hOverECut");
 
   trkQuality_ = iConfig.getParameter<std::vector<int> >("track_quality");
-  trkAlgos_   = iConfig.getParameter<std::vector<int> >("track_algos"  );
+  std::vector<std::string> algos = iConfig.getParameter<std::vector<std::string> >("track_algos");
+  std::transform(algos.begin(), algos.end(), std::back_inserter(trkAlgos_), [](const std::string& a) {
+      return reco::TrackBase::algoByName(a);
+    });
+
 
   showerRF_          = getResponseFunction_shower();
-  response_function_ = 0;
+  response_function_ = nullptr;
 
   int rfType = iConfig.getParameter<int>("rf_type");
 
@@ -547,13 +554,13 @@ void TCMETAlgo::findGoodShowerTracks(std::vector<int>& goodShowerTracks)
 
 //____________________________________________________________________________||
 int TCMETAlgo::nExpectedInnerHits(const reco::TrackRef track){
-  return track->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS);
+  return track->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS);
 }
 
 //____________________________________________________________________________||
 int TCMETAlgo::nExpectedOuterHits(const reco::TrackRef track)
 {
-  return track->hitPattern().numberOfHits(reco::HitPattern::MISSING_OUTER_HITS);
+  return track->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_OUTER_HITS);
 }
 
 //____________________________________________________________________________||
@@ -630,7 +637,7 @@ bool TCMETAlgo::isGoodTrack(const reco::TrackRef track)
     d0 = -1 * track->dxy( bspot );
     }
      
-  if( track->algo() < maxTrackAlgo_ )
+  if(std::find(trackAlgos_.begin(), trackAlgos_.end(), track->algo()) != trackAlgos_.end())
     {
       //1st 4 tracking iterations (pT-dependent d0 cut + nlayers cut)
        
@@ -668,7 +675,7 @@ bool TCMETAlgo::isGoodTrack(const reco::TrackRef track)
   if( !( ( track->qualityMask() & cut ) == cut ) ) return false;
 
   bool isGoodAlgo = false;
-  if( trkAlgos_.size() == 0 ) isGoodAlgo = true;
+  if( trkAlgos_.empty() ) isGoodAlgo = true;
   for( unsigned int i = 0; i < trkAlgos_.size(); i++ )
     {
       if( track->algo() == trkAlgos_.at(i) ) isGoodAlgo = true;

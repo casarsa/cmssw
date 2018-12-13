@@ -4,7 +4,7 @@ process = cms.Process("EDMtoMEConvert")
 
 process.load("DQMServices.Components.EDMtoMEConverter_cff")
 
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 # CRAFT08
@@ -39,7 +39,8 @@ process.source.processingMode = "RunsAndLumis"
 
 process.DQMStore.referenceFileName = ''
 process.dqmSaver.convention = 'Online'
-process.dqmEnvTr = cms.EDAnalyzer("DQMEventInfo",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.dqmEnvTr = DQMEDAnalyzer('DQMEventInfo',
                                                  subSystemFolder = cms.untracked.string('Tracking'),
                                                  eventRateWindow = cms.untracked.double(0.5),
                                                  eventInfoFolder = cms.untracked.string('EventInfo')

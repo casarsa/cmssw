@@ -3,8 +3,8 @@
 #include "Geometry/CommonTopologies/interface/TrapezoidalStripTopology.h"
 
 
-GEMEtaPartition::GEMEtaPartition(GEMDetId id, BoundPlane::BoundPlanePointer bp, GEMEtaPartitionSpecs* rrs) :
-  GeomDetUnit(bp), id_(id),specs_(rrs)
+GEMEtaPartition::GEMEtaPartition(GEMDetId id, const BoundPlane::BoundPlanePointer& bp, GEMEtaPartitionSpecs* rrs) :
+  GeomDet(bp), id_(id),specs_(rrs)
 {
   setDetId(id);
 }
@@ -53,7 +53,7 @@ GEMEtaPartition::nstrips() const
 LocalPoint
 GEMEtaPartition::centreOfStrip(int strip) const
 {
-  float s = static_cast<float>(strip) - 0.5;
+  float s = static_cast<float>(strip) + 0.5f;
   return this->specificTopology().localPosition(s);
 }
 
@@ -97,7 +97,7 @@ GEMEtaPartition::npads() const
 LocalPoint
 GEMEtaPartition::centreOfPad(int pad) const
 {
-  float p = static_cast<float>(pad) - 0.5;
+  float p = static_cast<float>(pad) + 0.5f;
   return specificPadTopology().localPosition(p);
 }
 
@@ -136,16 +136,16 @@ GEMEtaPartition::padOfStrip(int strip) const
 int
 GEMEtaPartition::firstStripInPad(int pad) const
 {
-  float p = static_cast<float>(pad) - 0.9999;
+  float p = static_cast<float>(pad) - 0.9999f;
   LocalPoint lp = specificPadTopology().localPosition(p);
-  return static_cast<int>(strip(lp)) + 1;
+  return static_cast<int>(strip(lp));
 }
 
 int
 GEMEtaPartition::lastStripInPad(int pad) const
 {
-  float p = static_cast<float>(pad) - 0.0001;
+  float p = static_cast<float>(pad) - 0.0001f;
   LocalPoint lp = specificPadTopology().localPosition(p);
-  return static_cast<int>(strip(lp)) + 1;
+  return static_cast<int>(strip(lp));
 }
 

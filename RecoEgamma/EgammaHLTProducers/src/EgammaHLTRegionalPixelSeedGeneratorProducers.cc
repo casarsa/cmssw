@@ -69,7 +69,7 @@ EgammaHLTRegionalPixelSeedGeneratorProducers::EgammaHLTRegionalPixelSeedGenerato
   edm::ParameterSet creatorPSet;
   creatorPSet.addParameter<std::string>("propagator","PropagatorWithMaterial");
 
-  combinatorialSeedGenerator.reset(new SeedGeneratorFromRegionHits( hitsGenerator, 0,
+  combinatorialSeedGenerator.reset(new SeedGeneratorFromRegionHits( hitsGenerator, nullptr,
                                                                     SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator", creatorPSet)
                                                                     ));
   // setup orderedhits setup (in order to tell seed generator to use pairs/triplets, which layers)
@@ -103,19 +103,12 @@ void EgammaHLTRegionalPixelSeedGeneratorProducers::fillDescriptions(edm::Configu
   descriptions.add(("hltEgammaHLTRegionalPixelSeedGeneratorProducers"), desc);  
 }
 
-void EgammaHLTRegionalPixelSeedGeneratorProducers::endRun(edm::Run const&run, const edm::EventSetup& es) {}
-
-
-void EgammaHLTRegionalPixelSeedGeneratorProducers::beginRun(edm::Run const&run, const edm::EventSetup& es)
-{
-}
-
 // Functions that gets called by framework every event
 void EgammaHLTRegionalPixelSeedGeneratorProducers::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
 
   // resulting collection
-  std::auto_ptr<TrajectorySeedCollection> output(new TrajectorySeedCollection());    
+  auto output = std::make_unique< TrajectorySeedCollection>();    
 
   // Get the recoEcalCandidates
   edm::Handle<reco::RecoEcalCandidateCollection> recoecalcands;
@@ -163,5 +156,5 @@ void EgammaHLTRegionalPixelSeedGeneratorProducers::produce(edm::Event& iEvent, c
     
   }
 
-    iEvent.put(output);
+    iEvent.put(std::move(output));
 }

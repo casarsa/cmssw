@@ -79,7 +79,7 @@ public:
   static double invDimuonMass( const lorentzVector & mu1, const lorentzVector & mu2 );
   static double massResolution( const lorentzVector & mu1, const lorentzVector & mu2 );
   static double massResolution( const lorentzVector & mu1, const lorentzVector & mu2, const std::vector<double> & parval );
-  static double massResolution( const lorentzVector & mu1, const lorentzVector & mu2, std::auto_ptr<double> parval );
+  static double massResolution( const lorentzVector & mu1, const lorentzVector & mu2, std::unique_ptr<double> parval );
   static double massResolution( const lorentzVector & mu1, const lorentzVector & mu2, double* parval );
   static double massResolution( const lorentzVector& mu1, const lorentzVector& mu2, const ResolutionFunction & resolFunc );
 
@@ -211,11 +211,12 @@ public:
   static std::vector<int> parfix;
   static std::vector<int> parorder;
 
-  static std::vector<std::pair<lorentzVector,lorentzVector> > SavedPair;
-  static std::vector<std::pair<MuScleFitMuon,MuScleFitMuon> > SavedPairMuScleFitMuons;
-  static std::vector<std::pair<lorentzVector,lorentzVector> > ReducedSavedPair;
-  static std::vector<std::pair<lorentzVector,lorentzVector> > genPair;
-  static std::vector<std::pair<lorentzVector,lorentzVector> > simPair;
+  static std::vector<std::pair<lorentzVector, lorentzVector> > SavedPair;
+  static std::vector<std::pair<lorentzVector, lorentzVector> > ReducedSavedPair;
+  static std::vector<std::pair<lorentzVector, lorentzVector> > genPair;
+  static std::vector<std::pair<MuScleFitMuon, MuScleFitMuon> > SavedPairMuScleFitMuons;
+  static std::vector<std::pair<MuScleFitMuon, MuScleFitMuon> > genMuscleFitPair;
+  static std::vector<std::pair<lorentzVector, lorentzVector> > simPair;
 
   static bool scaleFitNotDone_;
 

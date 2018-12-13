@@ -9,14 +9,12 @@
 #include "EventFilter/Utilities/interface/FastMonitor.h"
 
 #include <fstream>
-#include <stdio.h>
+#include <cstdio>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 
 #include "boost/shared_array.hpp"
 
-using namespace jsoncollector;
 
 class RawEventFileWriterForBU 
 {
@@ -40,9 +38,6 @@ class RawEventFileWriterForBU
   bool sharedMode() const {return false;}
   void makeRunPrefix(std::string const& destinationDir);
 
-  void handler(int s);
-  static void staticHandler(int s) { instance->handler(s); }
-
  private:
 
   bool closefd(){if(outfd_>=0){close(outfd_); outfd_=-1; return true;} else return false;}
@@ -53,26 +48,31 @@ class RawEventFileWriterForBU
   int run_ = -1;
   std::string runPrefix_;
 
-  IntJ perRunEventCount_;
-  IntJ perRunFileCount_;
-  IntJ perRunLumiCount_;
+  jsoncollector::IntJ perRunEventCount_;
+  jsoncollector::IntJ perRunFileCount_;
+  jsoncollector::IntJ perRunLumiCount_;
+  jsoncollector::IntJ perRunLastLumi_;
 
-  IntJ perLumiEventCount_;
-  IntJ perLumiFileCount_;
-  IntJ perLumiTotalEventCount_;
+  jsoncollector::IntJ perLumiEventCount_;
+  jsoncollector::IntJ perLumiFileCount_;
+  jsoncollector::IntJ perLumiTotalEventCount_;
+  jsoncollector::IntJ perLumiLostEventCount_;
+  jsoncollector::IntJ perLumiSize_;
 
-  IntJ perFileEventCount_;
 
-  FastMonitor* fileMon_ = nullptr;
-  FastMonitor* lumiMon_ = nullptr;
-  FastMonitor* runMon_ = nullptr;
+  jsoncollector::IntJ perFileEventCount_;
+  jsoncollector::IntJ perFileSize_;
 
-  DataPointDefinition rawJsonDef_;
-  DataPointDefinition eolJsonDef_;
-  DataPointDefinition eorJsonDef_;
+  jsoncollector::FastMonitor* fileMon_ = nullptr;
+  jsoncollector::FastMonitor* lumiMon_ = nullptr;
+  jsoncollector::FastMonitor* runMon_ = nullptr;
+
+  jsoncollector::DataPointDefinition rawJsonDef_;
+  jsoncollector::DataPointDefinition eolJsonDef_;
+  jsoncollector::DataPointDefinition eorJsonDef_;
   bool writtenJSDs_=false;
 
-  std::auto_ptr<std::ofstream> ost_;
+  std::unique_ptr<std::ofstream> ost_;
   std::string fileName_;
   std::string destinationDir_;
 
@@ -81,7 +81,8 @@ class RawEventFileWriterForBU
   uint32 adlera_;
   uint32 adlerb_;
 
-  static RawEventFileWriterForBU* instance;
+  unsigned int lumiOpen_ = 0;
+  unsigned int lumiClosed_ = 0;
 
 };
 #endif

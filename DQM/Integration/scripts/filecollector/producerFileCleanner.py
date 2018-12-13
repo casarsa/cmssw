@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os, time, sys, glob, re, smtplib, socket
 from email.MIMEText import MIMEText
 from traceback import print_exc, format_exc
@@ -27,7 +28,7 @@ lastEmailSent = 0
 # --------------------------------------------------------------------
 def logme(msg, *args):
   procid = "[%s/%d]" % (__file__.rsplit("/", 1)[-1], os.getpid())
-  print datetime.now(), procid, msg % args
+  print(datetime.now(), procid, msg % args)
   
 def getDiskUsage(path):
   fsStats=os.statvfs(path)
@@ -136,14 +137,14 @@ while True:
             try:
               os.remove(f)
               logme("INFO: File %s has been removed", f)
-            except Exception,e:
+            except Exception as e:
               logme("ERROR: Problem deleting file: [Errno %d] %s, '%s'",
                       e.errno, e.strerror, e.filename)
               
           try:
             os.removedir(sdRoot)
             logme("INFO: File %s has been removed" , sdRoot)
-          except Exception,e:
+          except Exception as e:
             logme("ERROR: Problem deleting directory: [Errno %d] %s, '%s'",
                       e.errno, e.strerror, e.filename)
                       
@@ -169,7 +170,7 @@ while True:
       try:
         os.remove(f)
         logme("INFO: File %s has been removed", f)
-      except Exception,e:
+      except Exception as e:
         logme("ERROR: Problem deleting file: [Errno %d] %s, '%s'",
                 e.errno, e.strerror, e.filename)
       if os.path.dirname(f) not in DIR_LIST and COLLECTDIR not in os.path.dirname(f):
@@ -180,14 +181,14 @@ while True:
       try:
         os.removedirs(d)
         logme("INFO: Directory %s has been removed", d)
-      except Exception,e:
+      except Exception as e:
         logme("ERROR: Directory delition failed: [Errno %d] %s, '%s'",
                 e.errno, e.strerror, e.filename)
 
-  except KeyboardInterrupt, e:
+  except KeyboardInterrupt as e:
     sys.exit(0)
 
-  except Exception, e:
+  except Exception as e:
     logme('ERROR: %s', e)
     sendmail ('ERROR: %s\n%s' % (e, format_exc()))
     now = time.time()

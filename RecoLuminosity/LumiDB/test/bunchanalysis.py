@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys,os,os.path,csv
 #analyse result from lumicalc2 cmmd to find perbunchlumi after subtracting noise
 #the following example analyses the output from:
@@ -40,7 +41,7 @@ class bxlumiParser(object):
             self.lssum[lumils]=sum(bxlum)
             self.lsmax[lumils]=max(bxlum)
             for i,inxval in enumerate(bxidx):
-                if not self.bxlumi.has_key(inxval): self.bxlumi[inxval]=0.
+                if inxval not in self.bxlumi: self.bxlumi[inxval]=0.
                 self.bxlumi[inxval]+=bxlum[i]
         f.close()
         if self.bxlumi:
@@ -51,7 +52,7 @@ class bxlumiParser(object):
            collidingbx is the bx with lumi within 20% of the max lumi
            noncollidingbx is the bunch with lumi >20% off the peak
         '''
-        if not self.bxlumi.has_key(bxidx): return False
+        if bxidx not in self.bxlumi: return False
         if self.bxlumi[bxidx] < self.bxlumimax*0.2: return False
         return True
     
@@ -61,9 +62,9 @@ if __name__ == "__main__" :
     bxreader.parse()
     collidingbx=[i for i in range(0,3564) if bxreader.iscollidingbx(i)]
     noncollidingbx=[i for i in range(0,3564) if i not in collidingbx]
-    print 'colliding bx ',collidingbx
+    print('colliding bx ',collidingbx)
     noise=0.
-    print 'bxidx,rawbxlumi,truebxlumi'
+    print('bxidx,rawbxlumi,truebxlumi')
     totlumi=0.
     totncolliding=0
     for i in collidingbx:
@@ -74,5 +75,5 @@ if __name__ == "__main__" :
         truebxlumi=rawbxlumi-noise
         totncolliding+=1
         totlumi+=truebxlumi
-        print i,rawbxlumi,truebxlumi
-    print '==n clean colliding bx, lumi ',totncolliding,totlumi
+        print(i,rawbxlumi,truebxlumi)
+    print('==n clean colliding bx, lumi ',totncolliding,totlumi)

@@ -21,7 +21,7 @@ std::vector<reco::BasicCluster> IslandClusterAlgo::makeClusters(
 				  const CaloSubdetectorGeometry *geometryES_p,
 				  EcalPart ecalPart,
 				  bool regional,
-				  const std::vector<EcalEtaPhiRegion>& regions)
+				  const std::vector<RectangularEtaPhiRegion>& regions)
 {
   seeds.clear();
   used_s.clear();
@@ -35,11 +35,15 @@ std::vector<reco::BasicCluster> IslandClusterAlgo::makeClusters(
     {
       threshold = ecalEndcapSeedThreshold;
       ecalPart_string = "EndCap";
+      v_chstatusSeed_ = v_chstatusSeed_Endcap_;
+      v_chstatus_ = v_chstatus_Endcap_;
     }
   if (ecalPart == barrel) 
     {
       threshold = ecalBarrelSeedThreshold;
       ecalPart_string = "Barrel";
+      v_chstatusSeed_ = v_chstatusSeed_Barrel_;
+      v_chstatus_ = v_chstatus_Barrel_;
     }
 
   if (verbosity < pINFO)
@@ -60,16 +64,23 @@ std::vector<reco::BasicCluster> IslandClusterAlgo::makeClusters(
 	double energy = it->energy();
 	if (energy < threshold) continue; // need to check to see if this line is useful!
 
-	const CaloCellGeometry *thisCell = geometry_p->getGeometry(it->id());
-	GlobalPoint position = thisCell->getPosition();
+        // avoid seeding for anomalous channels
+	if(! it->checkFlag(EcalRecHit::kGood)) { // if rechit is good, no need for further checks
+	  if (it->checkFlags( v_chstatus_ ) || it->checkFlags( v_chstatusSeed_ )) {
+	     continue; // the recHit has to be excluded from seeding
+	  }
+        }
+
+	auto thisCell = geometry_p->getGeometry(it->id());
+	auto const &  position = thisCell->getPosition();
 
 	// Require that RecHit is within clustering region in case
 	// of regional reconstruction
 	bool withinRegion = false;
 	if (regional) {
-	  std::vector<EcalEtaPhiRegion>::const_iterator region;
+	  std::vector<RectangularEtaPhiRegion>::const_iterator region;
 	  for (region=regions.begin(); region!=regions.end(); region++) {
-	    if (region->inRegion(position)) {
+	    if (region->inRegion(thisCell->etaPos(),thisCell->phiPos())) {
 	      withinRegion =  true;
 	      break;
 	    }
@@ -77,14 +88,14 @@ std::vector<reco::BasicCluster> IslandClusterAlgo::makeClusters(
 	}
 
 	if (!regional || withinRegion) {
-	  float ET = it->energy() * sin(position.theta());
+	  float ET = it->energy() * position.basicVector().unit().perp();
 	  if (ET > threshold) seeds.push_back(*it);
 	}
       }
     
   }
   
-  sort(seeds.begin(), seeds.end(), EcalRecHitLess());
+  sort(seeds.begin(), seeds.end(), [](auto const& x, auto const& y){ return x.energy() > y.energy();});
 
   if (verbosity < pINFO)
     {
@@ -92,7 +103,7 @@ std::vector<reco::BasicCluster> IslandClusterAlgo::makeClusters(
     }
 
   mainSearch(hits,geometry_p,topology_p,geometryES_p,ecalPart);
-  sort(clusters_v.rbegin(), clusters_v.rend(), ClusterEtLess());
+  sort(clusters_v.rbegin(), clusters_v.rend(), isClusterEtLess);
 
   if (verbosity < pINFO)
     {
@@ -255,7 +266,8 @@ bool IslandClusterAlgo::shouldBeAdded(EcalRecHitCollection::const_iterator candi
   if ( (candidate_it == recHits_->end())                 || // ...if it does not correspond to a hit
        (used_s.find(candidate_it->id()) != used_s.end()) || // ...if it already belongs to a cluster
        (candidate_it->energy() <= 0)                     || // ...if it has a negative or zero energy
-       (candidate_it->energy() > previous_it->energy()))    // ...or if the previous crystal had lower E
+       (candidate_it->energy() > previous_it->energy())  || // ...or if the previous crystal had lower E
+       (!(candidate_it->checkFlag(EcalRecHit::kGood)) && candidate_it->checkFlags( v_chstatus_ )))
     {
       return false;
     }

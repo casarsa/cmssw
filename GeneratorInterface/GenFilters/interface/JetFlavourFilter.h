@@ -28,9 +28,9 @@ class JetFlavourFilter : public edm::EDFilter
 public:
 
   explicit JetFlavourFilter(const edm::ParameterSet&);
-  ~JetFlavourFilter();
+  ~JetFlavourFilter() override;
   
-  virtual bool filter(edm::Event&, const edm::EventSetup&);
+  bool filter(edm::Event&, const edm::EventSetup&) override;
 
 private:
 
@@ -45,7 +45,7 @@ private:
 
   int jetType;
 
-  std::string label_;
+  edm::EDGetTokenT<edm::HepMCProduct> token_;
   int noAccepted;
 };
 

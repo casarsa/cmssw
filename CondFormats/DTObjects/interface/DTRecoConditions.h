@@ -18,7 +18,10 @@
 #include <map>
 #include <vector>
 #include <string>
-#include <stdint.h>
+#include <cstdint>
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+#include <atomic>
+#endif
 
 class DTWireId;
 class TFormula;
@@ -29,6 +32,8 @@ public:
 
   /// Constructor
   DTRecoConditions();
+  DTRecoConditions(const DTRecoConditions&);
+  const DTRecoConditions& operator=(const DTRecoConditions&);
 
   /// Destructor
   virtual ~DTRecoConditions();
@@ -44,7 +49,7 @@ public:
 
   /// Get the value correspoding to the given WireId, 
   //// using x[] as parameters of the parametrization when relevant
-  float get(const DTWireId& wireid, double* x=0) const;
+  float get(const DTWireId& wireid, double* x=nullptr) const;
 
   /// Set the expression representing the formula used for parametrization
   void setFormulaExpr(const std::string& expr) {
@@ -65,10 +70,18 @@ public:
 private:
 
   // The formula used for parametrization (transient pointer)
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+  mutable std::atomic<TFormula*> formula COND_TRANSIENT;
+#else
   mutable TFormula* formula COND_TRANSIENT;
+#endif
   
   // Formula evalaution strategy, derived from expression and cached for efficiency reasons
+#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
+  mutable std::atomic<int> formulaType COND_TRANSIENT;
+#else
   mutable int formulaType COND_TRANSIENT;
+#endif
 
   // String with the expression representing the formula used for parametrization
   std::string expression;

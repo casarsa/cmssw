@@ -5,6 +5,7 @@
 # fill_num.txt all the runs in the fill
 # dumpResult lumibyday --begin --end 
 #
+from __future__ import print_function
 import os,os.path,sys
 import coral,datetime
 from RecoLuminosity.LumiDB import argparse,sessionManager,lumiTime,RegexValidator
@@ -52,7 +53,7 @@ if __name__ == '__main__':
     lute=lumiTime.lumiTime()
     begtimeStr='01/01/12 00:00:00'
     reqtimemaxT=datetime.datetime.now()
-    print options.begin,options.end
+    print(options.begin,options.end)
     if options.begin:
         begtimeStr=options.begin
     reqtimeminT=lute.StrToDatetime(options.begin,customfm='%m/%d/%y %H:%M:%S')
@@ -63,21 +64,20 @@ if __name__ == '__main__':
     lumiquery.setCondition('TIME>=:begintime AND TIME<=:endtime',qCondition)
     cursor=lumiquery.execute()
     result={}#{ordinalnumber:delivered}
-    while cursor.next():
+    while next(cursor):
         timeStr=cursor.currentRow()['timestr'].data()
         runTime=lute.StrToDatetime(timeStr,customfm='%m/%d/%y %H:%M:%S')
         delivered=cursor.currentRow()['DELIVERED'].data()
         ordinalday=runTime.toordinal()
-        if not result.has_key(ordinalday):
+        if ordinalday not in result:
             result[ordinalday]=0.
         result[ordinalday]+=delivered
     session.transaction().commit()
     del lumiquery
     del session
     del svc
-    alldays=result.keys()
-    alldays.sort()
+    alldays=sorted(result.keys())
     for ordi in alldays:
-        print datetime.datetime.fromordinal(ordi).date(),',',result[ordi]
-    print '#total running days: ',len(alldays)
-    print '#total delivered: ',sum(result.values())
+        print(datetime.datetime.fromordinal(ordi).date(),',',result[ordi])
+    print('#total running days: ',len(alldays))
+    print('#total delivered: ',sum(result.values()))

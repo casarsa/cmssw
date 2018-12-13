@@ -75,14 +75,14 @@ class JetMatching {
 	void resetMatchingStatus() { fMatchingStatus = false; }
 	bool isMatchingDone() { return fMatchingStatus; }
 	
-	virtual const std::vector<int>* getPartonList()      { return 0; }
+	virtual const std::vector<int>* getPartonList()      { return nullptr; }
 	virtual double                  getJetEtaMax() const = 0;
 
 /*
 	const std::vector<JetPartonMatch> &getMatchSummary() const
 	{ return matchSummary; }
 */
-	static std::auto_ptr<JetMatching> create(
+	static std::unique_ptr<JetMatching> create(
 					const edm::ParameterSet &params);
 
     protected:

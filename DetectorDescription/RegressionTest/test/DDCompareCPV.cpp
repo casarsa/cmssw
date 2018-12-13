@@ -1,18 +1,19 @@
-#include "FWCore/PluginManager/interface/PluginManager.h"
-#include "FWCore/PluginManager/interface/standard.h"
+#include <cstdlib>
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include "DetectorDescription/Core/interface/DDCompactView.h"
 #include "DetectorDescription/Parser/interface/DDLParser.h"
 #include "DetectorDescription/Parser/interface/DDLSAX2FileHandler.h"
 #include "DetectorDescription/Parser/interface/FIPConfiguration.h"
 #include "DetectorDescription/RegressionTest/interface/DDCompareTools.h"
-#include "DetectorDescription/RegressionTest/interface/DDErrorDetection.h"
-
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/PluginManager/interface/PluginManager.h"
+#include "FWCore/PluginManager/interface/standard.h"
+#include "FWCore/Utilities/interface/Exception.h"
 #include <boost/program_options.hpp>
 #include <boost/exception/all.hpp>
-
-#include <string>
-#include <iostream>
-#include <iomanip>
 
 int main(int argc, char *argv[])
 {
@@ -75,8 +76,6 @@ int main(int argc, char *argv[])
     std::string configfile("DetectorDescription/RegressionTest/test/configuration.xml");
     std::string configfile2("DetectorDescription/RegressionTest/test/configuration.xml");
     DDCompOptions ddco;
-    //    double dtol(0.0004), rottol(0.0004);
-    // bool usrns(false), comprot(false);
     bool usrns(false);
     try {
       if (vm.count("file1")) {
@@ -119,7 +118,7 @@ int main(int argc, char *argv[])
     std::cout << "Continue on error (data mismatch)? " << ddco.contOnError_ << std::endl;
     std::cout << "Attempt resyncronization of disparate graphs? " << ddco.attResync_ << std::endl;
 
-    DDCompactView cpv1;
+    DDCompactView cpv1( DDName( "CompactView1" ));
     DDLParser myP(cpv1);
     myP.getDDLSAX2FileHandler()->setUserNS(usrns);
 
@@ -144,7 +143,7 @@ int main(int argc, char *argv[])
     }
     
     std::cout << "FILE 1: " << configfile << std::endl;
-    if ( fp.getFileList().size() == 0 ) {
+    if ( fp.getFileList().empty() ) {
       std::cout << "FILE 1: configuration file has no DDD xml files in it!" << std::endl;
       exit(1);
     }
@@ -155,7 +154,7 @@ int main(int argc, char *argv[])
     }
     cpv1.lockdown();
 
-    DDCompactView cpv2;
+    DDCompactView cpv2( DDName( "CompactView2" ));
     DDLParser myP2(cpv2);
     myP2.getDDLSAX2FileHandler()->setUserNS(usrns);
 
@@ -171,7 +170,7 @@ int main(int argc, char *argv[])
     FIPConfiguration fp2(cpv2);
     fp2.readConfig(configfile2, fullPath);
     std::cout << "FILE 2: " << configfile2 << std::endl;
-    if ( fp2.getFileList().size() == 0 ) {
+    if ( fp2.getFileList().empty() ) {
       std::cout << "FILE 2: configuration file has no DDD xml files in it!" << std::endl;
       exit(1);
     }
@@ -184,21 +183,7 @@ int main(int argc, char *argv[])
 
     std::cout << "Parsing completed. Start comparing." << std::endl;
 
-//      DDErrorDetection ed(cpv1);
-
-//      bool noErrors = ed.noErrorsInTheReport(cpv1);
-//      if (noErrors && fullPath) {
-//        std::cout << "DDCompareCPV did not find any errors and is finished." << std::endl;
-//      }
-//     else {
-//       ed.report(cpv1, std::cout);
-//       if (!noErrors) {
-//         return 1;
-//       }
-//     }
-
-    DDCompareCPV ddccpv(ddco);
-    bool graphmatch = ddccpv(cpv1, cpv2);
+    bool graphmatch = DDCompareCPV(cpv1, cpv2, ddco);
 
     if (graphmatch) {
       std::cout << "DDCompactView graphs match" << std::endl;

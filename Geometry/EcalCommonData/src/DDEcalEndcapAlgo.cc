@@ -52,7 +52,7 @@ DDEcalEndcapAlgo::DDEcalEndcapAlgo() :
    m_vecEESCCtrs(),
    m_EEnCRSC       ( 0 ) ,
    m_vecEECRCtrs(),
-   m_cutParms      ( 0 ),
+   m_cutParms      ( nullptr ),
    m_cutBoxName    ( "" ),
    m_envName    ( "" ),
    m_alvName    ( "" ),
@@ -136,8 +136,6 @@ void DDEcalEndcapAlgo::initialize(const DDNumericArguments      & nArgs,
    m_cryZOff = nArgs["EECryZOff"] ;
 
    m_zFront  = nArgs["EEzFront"] ;
-
-//   edm::LogInfo("EcalGeom") << "DDEcalEndcapAlgo info: end initialize" ;
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -149,15 +147,8 @@ DDRotation
 DDEcalEndcapAlgo::myrot( const std::string&      s,
 			 const DDRotationMatrix& r ) const 
 {
-   return DDrot( ddname( m_idNameSpace + ":" + s ), new DDRotationMatrix( r ) ) ; 
+  return DDrot( ddname( m_idNameSpace + ":" + s ), std::make_unique<DDRotationMatrix>( r ) ) ; 
 }
-/*
-DDRotation
-DDEcalBarrelAlgo::myrot( const std::string&      s,
-			 const CLHEP::HepRotation& r ) const 
-{
-  return DDrot( ddname( m_idNameSpace + ":" + s ), new DDRotationMatrix( r.xx(), r.xy(), r.xz(), r.yx(), r.yy(), r.yz(), r.zx(), r.zy(), r.zz() ) ) ; 
-}*/
  
 DDMaterial
 DDEcalEndcapAlgo::ddmat( const std::string& s ) const
@@ -169,7 +160,7 @@ DDName
 DDEcalEndcapAlgo::ddname( const std::string& s ) const
 { 
    const pair<std::string,std::string> temp ( DDSplit(s) ) ;
-   if ( temp.second == "" ) {
+   if ( temp.second.empty() ) {
      return DDName( temp.first,
 		    m_idNameSpace ) ;
    } else {
@@ -268,7 +259,7 @@ DDEcalEndcapAlgo::execute( DDCompactView& cpv )
 	    scrys.translate( DDTranslation( 0., 0., -eezOff() ) ) ;
 
 	    DDName rname ( envName( isctype ).name()
-			   + int_to_string( icol ) + "R" + int_to_string( irow ) ) ;
+			   + std::to_string( icol ) + "R" + std::to_string( irow ) ) ;
 /*
          edm::LogInfo("EcalGeom") << "Quadrant, SC col/row " 
 				  << eeQuaName() << " " << icol << " / " << irow << std::endl
@@ -303,7 +294,7 @@ DDEcalEndcapAlgo::EECreateSC( const unsigned int iSCType ,
    
 //   edm::LogInfo("EcalGeom") << "EECreateSC: Creating SC envelope" << std::endl;
 
-   const string anum ( int_to_string(iSCType) ) ;
+   const string anum ( std::to_string(iSCType) ) ;
 
    const double eFront ( 0.5*eeSCEFront() ) ;
    const double eRear  ( 0.5*eeSCERear()  ) ;
@@ -507,7 +498,7 @@ DDEcalEndcapAlgo::EEPositionCRs( const DDName&        pName,
 	       crystal.moveto( cryFCtr( icol, irow ) ,
 			       cryRCtr( icol, irow )   );
 
-	       DDName rname ( "EECrRoC" + int_to_string( icol ) + "R" + int_to_string( irow ) ) ;
+	       DDName rname ( "EECrRoC" + std::to_string( icol ) + "R" + std::to_string( irow ) ) ;
 
 	       cpv.position( cryName(),
 			     pName,

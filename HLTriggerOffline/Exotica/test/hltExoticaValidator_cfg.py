@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os, sys
 import FWCore.ParameterSet.Config as cms
 
@@ -18,7 +19,7 @@ for i in range(0,len(sys.argv)):
     if str(sys.argv[i])=="_input" and len(sys.argv)>i+1:
         myinput = str(sys.argv[i+1])
         
-print "Using myinput="+myinput
+print("Using myinput="+myinput)
 
 if   myinput=="ZEE" :
     myfileNames = cms.untracked.vstring(
@@ -169,8 +170,8 @@ elif myinput=="ZpEE_f_PU50ns" :
 elif myinput=="ZpMM_f_PU50ns" :
     myfileNames = cms.untracked.vstring()
 
-print "### Files : "
-print myfileNames
+print("### Files : ")
+print(myfileNames)
 
 
 ##############################################################################
@@ -185,7 +186,7 @@ process.hltExoticaValidator.hltProcessName = hltProcessName
 
 process.load("Configuration.StandardSequences.Reconstruction_cff")
 process.load("Configuration.StandardSequences.MagneticField_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 from Configuration.AlCa.autoCond import autoCond
 process.GlobalTag.globaltag = cms.string(autoCond['startup'])

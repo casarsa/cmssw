@@ -38,7 +38,7 @@ namespace{
 
 
 PythiaFilterGammaJetIsoPi0::PythiaFilterGammaJetIsoPi0(const edm::ParameterSet& iConfig) :
-  label_(iConfig.getUntrackedParameter("moduleLabel",std::string("generator"))),
+  token_(consumes<edm::HepMCProduct>(edm::InputTag(iConfig.getUntrackedParameter("moduleLabel",std::string("generator")),"unsmeared"))),
   etaMin(iConfig.getUntrackedParameter<double>("MinPi0Eta", 1.65)),
   PtMin(iConfig.getUntrackedParameter<double>("MinPi0Pt", 50.)),
   etaMax(iConfig.getUntrackedParameter<double>("MaxPi0Eta", 2.5)),
@@ -80,7 +80,7 @@ bool PythiaFilterGammaJetIsoPi0::filter(edm::Event& iEvent, const edm::EventSetu
   
   bool accepted = false;
   Handle<edm::HepMCProduct> evt;
-  iEvent.getByLabel(label_, evt);
+  iEvent.getByToken(token_, evt);
 
   const HepMC::GenEvent * myGenEvent = evt->GetEvent();
 
@@ -126,10 +126,10 @@ bool PythiaFilterGammaJetIsoPi0::filter(edm::Event& iEvent, const edm::EventSetu
 // ----------------------------------------------------------    
     if(dr_pi0_photon > isodr) { 
       
-      bool inEB(0);
+      bool inEB(false);
       double tgx(0);
       double tgy(0);
-      if( std::abs(eta_pi0) < ebEtaMax) inEB=1;
+      if( std::abs(eta_pi0) < ebEtaMax) inEB=true;
       else{
         tgx=myGenEvent->barcode_to_particle(pi0_id)->momentum().px()/myGenEvent->barcode_to_particle(pi0_id)->momentum().pz();
         tgy=myGenEvent->barcode_to_particle(pi0_id)->momentum().py()/myGenEvent->barcode_to_particle(pi0_id)->momentum().pz();

@@ -164,23 +164,31 @@ int getCharge(const SiStripCluster* cluster, int& nSatStrip, const GeomDetUnit& 
 
    nSatStrip = 0;
    int charge = 0;
-   for(unsigned int i=0;i<Ampls.size();i++){
-      int calibratedCharge = Ampls[i];
 
-      if(calibGains.size()!=0){
-         auto & gains     = calibGains[detUnit.index()-m_off];
-         calibratedCharge = (int)(calibratedCharge / gains[(cluster->firstStrip()+i)/128] );
-         if(calibratedCharge>=1024){
-            calibratedCharge = 255;
-         }else if(calibratedCharge>=255){
-            calibratedCharge = 254;
-         } 
-      }
-
-      charge+=calibratedCharge;
-      if(calibratedCharge>=254)nSatStrip++;
+   if ( calibGains.empty() ) {
+     for(unsigned int i=0;i<Ampls.size();i++){
+       int calibratedCharge = Ampls[i];
+       charge+=calibratedCharge;
+       if(calibratedCharge>=254)nSatStrip++;
+     }
    }
-
+   else{
+     for(unsigned int i=0;i<Ampls.size();i++){
+       int calibratedCharge = Ampls[i];
+       
+       auto & gains     = calibGains[detUnit.index()-m_off];
+       calibratedCharge = (int)(calibratedCharge / gains[(cluster->firstStrip()+i)/128] );
+       if ( calibratedCharge>=255 ) {
+	 if ( calibratedCharge>=1025 )
+	   calibratedCharge=255;
+	 else
+	   calibratedCharge=254;
+       }
+       
+       charge+=calibratedCharge;
+       if(calibratedCharge>=254)nSatStrip++;
+     }
+   }
    return charge;
 }
 
@@ -302,7 +310,7 @@ bool IsSpanningOver2APV(unsigned int FirstStrip, unsigned int ClusterSize)
 
 bool IsFarFromBorder(const TrajectoryStateOnSurface& trajState, const GeomDetUnit* it)
 {
-  if (dynamic_cast<const StripGeomDetUnit*>(it)==0 && dynamic_cast<const PixelGeomDetUnit*>(it)==0) {
+  if (dynamic_cast<const StripGeomDetUnit*>(it)==nullptr && dynamic_cast<const PixelGeomDetUnit*>(it)==nullptr) {
      edm::LogInfo("DeDxTools::IsFarFromBorder") << "this detID doesn't seem to belong to the Tracker" << std::endl;
      return false;
   }
@@ -314,20 +322,12 @@ bool IsFarFromBorder(const TrajectoryStateOnSurface& trajState, const GeomDetUni
   const TrapezoidalPlaneBounds* trapezoidalBounds( dynamic_cast<const TrapezoidalPlaneBounds*>(&(plane.bounds())));
   const RectangularPlaneBounds* rectangularBounds( dynamic_cast<const RectangularPlaneBounds*>(&(plane.bounds())));
 
+  if (!trapezoidalBounds && !rectangularBounds) return false;
+
   double DistFromBorder = 1.0;
   //double HalfWidth      = it->surface().bounds().width()  /2.0;
-  double HalfLength     = it->surface().bounds().length() /2.0;
-
-  if(trapezoidalBounds)
-  {
-      std::array<const float, 4> const & parameters = (*trapezoidalBounds).parameters();
-     HalfLength     = parameters[3];
-     //double t       = (HalfLength + HitLocalPos.y()) / (2*HalfLength) ;
-     //HalfWidth      = parameters[0] + (parameters[1]-parameters[0]) * t;
-  }else if(rectangularBounds){
-     //HalfWidth      = it->surface().bounds().width()  /2.0;
-     HalfLength     = it->surface().bounds().length() /2.0;
-  }else{return false;}
+  double HalfLength     = trapezoidalBounds ? (*trapezoidalBounds).parameters()[3] 
+                                            : it->surface().bounds().length() /2.0;
 
 //  if (fabs(HitLocalPos.x())+HitLocalError.xx() >= (HalfWidth  - DistFromBorder) ) return false;//Don't think is really necessary
   if (fabs(HitLocalPos.y())+HitLocalError.yy() >= (HalfLength - DistFromBorder) ) return false;

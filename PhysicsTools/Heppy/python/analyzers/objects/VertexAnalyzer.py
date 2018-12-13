@@ -1,3 +1,4 @@
+from __future__ import print_function
 import itertools
 
 from PhysicsTools.Heppy.analyzers.core.VertexHistograms import VertexHistograms
@@ -69,17 +70,27 @@ class VertexAnalyzer( Analyzer ):
                                                              'double' )
 
         self.mchandles['pusi'] =  AutoHandle(
-            'addPileupInfo',
-            'std::vector<PileupSummaryInfo>' 
+            'slimmedAddPileupInfo',
+            'std::vector<PileupSummaryInfo>', 
+            fallbackLabel='addPileupInfo',
             )        
 
         self.handles['rho'] =  AutoHandle(
             ('fixedGridRhoFastjetAll',''),
             'double' 
             )        
+        self.handles['rhoCN'] =  AutoHandle(
+            ('fixedGridRhoFastjetCentralNeutral',''),
+            'double' 
+            )        
+        self.handles['sigma'] =  AutoHandle(
+            ('fixedGridSigmaFastjetAll',''),
+            'double',
+            mayFail=True
+            )
 
-    def beginLoop(self):
-        super(VertexAnalyzer,self).beginLoop()
+    def beginLoop(self, setup):
+        super(VertexAnalyzer,self).beginLoop(setup)
         self.averages.add('vertexWeight', Average('vertexWeight') )
         self.counters.addCounter('GoodVertex')
         self.count = self.counters.counter('GoodVertex')
@@ -90,8 +101,10 @@ class VertexAnalyzer( Analyzer ):
     def process(self,  event):
         self.readCollections(event.input )
         event.rho = self.handles['rho'].product()[0]
+        event.rhoCN = self.handles['rhoCN'].product()[0]
+        event.sigma = self.handles['sigma'].product()[0] if self.handles['sigma'].isValid() else -999
         event.vertices = self.handles['vertices'].product()
-        event.goodVertices = filter(self.testGoodVertex,event.vertices)
+        event.goodVertices = list(filter(self.testGoodVertex,event.vertices))
 
 
         self.count.inc('All Events')
@@ -109,8 +122,8 @@ class VertexAnalyzer( Analyzer ):
             
         self.averages['vertexWeight'].add( event.vertexWeight )
         if self.verbose:
-            print 'VertexAnalyzer: #vert = ', len(event.vertices), \
-                  ', weight = ', event.vertexWeight
+            print('VertexAnalyzer: #vert = ', len(event.vertices), \
+                  ', weight = ', event.vertexWeight)
 
         # Check if events needs to be skipped if no good vertex is found (useful for generator level studies)
         keepFailingEvents = False
@@ -125,7 +138,8 @@ class VertexAnalyzer( Analyzer ):
 
         if self.doHists:
             self.pileup.hist.Fill( len(event.goodVertices) )
-            self.pileup.mindist.Fill( self.mindist(event.goodVertices) )
+#A.R. mindist is one of the slowest functions, default commented
+#           self.pileup.mindist.Fill( self.mindist(event.goodVertices) )
 
         self.count.inc('Events With Good Vertex')
         return True
@@ -151,8 +165,8 @@ class VertexAnalyzer( Analyzer ):
                 mindist = dist
         return mindist
                                                                  
-    def write(self):
-        super(VertexAnalyzer, self).write()
+    def write(self, setup):
+        super(VertexAnalyzer, self).write(setup)
         if self.doHists:
             self.pileup.write()
 

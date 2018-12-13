@@ -45,8 +45,6 @@
 
 #include "DataFormats/TauReco/interface/PFTauDiscriminator.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
-#include <memory>
-#include <boost/foreach.hpp>
 #include <TFormula.h>
 
 #include <memory>
@@ -75,7 +73,7 @@ class PFTau3ProngReco : public EDProducer {
   enum Alg{useKalmanFit=0, useTrackHelix};
 
   struct DiscCutPair{
-    DiscCutPair():cutFormula_(0){}
+    DiscCutPair():cutFormula_(nullptr){}
     ~DiscCutPair(){delete cutFormula_;}
     edm::Handle<reco::PFTauDiscriminator> handle_;
     edm::InputTag inputTag_;
@@ -85,14 +83,14 @@ class PFTau3ProngReco : public EDProducer {
   typedef std::vector<DiscCutPair*> DiscCutPairVec;
 
   explicit PFTau3ProngReco(const edm::ParameterSet& iConfig);
-  ~PFTau3ProngReco();
-  virtual void produce(edm::Event&,const edm::EventSetup&);
+  ~PFTau3ProngReco() override;
+  void produce(edm::Event&,const edm::EventSetup&) override;
  private:
   edm::InputTag PFTauTag_;
   edm::InputTag PFTauTIPTag_;
   int Algorithm_;
   DiscCutPairVec discriminators_;
-  std::auto_ptr<StringCutObjectSelector<reco::PFTau> > cut_;
+  std::unique_ptr<StringCutObjectSelector<reco::PFTau> > cut_;
   int ndfPVT_;
   KinematicParticleVertexFitter kpvFitter_;
 };
@@ -106,7 +104,7 @@ PFTau3ProngReco::PFTau3ProngReco(const edm::ParameterSet& iConfig):
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   std::vector<edm::ParameterSet> discriminators =iConfig.getParameter<std::vector<edm::ParameterSet> >("discriminators");
   // Build each of our cuts
-  BOOST_FOREACH(const edm::ParameterSet &pset, discriminators) {
+  for(auto const& pset : discriminators) {
     DiscCutPair* newCut = new DiscCutPair();
     newCut->inputTag_ = pset.getParameter<edm::InputTag>("discriminator");
     if ( pset.existsAs<std::string>("selectionCut") ) newCut->cutFormula_ = new TFormula("selectionCut", pset.getParameter<std::string>("selectionCut").data());
@@ -114,7 +112,7 @@ PFTau3ProngReco::PFTau3ProngReco(const edm::ParameterSet& iConfig):
     discriminators_.push_back(newCut);
   }
   // Build a string cut if desired
-  if (iConfig.exists("cut")) cut_.reset(new StringCutObjectSelector<reco::PFTau>(iConfig.getParameter<std::string>( "cut" )));
+  if (iConfig.exists("cut")) cut_ = std::make_unique<StringCutObjectSelector<reco::PFTau>>(iConfig.getParameter<std::string>("cut"));
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   produces<edm::AssociationVector<PFTauRefProd, std::vector<reco::PFTau3ProngSummaryRef> > >();
   produces<PFTau3ProngSummaryCollection>("PFTau3ProngSummary");
@@ -135,12 +133,12 @@ void PFTau3ProngReco::produce(edm::Event& iEvent,const edm::EventSetup& iSetup){
   edm::Handle<edm::AssociationVector<PFTauRefProd, std::vector<reco::PFTauTransverseImpactParameterRef> > > TIPAV;
   iEvent.getByLabel(PFTauTIPTag_,TIPAV);
 
-  auto_ptr<edm::AssociationVector<PFTauRefProd, std::vector<reco::PFTau3ProngSummaryRef> > > AVPFTau3PS(new edm::AssociationVector<PFTauRefProd, std::vector<reco::PFTau3ProngSummaryRef> >(PFTauRefProd(Tau)));
-  std::auto_ptr<PFTau3ProngSummaryCollection>  PFTau3PSCollection_out= std::auto_ptr<PFTau3ProngSummaryCollection>(new PFTau3ProngSummaryCollection());
+  auto AVPFTau3PS = std::make_unique<edm::AssociationVector<PFTauRefProd, std::vector<reco::PFTau3ProngSummaryRef>>>(PFTauRefProd(Tau));
+  auto PFTau3PSCollection_out = std::make_unique<PFTau3ProngSummaryCollection>();
   reco::PFTau3ProngSummaryRefProd PFTau3RefProd_out = iEvent.getRefBeforePut<reco::PFTau3ProngSummaryCollection>("PFTau3ProngSummary");
 
   // Load each discriminator
-  BOOST_FOREACH(DiscCutPair *disc, discriminators_) {iEvent.getByLabel(disc->inputTag_, disc->handle_);}
+  for(auto& disc : discriminators_) {iEvent.getByLabel(disc->inputTag_, disc->handle_);}
 
   // For each Tau Run Algorithim 
   if(Tau.isValid()){
@@ -150,7 +148,7 @@ void PFTau3ProngReco::produce(edm::Event& iEvent,const edm::EventSetup& iSetup){
       ///////////////////////
       // Check if it passed all the discrimiantors
       bool passed(true); 
-      BOOST_FOREACH(const DiscCutPair* disc, discriminators_) {
+      for(auto const& disc : discriminators_) {
         // Check this discriminator passes
 	bool passedDisc = true;
 	if ( disc->cutFormula_ )passedDisc = (disc->cutFormula_->Eval((*disc->handle_)[tau]) > 0.5);
@@ -263,8 +261,8 @@ void PFTau3ProngReco::produce(edm::Event& iEvent,const edm::EventSetup& iSetup){
       AVPFTau3PS->setValue(iPFTau,PFTau3PSRef);
     }
   }
-  iEvent.put(PFTau3PSCollection_out,"PFTau3ProngSummary");
-  iEvent.put(AVPFTau3PS);
+  iEvent.put(std::move(PFTau3PSCollection_out),"PFTau3ProngSummary");
+  iEvent.put(std::move(AVPFTau3PS));
 }
 
 DEFINE_FWK_MODULE(PFTau3ProngReco);

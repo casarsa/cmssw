@@ -51,7 +51,7 @@ class FFTJetTreeDump : public edm::EDAnalyzer
 {
 public:
     explicit FFTJetTreeDump(const edm::ParameterSet&);
-    ~FFTJetTreeDump();
+    ~FFTJetTreeDump() override;
 
 private:
     // Useful local typedefs
@@ -62,13 +62,13 @@ private:
     typedef fftjet::Functor1<double,fftjet::Peak> PeakProperty;
     typedef reco::PattRecoTree<Real,reco::PattRecoPeak<Real> > StoredTree;
 
-    FFTJetTreeDump();
-    FFTJetTreeDump(const FFTJetTreeDump&);
-    FFTJetTreeDump& operator=(const FFTJetTreeDump&);
+    FFTJetTreeDump() = delete;
+    FFTJetTreeDump(const FFTJetTreeDump&) = delete;
+    FFTJetTreeDump& operator=(const FFTJetTreeDump&) = delete;
 
-    virtual void beginJob() override ;
-    virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-    virtual void endJob() override ;
+    void beginJob() override ;
+    void analyze(const edm::Event&, const edm::EventSetup&) override;
+    void endJob() override ;
 
     template<class Real>
     void processTreeData(const edm::Event&, std::ofstream&);
@@ -76,7 +76,7 @@ private:
     template<class Ptr>
     void checkConfig(const Ptr& ptr, const char* message)
     {
-        if (ptr.get() == NULL)
+        if (ptr.get() == nullptr)
             throw cms::Exception("FFTJetBadConfig") << message << std::endl;
     }
 
@@ -94,21 +94,21 @@ private:
     const double completeEventScale;
 
     // Distance calculator for the clustering tree
-    std::auto_ptr<fftjet::AbsDistanceCalculator<fftjet::Peak> > distanceCalc;
+    std::unique_ptr<fftjet::AbsDistanceCalculator<fftjet::Peak> > distanceCalc;
 
     // Scales used
-    std::auto_ptr<std::vector<double> > iniScales;
+    std::unique_ptr<std::vector<double> > iniScales;
 
     // The sparse clustering tree
     SparseTree sparseTree;
 
     // Functors which define OpenDX glyph size and color
-    std::auto_ptr<PeakProperty> glyphSize;
-    std::auto_ptr<PeakProperty> glyphColor;
+    std::unique_ptr<PeakProperty> glyphSize;
+    std::unique_ptr<PeakProperty> glyphColor;
 
     // OpenDX formatters
-    std::auto_ptr<DXFormatter> denseFormatter;
-    std::auto_ptr<SparseFormatter> sparseFormatter;
+    std::unique_ptr<DXFormatter> denseFormatter;
+    std::unique_ptr<SparseFormatter> sparseFormatter;
 
     unsigned counter;
 };
@@ -117,7 +117,7 @@ private:
 // constructors and destructor
 //
 FFTJetTreeDump::FFTJetTreeDump(const edm::ParameterSet& ps)
-    : clusteringTree(0),
+    : clusteringTree(nullptr),
       treeLabel(ps.getParameter<edm::InputTag>("treeLabel")),
       outputPrefix(ps.getParameter<std::string>("outputPrefix")),
       etaMax(ps.getParameter<double>("etaMax")),
@@ -155,9 +155,9 @@ FFTJetTreeDump::FFTJetTreeDump(const edm::ParameterSet& ps)
     checkConfig(glyphColor, "invalid glyph color parameters");
 
     // Build the tree formatters
-    denseFormatter = std::auto_ptr<DXFormatter>(new DXFormatter(
+    denseFormatter = std::unique_ptr<DXFormatter>(new DXFormatter(
         glyphSize.get(), glyphColor.get(), etaMax));
-    sparseFormatter = std::auto_ptr<SparseFormatter>(new SparseFormatter(
+    sparseFormatter = std::unique_ptr<SparseFormatter>(new SparseFormatter(
         glyphSize.get(), glyphColor.get(), etaMax));
 
     // Build the clustering tree

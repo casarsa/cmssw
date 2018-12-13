@@ -21,7 +21,7 @@ using namespace std;
 
 ZgammaMassFilter::ZgammaMassFilter(const edm::ParameterSet& iConfig)
 {
-  label_          =iConfig.getParameter<string>("HepMCProduct");
+  token_          =consumes<edm::HepMCProduct>(iConfig.getParameter<InputTag>("HepMCProduct"));
   minPhotonPt     =iConfig.getParameter<double>("minPhotonPt");
   minLeptonPt     =iConfig.getParameter<double>("minLeptonPt");
   minPhotonEta    =iConfig.getParameter<double>("minPhotonEta");
@@ -43,7 +43,7 @@ bool ZgammaMassFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   
   bool accepted = false;
   Handle<HepMCProduct> evt;
-  iEvent.getByLabel(label_, evt);
+  iEvent.getByToken(token_, evt);
   const HepMC::GenEvent * myGenEvent = evt->GetEvent();
   
   vector<TLorentzVector> Lepton; Lepton.clear();
@@ -95,7 +95,7 @@ bool ZgammaMassFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   //  std::cout << "\n" << std::endl;
   
   if (
-      Photon.size() > 0 && Lepton.size() > 1 &&  
+      !Photon.empty() && Lepton.size() > 1 &&  
       Photon[0].Pt()  > minPhotonPt  && 
       Lepton[0].Pt()  > minLeptonPt  && 
       Lepton[1].Pt()  > minLeptonPt  &&  

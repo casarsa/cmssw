@@ -22,7 +22,6 @@ Test of GenericHandle class.
 #include "FWCore/Framework/interface/LuminosityBlockPrincipal.h"
 #include "FWCore/Framework/interface/RunPrincipal.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/RootAutoLibraryLoader/interface/RootAutoLibraryLoader.h"
 #include "FWCore/Utilities/interface/GetPassID.h"
 #include "FWCore/Utilities/interface/GlobalIdentifier.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
@@ -38,7 +37,7 @@ Test of GenericHandle class.
 namespace edm {
    class ProducerBase {
       public:
-         static void commitEvent(Event& e) { e.commit_(); }
+         static void commitEvent(Event& e) { e.commit_(std::vector<ProductResolverIndex>()); }
    };
 }
 
@@ -50,7 +49,6 @@ CPPUNIT_TEST(failWrongType);
 CPPUNIT_TEST_SUITE_END();
 public:
   void setUp(){
-    edm::RootAutoLibraryLoader::enable();
   }
   void tearDown(){}
   void failgetbyLabelTest();
@@ -86,8 +84,8 @@ void testGenericHandle::failgetbyLabelTest() {
   preg->setFrozen();
   auto runAux = std::make_shared<edm::RunAuxiliary>(id.run(), time, time);
   auto rp = std::make_shared<edm::RunPrincipal>(runAux, preg, pc, &historyAppender_,0);
-  auto lumiAux = std::make_shared<edm::LuminosityBlockAuxiliary>(rp->run(), 1, time, time);
-  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(lumiAux, preg, pc, &historyAppender_,0);
+  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(preg, pc, &historyAppender_,0);
+  lbp->setAux(edm::LuminosityBlockAuxiliary(rp->run(), 1, time, time));
   lbp->setRunPrincipal(rp);
   auto branchIDListHelper = std::make_shared<edm::BranchIDListHelper>();
   branchIDListHelper->updateFromRegistry(*preg);
@@ -96,7 +94,7 @@ void testGenericHandle::failgetbyLabelTest() {
   edm::EventPrincipal ep(preg, branchIDListHelper, thinnedAssociationsHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
   edm::ProcessHistoryRegistry phr; 
   ep.fillEventPrincipal(eventAux, phr);
-  ep.setLuminosityBlockPrincipal(lbp);
+  ep.setLuminosityBlockPrincipal(lbp.get());
   edm::GenericHandle h("edmtest::DummyProduct");
   bool didThrow=true;
   try {
@@ -132,8 +130,8 @@ void testGenericHandle::getbyLabelTest() {
   typedef edmtest::DummyProduct DP;
   typedef edm::Wrapper<DP> WDP;
 
-  std::unique_ptr<DP> pr(new DP);
-  std::unique_ptr<edm::WrapperBase> pprod(new WDP(std::move(pr)));
+  auto pr = std::make_unique<DP>();
+  std::unique_ptr<edm::WrapperBase> pprod = std::make_unique<WDP>(std::move(pr));
   std::string label("fred");
   std::string productInstanceName("Rick");
 
@@ -161,7 +159,7 @@ void testGenericHandle::getbyLabelTest() {
 
   product.init();
 
-  std::unique_ptr<edm::ProductRegistry> preg(new edm::ProductRegistry);
+  auto preg = std::make_unique<edm::ProductRegistry>();
   preg->addProduct(product);
   preg->setFrozen();
   auto branchIDListHelper = std::make_shared<edm::BranchIDListHelper>();
@@ -179,17 +177,17 @@ void testGenericHandle::getbyLabelTest() {
   std::shared_ptr<edm::ProductRegistry const> pregc(preg.release());
   auto runAux = std::make_shared<edm::RunAuxiliary>(col.run(), fakeTime, fakeTime);
   auto rp = std::make_shared<edm::RunPrincipal>(runAux, pregc, pc, &historyAppender_,0);
-  auto lumiAux = std::make_shared<edm::LuminosityBlockAuxiliary>(rp->run(), 1, fakeTime, fakeTime);
-  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(lumiAux, pregc, pc, &historyAppender_,0);
+  auto lbp = std::make_shared<edm::LuminosityBlockPrincipal>(pregc, pc, &historyAppender_,0);
+  lbp->setAux(edm::LuminosityBlockAuxiliary(rp->run(), 1, fakeTime, fakeTime));
   lbp->setRunPrincipal(rp);
   edm::EventAuxiliary eventAux(col, uuid, fakeTime, true);
   edm::EventPrincipal ep(pregc, branchIDListHelper, thinnedAssociationsHelper, pc, &historyAppender_,edm::StreamID::invalidStreamID());
   edm::ProcessHistoryRegistry phr; 
   ep.fillEventPrincipal(eventAux, phr);
-  ep.setLuminosityBlockPrincipal(lbp);
+  ep.setLuminosityBlockPrincipal(lbp.get());
   edm::BranchDescription const& branchFromRegistry = it->second;
-  auto entryDescriptionPtr = std::make_shared<edm::Parentage>();
-  edm::ProductProvenance prov(branchFromRegistry.branchID(), entryDescriptionPtr);
+  std::vector<edm::BranchID> const ids;
+  edm::ProductProvenance prov(branchFromRegistry.branchID(), ids);
   edm::BranchDescription const desc(branchFromRegistry);
   ep.put(desc, std::move(pprod), prov);
 

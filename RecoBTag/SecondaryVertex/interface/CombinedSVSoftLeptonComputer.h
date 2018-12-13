@@ -5,27 +5,48 @@
 
 #include "RecoBTag/SecondaryVertex/interface/CombinedSVComputer.h"
 
+//(z)
+#include "DataFormats/BTauReco/interface/CandSoftLeptonTagInfo.h"
+#include "DataFormats/BTauReco/src/classes.h"
+#include "DataFormats/PatCandidates/interface/Jet.h"
+
 
 class CombinedSVSoftLeptonComputer : public CombinedSVComputer {
     public:
 	explicit CombinedSVSoftLeptonComputer(const edm::ParameterSet &params);
+        ~CombinedSVSoftLeptonComputer() override = default;	
+	double flipSoftLeptonValue(double value) const;
 	
 	template <class IPTI,class SVTI>
 	reco::TaggingVariableList
 	operator () (const IPTI &ipInfo, const SVTI &svInfo,
-		     const reco::SoftLeptonTagInfo &muonInfo,
-		     const reco::SoftLeptonTagInfo &elecInfo ) const;
+		     const reco::CandSoftLeptonTagInfo &muonInfo,
+		     const reco::CandSoftLeptonTagInfo &elecInfo ) const;
+	
+	private:
+	bool					SoftLeptonFlip;
 };
+
+double CombinedSVSoftLeptonComputer::flipSoftLeptonValue(double value) const
+{
+	return SoftLeptonFlip ? -value : value;
+}
 
 template <class IPTI,class SVTI>
 reco::TaggingVariableList CombinedSVSoftLeptonComputer::operator () (const IPTI &ipInfo, const SVTI &svInfo,
-								     const reco::SoftLeptonTagInfo &muonInfo,
-								     const reco::SoftLeptonTagInfo &elecInfo) const
+								     const reco::CandSoftLeptonTagInfo &muonInfo,
+								     const reco::CandSoftLeptonTagInfo &elecInfo) const
 {
 	using namespace reco;
 	
 	// call the inherited operator()
 	TaggingVariableList vars = CombinedSVComputer::operator()(ipInfo,svInfo);
+
+	//Jets with vtxCategory 99 cause problems
+	unsigned int vtxType = ( vars.checkTag(reco::btau::vertexCategory) ? (unsigned int)(vars.get(reco::btau::vertexCategory)) : 99 );
+	if (vtxType == 99)
+     		return vars;
+
 	
 	// the following is specific to soft leptons
 	int leptonCategory = 0; // 0 = no lepton, 1 = muon, 2 = electron
@@ -35,7 +56,7 @@ reco::TaggingVariableList CombinedSVSoftLeptonComputer::operator () (const IPTI 
 		leptonCategory = 1; // muon category
 		const SoftLeptonProperties & propertiesMuon = muonInfo.properties(i);
 		vars.insert(btau::leptonPtRel,propertiesMuon.ptRel , true);
-		vars.insert(btau::leptonSip3d,propertiesMuon.sip3d , true);
+		vars.insert(btau::leptonSip3d,flipSoftLeptonValue(propertiesMuon.sip3d) , true);
 		vars.insert(btau::leptonDeltaR,propertiesMuon.deltaR , true);
 		vars.insert(btau::leptonRatioRel,propertiesMuon.ratioRel , true);
 		vars.insert(btau::leptonEtaRel,propertiesMuon.etaRel , true);
@@ -49,7 +70,7 @@ reco::TaggingVariableList CombinedSVSoftLeptonComputer::operator () (const IPTI 
 			leptonCategory = 2; // electron category
 			const SoftLeptonProperties & propertiesElec = elecInfo.properties(i);
 			vars.insert(btau::leptonPtRel,propertiesElec.ptRel , true);
-			vars.insert(btau::leptonSip3d,propertiesElec.sip3d , true);
+			vars.insert(btau::leptonSip3d,flipSoftLeptonValue(propertiesElec.sip3d) , true);
 			vars.insert(btau::leptonDeltaR,propertiesElec.deltaR , true);
 			vars.insert(btau::leptonRatioRel,propertiesElec.ratioRel , true);
 			vars.insert(btau::leptonEtaRel,propertiesElec.etaRel , true);
@@ -61,7 +82,6 @@ reco::TaggingVariableList CombinedSVSoftLeptonComputer::operator () (const IPTI 
 	// set the default value for vertexLeptonCategory to 2 (= NoVertexNoSoftLepton)
 	int vertexLepCat = 2; 
 
-	unsigned int vtxType = ( vars.checkTag(reco::btau::vertexCategory) ? (unsigned int)(vars.get(reco::btau::vertexCategory)) : 99 );
 	
 	if(leptonCategory == 0) // no soft lepton
 	{

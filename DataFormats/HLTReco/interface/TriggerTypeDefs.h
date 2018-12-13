@@ -11,7 +11,7 @@
  */
 
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 
 namespace trigger
 {
@@ -29,22 +29,38 @@ namespace trigger
     /// DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutSetupFwd.h"
 
     TriggerL1Mu           = -81,
-    TriggerL1NoIsoEG      = -82,
-    TriggerL1IsoEG        = -83,
-    TriggerL1CenJet       = -84,
-    TriggerL1ForJet       = -85,
-    TriggerL1TauJet       = -86,
+    TriggerL1NoIsoEG      = -82, // legacy and stage1
+    TriggerL1IsoEG        = -83, // legacy and stage1
+    TriggerL1CenJet       = -84, // legacy and stage1
+    TriggerL1ForJet       = -85, // legacy and stage1
+    TriggerL1TauJet       = -86, // legacy and stage1
     TriggerL1ETM          = -87,
     TriggerL1ETT          = -88,
     TriggerL1HTT          = -89,
     TriggerL1HTM          = -90,
-    TriggerL1JetCounts    = -91,
-    TriggerL1HfBitCounts  = -92,
-    TriggerL1HfRingEtSums = -93,
+    TriggerL1JetCounts    = -91, // legacy and stage1
+    TriggerL1HfBitCounts  = -92, // legacy and stage1
+    TriggerL1HfRingEtSums = -93, // legacy and stage1
     TriggerL1TechTrig     = -94,
     TriggerL1Castor       = -95,
     TriggerL1BPTX         = -96,
     TriggerL1GtExternal   = -97,
+    TriggerL1EG           = -98, // stage2
+    TriggerL1Jet          = -99, // stage2
+    TriggerL1Tau          =-100, // stage2
+    TriggerL1ETMHF        =-101,
+    TriggerL1Centrality   =-102,
+    TriggerL1MinBiasHFP0  =-103,
+    TriggerL1MinBiasHFM0  =-104,
+    TriggerL1MinBiasHFP1  =-105,
+    TriggerL1MinBiasHFM1  =-106,
+    TriggerL1TotalEtEm    =-107,
+    TriggerL1MissingHtHF  =-108,
+    TriggerL1TowerCount   =-109,
+    TriggerL1AsymEt       =-110,
+    TriggerL1AsymHt       =-111,
+    TriggerL1AsymEtHF     =-112,
+    TriggerL1AsymHtHF     =-113,
 
     /// HLT
 

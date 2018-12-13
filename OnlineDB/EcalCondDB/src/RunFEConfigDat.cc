@@ -10,10 +10,10 @@ using namespace oracle::occi;
 
 RunFEConfigDat::RunFEConfigDat()
 {
-  m_env = NULL;
-  m_conn = NULL;
-  m_writeStmt = NULL;
-  m_readStmt = NULL;
+  m_env = nullptr;
+  m_conn = nullptr;
+  m_writeStmt = nullptr;
+  m_readStmt = nullptr;
 
   m_config = 0;
 
@@ -28,7 +28,7 @@ RunFEConfigDat::~RunFEConfigDat()
 
 
 void RunFEConfigDat::prepareWrite()
-  throw(std::runtime_error)
+  noexcept(false)
 {
   this->checkConnection();
 
@@ -39,14 +39,14 @@ void RunFEConfigDat::prepareWrite()
 			"VALUES (:iov_id, :logic_id, "
 			":Config_id ) ");
   } catch (SQLException &e) {
-    throw(std::runtime_error("RunFEConfigDat::prepareWrite():  "+e.getMessage()));
+    throw(std::runtime_error(std::string("RunFEConfigDat::prepareWrite():  ")+getOraMessage(&e)));
   }
 }
 
 
 
 void RunFEConfigDat::writeDB(const EcalLogicID* ecid, const RunFEConfigDat* item, RunIOV* iov)
-  throw(std::runtime_error)
+  noexcept(false)
 {
   this->checkConnection();
   this->checkPrepare();
@@ -65,14 +65,14 @@ void RunFEConfigDat::writeDB(const EcalLogicID* ecid, const RunFEConfigDat* item
 
     m_writeStmt->executeUpdate();
   } catch (SQLException &e) {
-    throw(std::runtime_error("RunFEConfigDat::writeDB():  "+e.getMessage()));
+    throw(std::runtime_error(std::string("RunFEConfigDat::writeDB():  ")+getOraMessage(&e)));
   }
 }
 
 
 
 void RunFEConfigDat::fetchData(map< EcalLogicID, RunFEConfigDat >* fillMap, RunIOV* iov)
-  throw(std::runtime_error)
+  noexcept(false)
 {
   this->checkConnection();
   fillMap->clear();
@@ -86,33 +86,38 @@ void RunFEConfigDat::fetchData(map< EcalLogicID, RunFEConfigDat >* fillMap, RunI
 
   try {
 
-    createReadStatement();
-    m_readStmt->setSQL("SELECT cv.name, cv.logic_id, cv.id1, cv.id2, cv.id3, cv.maps_to, "
+    //    createReadStatement();
+    //    m_readStmt->setSQL("SELECT cv.name, cv.logic_id, cv.id1, cv.id2, cv.id3, cv.maps_to, "
+    Statement* stmt = m_conn->createStatement();
+    stmt->setSQL("SELECT cv.name, cv.logic_id, cv.id1, cv.id2, cv.id3, cv.maps_to, "
 		 "d.Config_id "
 		 "FROM channelview cv JOIN run_FEConfig_dat d "
 		 "ON cv.logic_id = d.logic_id AND cv.name = cv.maps_to "
 		 "WHERE d.iov_id = :iov_id");
-    m_readStmt->setInt(1, iovID);
-    ResultSet* rset = m_readStmt->executeQuery();
+    stmt->setInt(1, iovID);
+    //    m_readStmt->setInt(1, iovID);
+    //    ResultSet* rset = m_readStmt->executeQuery();
+    ResultSet* rset = stmt->executeQuery();
     
     std::pair< EcalLogicID, RunFEConfigDat > p;
     RunFEConfigDat dat;
     while(rset->next()) {
-      p.first = EcalLogicID( rset->getString(1),     // name
+      p.first = EcalLogicID( getOraString(rset,1),     // name
 			     rset->getInt(2),        // logic_id
 			     rset->getInt(3),        // id1
 			     rset->getInt(4),        // id2
 			     rset->getInt(5),        // id3
-			     rset->getString(6));    // maps_to
+			     getOraString(rset,6));    // maps_to
 
       dat.setConfigId( rset->getInt(7) );
  
       p.second = dat;
       fillMap->insert(p);
     }
-    terminateReadStatement();
+    //    terminateReadStatement();
+    m_conn->terminateStatement(stmt);
   } catch (SQLException &e) {
-    throw(std::runtime_error("RunFEConfigDat::fetchData():  "+e.getMessage()));
+    throw(std::runtime_error(std::string("RunFEConfigDat::fetchData():  ")+getOraMessage(&e)));
   }
 }
 

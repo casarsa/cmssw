@@ -4,6 +4,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 //#include<iostream>
+#include<memory>
 #include<sstream>
 #include<vector>
 #include<string>
@@ -13,10 +14,9 @@
 #include "CondCore/CondDB/interface/Serialization.h"
 
 namespace cond {
-  template <> boost::shared_ptr<condex::Efficiency> deserialize<condex::Efficiency>( const std::string& payloadType,
-                                                                                     const Binary& payloadData,
-                                                                                     const Binary& streamerInfoData,
-                                                                                     bool unpackingOnly ){
+  template <> std::unique_ptr<condex::Efficiency> deserialize<condex::Efficiency>( const std::string& payloadType,
+                                                                                   const Binary& payloadData,
+                                                                                   const Binary& streamerInfoData ){
     // DESERIALIZE_BASE_CASE( condex::Efficiency );  abstract
     DESERIALIZE_POLIMORPHIC_CASE( condex::Efficiency, condex::ParametricEfficiencyInPt );
     DESERIALIZE_POLIMORPHIC_CASE( condex::Efficiency, condex::ParametricEfficiencyInEta );
@@ -56,7 +56,7 @@ void popcon::ExEffSource::getNewObjects() {
   if (tagInfo().size>0) {
     Ref payload = lastPayload();
     edm::LogInfo   ("ExEffsSource")<<" type of last payload  "<< 
-      typeid(*payload).name()<<std::endl;
+      typeid(value_type).name()<<std::endl;
   }
 
 

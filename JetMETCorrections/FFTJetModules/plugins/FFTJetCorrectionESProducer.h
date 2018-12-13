@@ -23,14 +23,16 @@
 // system include files
 #include <sstream>
 
-#include "boost/shared_ptr.hpp"
+#include <memory>
 
 #include "Alignment/Geners/interface/CompressedIO.hh"
 
 // user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/Framework/interface/ESProductHost.h"
 #include "FWCore/Framework/interface/ESTransientHandle.h"
+#include "FWCore/Utilities/interface/ReusableObjectHolder.h"
 
 #include "CondFormats/JetMETObjects/interface/FFTJetCorrectorParameters.h"
 #include "CondFormats/JetMETObjects/interface/FFTJetCorrTypes.h"
@@ -50,11 +52,12 @@
 // record types.
 //
 template<class CorrectorSequence>
-static boost::shared_ptr<CorrectorSequence>
+static void
 buildCorrectorSequence(
     const FFTJetCorrectorParameters& tablePars,
     const std::vector<edm::ParameterSet>& sequence,
-    const bool isArchiveCompressed, const bool verbose)
+    const bool isArchiveCompressed, const bool verbose,
+    CorrectorSequence* ptr)
 {
     typedef typename CorrectorSequence::Corrector Corrector;
     typedef typename CorrectorSequence::jet_type jet_type;
@@ -69,8 +72,7 @@ buildCorrectorSequence(
             ar = gs::read_item<gs::StringArchive>(is);
     }
 
-    // Create an empty corrector sequence
-    boost::shared_ptr<CorrectorSequence> ptr(new CorrectorSequence());
+    ptr->clear();
 
     // Go over the parameter sets in the VPSet and
     // configure all correction levels. Add each new
@@ -95,8 +97,6 @@ buildCorrectorSequence(
             previousLevel = level;
         }
     }
-
-    return ptr;
 }
 
 //
@@ -113,27 +113,25 @@ public:
         FFTJetCorrectorTransientFromJet,
         FFTJetCorrectorResultFromTransient
     > CorrectorSequence;
-    typedef boost::shared_ptr<CorrectorSequence> ReturnType;
+    typedef std::shared_ptr<CorrectorSequence> ReturnType;
     typedef FFTJetCorrectorSequenceRcd<CT> MyRecord;
     typedef FFTJetCorrectorParametersRcd<CT> ParentRecord;
 
     FFTJetCorrectionESProducer(const edm::ParameterSet&);
-    virtual ~FFTJetCorrectionESProducer() {}
+    ~FFTJetCorrectionESProducer() override {}
 
     ReturnType produce(const MyRecord&);
 
 private:
-    inline void doWhenChanged(const ParentRecord&)
-        {remakeProduct = true;}
 
     // Module parameters
     std::vector<edm::ParameterSet> sequence;
     bool isArchiveCompressed;
     bool verbose;
 
-    // Other module variables
-    bool remakeProduct;
-    ReturnType product;
+    using HostType = edm::ESProductHost<CorrectorSequence,
+                                        ParentRecord>;
+    edm::ReusableObjectHolder<HostType> holder_;
 };
 
 //
@@ -144,12 +142,11 @@ FFTJetCorrectionESProducer<CT>::FFTJetCorrectionESProducer(
     const edm::ParameterSet& psIn)
     : sequence(psIn.getParameter<std::vector<edm::ParameterSet> >("sequence")),
       isArchiveCompressed(psIn.getParameter<bool>("isArchiveCompressed")),
-      verbose(psIn.getUntrackedParameter<bool>("verbose", false)),
-      remakeProduct(true)
+      verbose(psIn.getUntrackedParameter<bool>("verbose", false))
 {
     // The following line is needed to tell the framework what
     // data is being produced
-    setWhatProduced(this, dependsOn(&FFTJetCorrectionESProducer::doWhenChanged));
+    setWhatProduced(this);
 }
 
 // ------------ method called to produce the data  ------------
@@ -157,24 +154,19 @@ template<typename CT>
 typename FFTJetCorrectionESProducer<CT>::ReturnType
 FFTJetCorrectionESProducer<CT>::produce(const MyRecord& iRecord)
 {
-    if (remakeProduct)
-    {
-        // According to:
-        // https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideHowToGetDependentRecord
-        //
-        // If ARecord is dependent on BRecord then you can
-        // call the method getRecord of ARecord:
-        //
-        // const BRecord& b = aRecord.getRecord<BRecord>();
-        //
-        const ParentRecord& rec = iRecord.template getRecord<ParentRecord>();
+    auto host = holder_.makeOrGet([]() {
+        return new HostType;
+    });
+
+    host->template ifRecordChanges<ParentRecord>(iRecord,
+                                                 [this,product=host.get()](auto const& rec) {
         edm::ESTransientHandle<FFTJetCorrectorParameters> parHandle;
         rec.get(parHandle);
-        product = buildCorrectorSequence<CorrectorSequence>(
-            *parHandle, sequence, isArchiveCompressed, verbose);
-        remakeProduct = false;
-    }
-    return product;
+        buildCorrectorSequence<CorrectorSequence>(
+          *parHandle, sequence, isArchiveCompressed, verbose, product);
+    });
+
+    return host;
 }
 
 #endif // JetMETCorrections_FFTJetModules_plugins_FFTJetCorrectionESProducer_h

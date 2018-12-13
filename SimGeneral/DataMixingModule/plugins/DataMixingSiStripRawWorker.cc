@@ -7,12 +7,7 @@
 #include <map>
 #include <memory>
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Framework/interface/ConstProductRegistry.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/Provenance/interface/Provenance.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
 //
 //
 #include "DataMixingSiStripRawWorker.h"
@@ -198,10 +193,10 @@ namespace edm
     //
 
     // make new raw digi collection
-    std::auto_ptr< edm::DetSetVector<SiStripRawDigi> > MySiStripRawDigis(new edm::DetSetVector<SiStripRawDigi>(vSiStripRawDigi) );
+    std::unique_ptr< edm::DetSetVector<SiStripRawDigi> > MySiStripRawDigis(new edm::DetSetVector<SiStripRawDigi>(vSiStripRawDigi) );
 
     // put collection
-    e.put( MySiStripRawDigis, SiStripDigiCollectionDM_ );
+    e.put(std::move(MySiStripRawDigis), SiStripDigiCollectionDM_ );
 
     // clear local storage for this event
     SiHitStorage_.clear();

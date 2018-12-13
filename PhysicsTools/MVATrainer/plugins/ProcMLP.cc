@@ -36,18 +36,18 @@ class ProcMLP : public TrainProcessor {
 
 	ProcMLP(const char *name, const AtomicId *id,
 	        MVATrainer *trainer);
-	virtual ~ProcMLP();
+	~ProcMLP() override;
 
-	virtual void configure(DOMElement *elem) override;
-	virtual Calibration::VarProcessor *getCalibration() const override;
+	void configure(DOMElement *elem) override;
+	Calibration::VarProcessor *getCalibration() const override;
 
-	virtual void trainBegin() override;
-	virtual void trainData(const std::vector<double> *values,
+	void trainBegin() override;
+	void trainData(const std::vector<double> *values,
 	                       bool target, double weight) override;
-	virtual void trainEnd() override;
+	void trainEnd() override;
 
-	virtual bool load() override;
-	virtual void cleanup() override;
+	bool load() override;
+	void cleanup() override;
 
     private:
 	void runMLPTrainer();
@@ -63,7 +63,7 @@ class ProcMLP : public TrainProcessor {
 	unsigned int		steps;
 	unsigned int		count, row;
 	double			weightSum;
-	std::auto_ptr<MLP>	mlp;
+	std::unique_ptr<MLP>	mlp;
 	std::vector<double>	vars;
 	std::vector<double>	targets;
 	bool			needCleanup;
@@ -72,7 +72,7 @@ class ProcMLP : public TrainProcessor {
 	double			limiter;
 };
 
-static ProcMLP::Registry registry("ProcMLP");
+ProcMLP::Registry registry("ProcMLP");
 
 ProcMLP::ProcMLP(const char *name, const AtomicId *id,
                  MVATrainer *trainer) :
@@ -148,7 +148,7 @@ Calibration::VarProcessor *ProcMLP::getCalibration() const
 {
 	Calibration::ProcMLP *calib = new Calibration::ProcMLP;
 
-	std::auto_ptr<MLP> mlp(new MLP(getInputs().size() - (boost >= 0 ? 1 : 0),
+	std::unique_ptr<MLP> mlp(new MLP(getInputs().size() - (boost >= 0 ? 1 : 0),
 	                               getOutputs().size(), layout));
 	mlp->load(trainer->trainFileName(this, "txt"));
 
@@ -207,12 +207,12 @@ void ProcMLP::trainBegin()
 		break;
 	    case ITER_TRAIN:
 		try {
-			mlp = std::auto_ptr<MLP>(
+			mlp = std::unique_ptr<MLP>(
 					new MLP(getInputs().size() - (boost >= 0 ? 1 : 0),
 					getOutputs().size(), layout));
 			mlp->init(count);
 			row = 0;
-		} catch(cms::Exception e) {
+		} catch(cms::Exception const&) {
 			// MLP probably busy (or layout invalid, aaaack)
 			iteration = ITER_WAIT;
 		}
@@ -241,7 +241,7 @@ void ProcMLP::trainData(const std::vector<double> *values,
 
 	if (iteration == ITER_COUNT)
 		count++;
-		weightSum += weight;
+   weightSum += weight; 
 
 	if (iteration != ITER_TRAIN)
 		return;

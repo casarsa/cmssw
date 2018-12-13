@@ -9,7 +9,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/Common/interface/RefToBase.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -28,13 +28,13 @@ class JetCorrector;
 namespace cms
 {
   template<class T>
-  class JetCorrectionProducer : public edm::EDProducer
+  class JetCorrectionProducer : public edm::stream::EDProducer<>
   {
   public:
     typedef std::vector<T> JetCollection;
     explicit JetCorrectionProducer (const edm::ParameterSet& fParameters);
-    virtual ~JetCorrectionProducer () {}
-    virtual void produce(edm::Event&, const edm::EventSetup&);
+    ~JetCorrectionProducer () override {}
+    void produce(edm::Event&, const edm::EventSetup&) override;
   private:
     edm::EDGetTokenT<JetCollection> mInput;
     std::vector <std::string> mCorrectorNames;
@@ -53,7 +53,7 @@ namespace cms {
   JetCorrectionProducer<T>::JetCorrectionProducer(const edm::ParameterSet& fConfig)
     : mInput(consumes<JetCollection>(fConfig.getParameter <edm::InputTag> ("src")))
     , mCorrectorNames(fConfig.getParameter<std::vector<std::string> >("correctors"))
-    , mCorrectors(mCorrectorNames.size(), 0)
+    , mCorrectors(mCorrectorNames.size(), nullptr)
     , mCacheId (0)
     , mVerbose (fConfig.getUntrackedParameter <bool> ("verbose", false))
   {
@@ -82,7 +82,7 @@ namespace cms {
       }
     edm::Handle<JetCollection> jets;                         //Define Inputs
     fEvent.getByToken (mInput, jets);                        //Get Inputs
-    std::auto_ptr<JetCollection> result (new JetCollection); //Corrected jets
+    std::unique_ptr<JetCollection> result (new JetCollection); //Corrected jets
     typename JetCollection::const_iterator jet;
     for (jet = jets->begin(); jet != jets->end(); jet++)
       {
@@ -128,7 +128,7 @@ namespace cms {
     // reorder corrected jets
     std::sort (result->begin (), result->end (), compJets);
     // put corrected jet collection into event
-    fEvent.put(result);
+    fEvent.put(std::move(result));
   }
 
 }

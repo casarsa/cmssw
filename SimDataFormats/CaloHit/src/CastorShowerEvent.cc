@@ -1,8 +1,6 @@
 #include "SimDataFormats/CaloHit/interface/CastorShowerEvent.h"
 #include <iostream>
 
-ClassImp(CastorShowerEvent)
-
 CastorShowerEvent::CastorShowerEvent() {
    // Clear();
    // std::cout << "\n    *** CastorShowerEvent object created ***    " << std::endl;
@@ -11,7 +9,7 @@ CastorShowerEvent::CastorShowerEvent() {
 CastorShowerEvent::~CastorShowerEvent() {}
 
     
-void CastorShowerEvent::Clear() {
+void CastorShowerEvent::Clear(Option_t * option) {
    nhit = 0;
    detID.clear();
    hitPosition.clear();

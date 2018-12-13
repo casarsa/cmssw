@@ -11,7 +11,6 @@
  */
 
 // framework & common header files
-#include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -19,6 +18,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 //DQM services
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
@@ -38,19 +38,18 @@
 //#include <CLHEP/Units/SystemOfUnits.h>
 
 #include <iostream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <memory>
 #include <vector>
 #include <map>
-#include <math.h>
+#include <cmath>
 
 #include "TString.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
 
 
-class GlobalDigisHistogrammer : public edm::EDAnalyzer
-{
+class GlobalDigisHistogrammer : public DQMEDAnalyzer {
 
  public:
 
@@ -60,10 +59,10 @@ class GlobalDigisHistogrammer : public edm::EDAnalyzer
   typedef std::map<uint32_t,float,std::less<uint32_t> > MapType;
 
   explicit GlobalDigisHistogrammer(const edm::ParameterSet&);
-  virtual ~GlobalDigisHistogrammer();
-  virtual void beginJob( void );
-  virtual void endJob();  
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  ~GlobalDigisHistogrammer() override;
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void bookHistograms(DQMStore::IBooker &,
+      edm::Run const &, edm::EventSetup const &) override;
   
 
  private:
@@ -76,7 +75,6 @@ class GlobalDigisHistogrammer : public edm::EDAnalyzer
   bool getAllProvenances;
   bool printProvenanceInfo;
 
-  DQMStore *dbe;
   std::string outputfile;
   bool doOutput;
 

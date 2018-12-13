@@ -1,5 +1,5 @@
-#include "../interface/HcalADCSaturationFlag.h"
-#include "RecoLocalCalo/HcalRecAlgos/interface/HcalCaloFlagLabels.h"
+#include "RecoLocalCalo/HcalRecAlgos/interface/HcalADCSaturationFlag.h"
+#include "DataFormats/METReco/interface/HcalCaloFlagLabels.h"
 
 
 

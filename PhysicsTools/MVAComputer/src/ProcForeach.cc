@@ -32,40 +32,35 @@ class ProcForeach : public VarProcessor {
 	ProcForeach(const char *name,
 	             const Calibration::ProcForeach *calib,
 	             const MVAComputer *computer);
-	virtual ~ProcForeach() {}
+	~ProcForeach() override {}
 
-	virtual void configure(ConfIterator iter, unsigned int n) override;
-	virtual ConfigCtx::Context *
+	void configure(ConfIterator iter, unsigned int n) override;
+	ConfigCtx::Context *
 	configureLoop(ConfigCtx::Context *ctx, ConfigCtx::iterator begin,
 	              ConfigCtx::iterator cur, ConfigCtx::iterator end) override;
 
-	virtual void eval(ValueIterator iter, unsigned int n) const override;
-	virtual std::vector<double> deriv(
+	void eval(ValueIterator iter, unsigned int n) const override;
+	std::vector<double> deriv(
 				ValueIterator iter, unsigned int n) const override;
-	virtual LoopStatus loop(double *output, int *conf,
+	LoopStatus loop(double *output, int *conf,
 	                        unsigned int nOutput,
+                                LoopCtx& ctx,
 	                        unsigned int &nOffset) const override;
 
     private:
 	struct ConfContext : public VarProcessor::ConfigCtx::Context {
 		ConfContext(unsigned int origin, unsigned int count) :
 			origin(origin), count(count) {}
-		virtual ~ConfContext() {}
+		~ConfContext() override {}
 
 		unsigned int origin;
 		unsigned int count;
 	};
 
-	inline void reset() const { index = offset = size = 0; }
-
-	mutable unsigned int	index;
-	mutable unsigned int	offset;
-	mutable unsigned int	size;
-
 	unsigned int		count;
 };
 
-static ProcForeach::Registry registry("ProcForeach");
+ProcForeach::Registry registry("ProcForeach");
 
 ProcForeach::ProcForeach(const char *name,
                          const Calibration::ProcForeach *calib,
@@ -77,7 +72,6 @@ ProcForeach::ProcForeach(const char *name,
 
 void ProcForeach::configure(ConfIterator iter, unsigned int n)
 {
-	reset();
 	iter << Variable::FLAG_NONE;
 	while(iter)
 		iter << iter++(Variable::FLAG_MULTIPLE);
@@ -99,17 +93,19 @@ ProcForeach::configureLoop(ConfigCtx::Context *ctx_, ConfigCtx::iterator begin,
 	if (--ctx->count)
 		return ctx;
 	else
-		return 0;
+		return nullptr;
 }
 
 void ProcForeach::eval(ValueIterator iter, unsigned int n) const
 {
+        auto const offset = iter.loopCtx().offset();
 	iter(offset);
 
+        auto& loopSize = iter.loopCtx().size();
 	while(iter) {
 		unsigned int size = iter.size();
-		if (!this->size)
-			this->size = size;
+		if (!loopSize)
+			loopSize = size;
 
 		double value = iter[offset];
 		iter(value);
@@ -120,6 +116,7 @@ void ProcForeach::eval(ValueIterator iter, unsigned int n) const
 std::vector<double> ProcForeach::deriv(
 				ValueIterator iter, unsigned int n) const
 {
+        auto const offset = iter.loopCtx().offset();
 	std::vector<unsigned int> offsets;
 	unsigned int in = 0, out = 0;
 	while(iter) {
@@ -137,13 +134,16 @@ std::vector<double> ProcForeach::deriv(
 
 VarProcessor::LoopStatus
 ProcForeach::loop(double *output, int *conf,
-                  unsigned int nOutput, unsigned int &nOffset) const
+                  unsigned int nOutput, LoopCtx& ctx, unsigned int &nOffset) const
 {
+        auto& index = ctx.index();
 	bool endIteration = false;
 	if (index++ == count) {
 		index = 0;
 		endIteration = true;
 	}
+        auto& offset = ctx.offset();
+        auto& size = ctx.size();
 
 	if (offset == 0 && !endIteration) {
 		for(int cur = *conf + size; nOutput--; cur += size)
@@ -152,7 +152,6 @@ ProcForeach::loop(double *output, int *conf,
 
 	if (endIteration) {
 		if (++offset >= size) {
-			reset();
 			return kStop;
 		} else
 			return kReset;

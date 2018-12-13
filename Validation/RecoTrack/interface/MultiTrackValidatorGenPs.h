@@ -8,8 +8,8 @@
  */
 
 #include "Validation/RecoTrack/interface/MultiTrackValidator.h"
-#include "SimTracker/TrackAssociation/interface/TrackAssociatorByChi2.h"
 #include "CommonTools/CandAlgos/interface/GenParticleCustomSelector.h"
+#include "SimDataFormats/Associations/interface/TrackToGenParticleAssociator.h"
 
 class MultiTrackValidatorGenPs : public MultiTrackValidator {
  public:
@@ -17,15 +17,17 @@ class MultiTrackValidatorGenPs : public MultiTrackValidator {
   MultiTrackValidatorGenPs(const edm::ParameterSet& pset);
   
   /// Destructor
-  virtual ~MultiTrackValidatorGenPs();
+  ~MultiTrackValidatorGenPs() override;
 
   /// Method called once per event
-  void analyze(const edm::Event&, const edm::EventSetup& );
+  void dqmAnalyze(const edm::Event&, const edm::EventSetup&, const Histograms& ) const override;
 
 private:
 
-  const TrackAssociatorByChi2* associatorByChi2;
   GenParticleCustomSelector gpSelector;				      
+  edm::EDGetTokenT<reco::TrackToGenParticleAssociator> label_gen_associator;
+  edm::EDGetTokenT<reco::GenToRecoCollection> associatormapGtR;
+  edm::EDGetTokenT<reco::RecoToGenCollection> associatormapRtG;
 
 };
 

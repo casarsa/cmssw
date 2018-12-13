@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 import sys
 import re
 import optparse
@@ -7,6 +8,7 @@ from pprint import pprint
 import array
 import ROOT
 import math
+import six
 
 sepRE      = re.compile (r'[\s,;:]+')
 nonSpaceRE = re.compile (r'\S')
@@ -33,16 +35,16 @@ class LumiInfo (object):
         pieces = sepRE.split (line.strip())
         size = len (pieces)
         if size % 2:
-            raise RuntimeError, "Odd number of pieces"
+            raise RuntimeError("Odd number of pieces")
         if size < 4:
-            raise RuntimeError, "Not enough pieces"
+            raise RuntimeError("Not enough pieces")
         try:
             self.run       = int   (pieces[0])
             self.lumi      = int   (pieces[1])
             self.delivered = float (pieces[2])
             self.recorded  = float (pieces[3])
         except:
-            raise RuntimeError, "Pieces not right format"
+            raise RuntimeError("Pieces not right format")
         if size > 4:
             try:
                 for xing, lum in zip (pieces[4::2],pieces[5::2]):
@@ -52,7 +54,7 @@ class LumiInfo (object):
                     self.totInstLum += lum
                     self.numXings += 1
             except:
-                raise RuntimeError, "Inst Lumi Info malformed"
+                raise RuntimeError("Inst Lumi Info malformed")
             self.aveInstLum = self.totInstLum / (self.numXings)
             self.xingInfo   = True
         self.key       = (self.run, self.lumi)
@@ -63,8 +65,8 @@ class LumiInfo (object):
         if self.numXings:
             # You shouldn't try and fix an event if it already has
             # xing information.
-            raise RuntimeError, "This event %s already has Xing information" \
-                  % self.keyString
+            raise RuntimeError("This event %s already has Xing information" \
+                  % self.keyString)
         if self.run > LumiInfo.lastSingleXingRun:
             # this run may have more than one crossing.  I don't know
             # how to fix this.
@@ -104,7 +106,7 @@ class LumiInfo (object):
 class LumiInfoCont (dict):
 
     def __init__ (self, filename, **kwargs):
-        print "loading luminosity information from '%s'." % filename
+        print("loading luminosity information from '%s'." % filename)
         source = open (filename, 'r')
         self.minMaxKeys = ['totInstLum', 'aveInstLum', 'numXings',
                      'delivered', 'recorded']
@@ -134,7 +136,7 @@ class LumiInfoCont (dict):
             if lumi.xingInfo:
                 #print "yes", lumi.keyString
                 if not self.xingInfo:
-                    print "huh?"
+                    print("huh?")
             for key in self.minMaxKeys:
                 val = getattr (lumi, key)
                 if val < self._min[key] or self._min[key] < 0:
@@ -169,7 +171,7 @@ class LumiInfoCont (dict):
 
     def __str__ (self):
         retval = 'run,     lum     del ( dt  ) inst (#xng)\n'
-        for key, value in sorted (self.iteritems()):
+        for key, value in sorted (six.iteritems(self)):
             retval += "%s\n" % value
         return retval
 
@@ -193,7 +195,7 @@ class LumiInfoCont (dict):
     def _integrateContainer (self):
         # calculate numbers for recorded integrated luminosity
         total = 0.
-        for key, lumi in self.iteritems():
+        for key, lumi in six.iteritems(self):
             total += lumi.recorded
             lumi.totalRecorded = total
             lumi.fracRecorded  = total / self.totalRecLum
@@ -203,12 +205,12 @@ class LumiInfoCont (dict):
             return
         xingKeyList = []
         maxAveInstLum = 0.
-        for key, lumi in self.iteritems():
+        for key, lumi in six.iteritems(self):
             if not lumi.xingInfo and not lumi.fixXingInfo():
                 if not self.noWarnings:
-                    print "Do not have lumi xing info for %s" % lumi.keyString
+                    print("Do not have lumi xing info for %s" % lumi.keyString)
                 if not self.allowNoXing:
-                    print "Setting no Xing info flag"
+                    print("Setting no Xing info flag")
                     self.xingInfo = False
                     return
                 continue
@@ -233,7 +235,7 @@ class LumiInfoCont (dict):
 
 def loadEvents (filename, cont, options):
     eventsDict = {}
-    print "loading events from '%s'" % filename
+    print("loading events from '%s'" % filename)
     events = open (filename, 'r')
     runIndex, lumiIndex, eventIndex, weightIndex = 0, 1, 2, 3
     if options.relOrder:
@@ -246,7 +248,7 @@ def loadEvents (filename, cont, options):
         pieces = sepRE.split (line.strip())
         if len (pieces) < minPieces:
             if nonSpaceRE.search (line):
-                print "skipping", line
+                print("skipping", line)
             continue
         try:
             run, lumi, event = int( pieces[runIndex]   ), \
@@ -255,22 +257,22 @@ def loadEvents (filename, cont, options):
         except:
             continue
         key = (run, lumi)
-        if not cont.has_key (key):
+        if key not in cont:
             if options.ignore:
-                print "Warning, %s is not found in the lumi information" \
-                      % key.__str__()
+                print("Warning, %s is not found in the lumi information" \
+                      % key.__str__())
                 continue
             else:
-                raise RuntimeError, "%s is not found in lumi information.  Use '--ignoreNoLumiEvents' option to ignore these events and continue." \
-                      % key.__str__()
+                raise RuntimeError("%s is not found in lumi information.  Use '--ignoreNoLumiEvents' option to ignore these events and continue." \
+                      % key.__str__())
         if options.edfMode != 'time' and not cont[key].xingInfo:
             if options.ignore:
-                print "Warning, %s does not have Xing information" \
-                      % key.__str__()
+                print("Warning, %s does not have Xing information" \
+                      % key.__str__())
                 continue
             else:
-                raise RuntimeError, "%s  does not have Xing information.  Use '--ignoreNoLumiEvents' option to ignore these events and continue." \
-                      % key.__str__()            
+                raise RuntimeError("%s  does not have Xing information.  Use '--ignoreNoLumiEvents' option to ignore these events and continue." \
+                      % key.__str__())            
         if options.weights:
             weight = float (pieces[weightIndex])
         else:
@@ -300,7 +302,7 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
             expectedVals = []
             predVals   = []
         # loop over events
-        for key, eventList in sorted( eventsDict.iteritems() ):
+        for key, eventList in sorted( six.iteritems(eventsDict) ):
             usePoints = True
             # should we add this point?
             if lumiCont.minRun and lumiCont.minRun > key[0] or \
@@ -314,8 +316,8 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
                 try:
                     intLum = lumiCont[key].totalRecorded
                 except:
-                    raise RuntimeError, "key %s not found in lumi information" \
-                          % key.__str__()
+                    raise RuntimeError("key %s not found in lumi information" \
+                          % key.__str__())
                 if lumiCont.minIntLum and lumiCont.minIntLum > intLum or \
                    lumiCont.maxIntLum and lumiCont.maxIntLum < intLum:
                     continue
@@ -335,7 +337,7 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
         ####################
         if options.resetExpected:
             slope = (yVals[-1] - yVals[0]) / (xVals[-1] - xVals[0])
-            print "slope", slope
+            print("slope", slope)
             for index, old in enumerate (expectedVals):
                 expectedVals[index] = yVals[0] + \
                                     slope * (xVals[index] - xVals[0])
@@ -350,8 +352,8 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
                     for piece in pieces:
                         breakExpectedIntLum.append( float(piece) )
                 except:
-                    raise RuntimeError, "'%s' from '%s' is not a valid float" \
-                          % (piece, chunk)
+                    raise RuntimeError("'%s' from '%s' is not a valid float" \
+                          % (piece, chunk))
             breakExpectedIntLum.sort()
             boundaries = []
             breakIndex = 0
@@ -373,7 +375,7 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
                         break
             # do we have any boundaries?
             if not boundaries:
-                raise RuntimeError, "No values of 'breakExpectedIntLum' are in current range."
+                raise RuntimeError("No values of 'breakExpectedIntLum' are in current range.")
             # is the first boundary at 0?  If not, add 0
             if boundaries[0]:
                 boundaries.insert (0, 0)
@@ -381,13 +383,13 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
             # boundary
             if boundaries[-1] != len (xVals) - 1:
                 boundaries.append( len (xVals) - 1 )
-            rangeList = zip (boundaries, boundaries[1:])
+            rangeList = list(zip (boundaries, boundaries[1:]))
             for thisRange in rangeList:
                 upper = thisRange[1]
                 lower = thisRange[0]
                 slope = (yVals[upper] - yVals[lower]) / \
                         (xVals[upper] - xVals[lower])
-                print "slope", slope
+                print("slope", slope)
                 # now go over the range inclusively
                 pairList = []
                 for index in range (lower, upper + 1):
@@ -402,16 +404,16 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
     elif 'instLum' == options.edfMode or 'instIntLum' == options.edfMode:
         eventTupList = []
         if not lumiCont.xingInfo:
-            raise RuntimeError, "Luminosity Xing information missing."
-        for key, eventList in sorted( eventsDict.iteritems() ):
+            raise RuntimeError("Luminosity Xing information missing.")
+        for key, eventList in sorted( six.iteritems(eventsDict) ):
             try:
                 lumi =  lumiCont[key]
                 instLum   = lumi.aveInstLum
                 fracAXIL  = lumi.fracAXILrecorded
                 totalAXIL = lumi.totalAXILrecorded
             except:
-                raise RuntimeError, "key %s not found in lumi information" \
-                      % key.__str__()
+                raise RuntimeError("key %s not found in lumi information" \
+                      % key.__str__())
             for event in eventList:
                 eventTupList.append( (instLum, fracAXIL, totalAXIL, key,
                                       event[0], event[1], ) )
@@ -427,23 +429,23 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
             expectedVals.append (eventTup[1])
             predVals.append   (eventTup[1] * options.pred)
     else:
-        raise RuntimeError, "It looks like Charles screwed up if you are seeing this."
+        raise RuntimeError("It looks like Charles screwed up if you are seeing this.")
 
     size = len (xVals)
     step = int (math.sqrt(size) / 2 + 1)
     if options.printValues:
         for index in range (size):
-            print "%8f %8f %8f" % (xVals[index], yVals[index], expectedVals[index]),
+            print("%8f %8f %8f" % (xVals[index], yVals[index], expectedVals[index]), end=' ')
             if index > step:
                 denom = xVals[index] - xVals[index - step]
                 numer = yVals[index] - yVals[index - step]
                 if denom:
-                    print " %8f" % (numer / denom),
+                    print(" %8f" % (numer / denom), end=' ')
             if 0 == index % step:
-                print " **", ## indicates statistically independent
+                print(" **", end=' ') ## indicates statistically independent
                              ## slope measurement
-            print
-        print
+            print()
+        print()
 
     xArray = array.array ('d', xVals)
     yArray = array.array ('d', yVals)
@@ -459,7 +461,7 @@ def makeEDFplot (lumiCont, eventsDict, totalWeight, outputFile, options):
 
     # run statistical tests
     if options.weights:
-        print "average weight per event:", weight / ( size - 1)
+        print("average weight per event:", weight / ( size - 1))
     maxDistance = ROOT.TMath.KolmogorovTest (size, yArray,
                                              size, expected,
                                              "M")
@@ -609,11 +611,11 @@ if __name__ == '__main__':
     (options, args) = parser.parse_args()
 
     if options.edfMode not in allowedEDF:
-        raise RuntimeError, "edfMode (currently '%s') must be one of %s" \
-              % (options.edfMode, allowedEDF)
+        raise RuntimeError("edfMode (currently '%s') must be one of %s" \
+              % (options.edfMode, allowedEDF))
 
     if len (args) != 3 and not (options.runsWithLumis and len(args) >= 1):
-        raise RuntimeError, "Must provide lumi.csv, events.txt, and output.png"
+        raise RuntimeError("Must provide lumi.csv, events.txt, and output.png")
 
 
     ##########################
@@ -637,23 +639,23 @@ if __name__ == '__main__':
                 try:
                     recLumValue = float (piece)
                 except:
-                    raise RuntimeError, "'%s' in '%s' is not a float" % \
-                          (piece, line)
+                    raise RuntimeError("'%s' in '%s' is not a float" % \
+                          (piece, line))
                 if recLumValue <= 0:
-                    raise RuntimeError, "You must provide positive values for -runsWithLumis ('%f' given)" % recLumValue
+                    raise RuntimeError("You must provide positive values for -runsWithLumis ('%f' given)" % recLumValue)
                 recLumis.append (recLumValue)
         if not recLumis:
-            raise RuntimeError, "What did Charles do now?"
+            raise RuntimeError("What did Charles do now?")
         recLumis.sort()
         recLumIndex = 0
         recLumValue = recLumis [recLumIndex]
         prevRecLumi = 0.
         done = False
-        for key, lumi in cont.iteritems():
+        for key, lumi in six.iteritems(cont):
             if prevRecLumi >= recLumValue and recLumValue < lumi.totalRecorded:
                 # found it
-                print "%s contains total recorded lumi %f" % \
-                      (key.__str__(), recLumValue)
+                print("%s contains total recorded lumi %f" % \
+                      (key.__str__(), recLumValue))
                 while True:
                     recLumIndex += 1
                     if recLumIndex == len (recLumis):
@@ -662,21 +664,21 @@ if __name__ == '__main__':
                     recLumValue = recLumis [recLumIndex]
                     if prevRecLumi >= recLumValue and recLumValue < lumi.totalRecorded:
                         # found it
-                        print "%s contains total recorded lumi %f" % \
-                              (key.__str__(), recLumValue)
+                        print("%s contains total recorded lumi %f" % \
+                              (key.__str__(), recLumValue))
                     else:
                         break
                 if done:
                     break
             prevRecLumi = lumi.totalRecorded
         if recLumIndex < len (recLumis):
-            print "Theses lumis not found: %s" % recLumis[recLumIndex:]
+            print("Theses lumis not found: %s" % recLumis[recLumIndex:])
         sys.exit()
 
     ####################
     ## make EDF plots ##
     ####################
     if options.edfMode != 'time' and not cont.xingInfo:
-        raise RuntimeError, "'%s' does not have Xing info" % args[0]
+        raise RuntimeError("'%s' does not have Xing info" % args[0])
     eventsDict, totalWeight = loadEvents (args[1], cont, options)
     makeEDFplot (cont, eventsDict, totalWeight, args[2], options)

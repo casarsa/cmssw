@@ -17,9 +17,9 @@
 // user include files
 #include "Alignment/MuonAlignment/interface/MuonAlignmentInputSurveyDB.h"
 #include "CondFormats/AlignmentRecord/interface/DTSurveyRcd.h"
-#include "CondFormats/AlignmentRecord/interface/DTSurveyErrorRcd.h"
+#include "CondFormats/AlignmentRecord/interface/DTSurveyErrorExtendedRcd.h"
 #include "CondFormats/AlignmentRecord/interface/CSCSurveyRcd.h"
-#include "CondFormats/AlignmentRecord/interface/CSCSurveyErrorRcd.h"
+#include "CondFormats/AlignmentRecord/interface/CSCSurveyErrorExtendedRcd.h"
 #include "Alignment/CommonAlignment/interface/SurveyDet.h"
 
 //
@@ -63,34 +63,34 @@ MuonAlignmentInputSurveyDB::~MuonAlignmentInputSurveyDB() {}
 //
 
 AlignableMuon *MuonAlignmentInputSurveyDB::newAlignableMuon(const edm::EventSetup& iSetup) const {
-   boost::shared_ptr<DTGeometry> dtGeometry = idealDTGeometry(iSetup);
-   boost::shared_ptr<CSCGeometry> cscGeometry = idealCSCGeometry(iSetup);
+   std::shared_ptr<DTGeometry> dtGeometry = idealDTGeometry(iSetup);
+   std::shared_ptr<CSCGeometry> cscGeometry = idealCSCGeometry(iSetup);
 
    edm::ESHandle<Alignments> dtSurvey;
    edm::ESHandle<SurveyErrors> dtSurveyError;
    edm::ESHandle<Alignments> cscSurvey;
    edm::ESHandle<SurveyErrors> cscSurveyError;
    iSetup.get<DTSurveyRcd>().get(m_dtLabel, dtSurvey);
-   iSetup.get<DTSurveyErrorRcd>().get(m_dtLabel, dtSurveyError);
+   iSetup.get<DTSurveyErrorExtendedRcd>().get(m_dtLabel, dtSurveyError);
    iSetup.get<CSCSurveyRcd>().get(m_cscLabel, cscSurvey);
-   iSetup.get<CSCSurveyErrorRcd>().get(m_cscLabel, cscSurveyError);
+   iSetup.get<CSCSurveyErrorExtendedRcd>().get(m_cscLabel, cscSurveyError);
 
    AlignableMuon *output = new AlignableMuon(&(*dtGeometry), &(*cscGeometry));
 
    unsigned int theSurveyIndex  = 0;
    const Alignments *theSurveyValues = &*dtSurvey;
    const SurveyErrors *theSurveyErrors = &*dtSurveyError;
-   std::vector<Alignable*> barrels = output->DTBarrel();
-   for (std::vector<Alignable*>::const_iterator iter = barrels.begin();  iter != barrels.end();  ++iter) {
-      addSurveyInfo_(*iter, &theSurveyIndex, theSurveyValues, theSurveyErrors);
+   const auto& barrels = output->DTBarrel();
+   for (const auto& iter: barrels) {
+      addSurveyInfo_(iter, &theSurveyIndex, theSurveyValues, theSurveyErrors);
    }
 
    theSurveyIndex  = 0;
    theSurveyValues = &*cscSurvey;
    theSurveyErrors = &*cscSurveyError;
-   std::vector<Alignable*> endcaps = output->CSCEndcaps();
-   for (std::vector<Alignable*>::const_iterator iter = endcaps.begin();  iter != endcaps.end();  ++iter) {
-      addSurveyInfo_(*iter, &theSurveyIndex, theSurveyValues, theSurveyErrors);
+   const auto& endcaps = output->CSCEndcaps();
+   for (const auto& iter: endcaps) {
+      addSurveyInfo_(iter, &theSurveyIndex, theSurveyValues, theSurveyErrors);
    }
 
    return output;
@@ -104,7 +104,7 @@ void MuonAlignmentInputSurveyDB::addSurveyInfo_(Alignable* ali,
 						unsigned int *theSurveyIndex,
 						const Alignments* theSurveyValues,
 						const SurveyErrors* theSurveyErrors) const {
-  const std::vector<Alignable*>& comp = ali->components();
+  const auto& comp = ali->components();
 
   unsigned int nComp = comp.size();
 

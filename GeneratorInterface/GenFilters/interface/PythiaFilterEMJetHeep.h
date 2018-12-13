@@ -27,21 +27,24 @@
 #include "TTree.h"
 class TFile;
 
+namespace edm {
+  class HepMCProduct;
+}
 
 class PythiaFilterEMJetHeep : public edm::EDFilter {
    public:
       explicit PythiaFilterEMJetHeep(const edm::ParameterSet&);
-      ~PythiaFilterEMJetHeep();
+      ~PythiaFilterEMJetHeep() override;
 
       double deltaR(double eta0, double phi0, double eta, double phi);
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
-      virtual void beginJob();
-      virtual void endJob();
+      bool filter(edm::Event&, const edm::EventSetup&) override;
+      void beginJob() override;
+      void endJob() override;
 
 
    private:
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        //
        double minEventPt;
        double etaMax;

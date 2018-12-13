@@ -13,7 +13,6 @@
 
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/ptr_container/ptr_list.hpp>
-#include <boost/foreach.hpp>
 #include <algorithm>
 #include <functional>
 
@@ -43,7 +42,7 @@ class RecoTauPiZeroProducer : public edm::stream::EDProducer<> {
     typedef reco::tau::RecoTauPiZeroQualityPlugin Ranker;
 
     explicit RecoTauPiZeroProducer(const edm::ParameterSet& pset);
-    ~RecoTauPiZeroProducer() {}
+    ~RecoTauPiZeroProducer() override {}
     void produce(edm::Event& evt, const edm::EventSetup& es) override;
     void print(const std::vector<reco::RecoTauPiZero>& piZeros,
                std::ostream& out);
@@ -69,12 +68,17 @@ class RecoTauPiZeroProducer : public edm::stream::EDProducer<> {
     //consumes interface
     edm::EDGetTokenT<reco::CandidateView> cand_token;
 
+    double minJetPt_;
+    double maxJetAbsEta_;
+
     int verbosity_;
 };
 
 RecoTauPiZeroProducer::RecoTauPiZeroProducer(const edm::ParameterSet& pset) 
 {
   cand_token = consumes<reco::CandidateView>( pset.getParameter<edm::InputTag>("jetSrc"));
+  minJetPt_ = ( pset.exists("minJetPt") ) ? pset.getParameter<double>("minJetPt") : -1.0;
+  maxJetAbsEta_ = ( pset.exists("maxJetAbsEta") ) ? pset.getParameter<double>("maxJetAbsEta") : 99.0;
 
   typedef std::vector<edm::ParameterSet> VPSet;
   // Get the mass hypothesis for the pizeros
@@ -109,7 +113,7 @@ RecoTauPiZeroProducer::RecoTauPiZeroProducer(const edm::ParameterSet& pset)
   // Check if we want to apply a final output selection
   if (pset.exists("outputSelection")) {
     std::string selection = pset.getParameter<std::string>("outputSelection");
-    if (selection != "") {
+    if (!selection.empty()) {
       outputSelector_.reset(
           new StringCutObjectSelector<reco::RecoTauPiZero>(selection));
     }
@@ -128,7 +132,7 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
   evt.getByToken(cand_token, jetView);
 
   // Give each of our plugins a chance at doing something with the edm::Event
-  BOOST_FOREACH(Builder& builder, builders_) {
+  for(auto& builder : builders_) {
     builder.setup(evt, es);
   }
 
@@ -136,22 +140,26 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
   reco::PFJetRefVector jetRefs =
       reco::tau::castView<reco::PFJetRefVector>(jetView);
   // Make our association
-  std::auto_ptr<reco::JetPiZeroAssociation> association;
+  std::unique_ptr<reco::JetPiZeroAssociation> association;
 
-  if (jetRefs.size()) {
-    association.reset(
-        new reco::JetPiZeroAssociation(reco::PFJetRefProd(jetRefs)));
+  if (!jetRefs.empty()) {
+    edm::Handle<reco::PFJetCollection> pfJetCollectionHandle;
+    evt.get(jetRefs.id(), pfJetCollectionHandle);
+    association = std::make_unique<reco::JetPiZeroAssociation>(reco::PFJetRefProd(pfJetCollectionHandle));
   } else {
-    association.reset(new reco::JetPiZeroAssociation);
+    association = std::make_unique<reco::JetPiZeroAssociation>();
   }
 
   // Loop over our jets
-  BOOST_FOREACH(const reco::PFJetRef& jet, jetRefs) {
+  for(auto const& jet : jetRefs) {
+
+    if(jet->pt() - minJetPt_ < 1e-5) continue;
+    if(std::abs(jet->eta()) - maxJetAbsEta_ > -1e-5) continue;
     // Build our global list of RecoTauPiZero
     PiZeroList dirtyPiZeros;
 
     // Compute the pi zeros from this jet for all the desired algorithms
-    BOOST_FOREACH(const Builder& builder, builders_) {
+    for(auto const& builder : builders_) {
       try {
         PiZeroVector result(builder(*jet));
         dirtyPiZeros.transfer(dirtyPiZeros.end(), result);
@@ -168,7 +176,7 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     // Keep track of the photons in the clean collection
     std::vector<reco::RecoTauPiZero> cleanPiZeros;
     std::set<reco::CandidatePtr> photonsInCleanCollection;
-    while (dirtyPiZeros.size()) {
+    while (!dirtyPiZeros.empty()) {
       // Pull our candidate pi zero from the front of the list
       std::auto_ptr<reco::RecoTauPiZero> toAdd(
           dirtyPiZeros.pop_front().release());
@@ -185,7 +193,7 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
                           std::back_inserter(uniqueGammas));
       // If the pi zero has no unique gammas, discard it.  Note toAdd is deleted
       // when it goes out of scope.
-      if (!uniqueGammas.size()) {
+      if (uniqueGammas.empty()) {
         continue;
       } else if (uniqueGammas.size() == toAdd->daughterPtrVector().size()) {
         // Check if it is composed entirely of unique gammas.  In this case
@@ -198,7 +206,7 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
         // add it back into the sorted list of dirty PiZeros
         toAdd->clearDaughters();
         // Add each of the unique daughters back to the pizero
-        BOOST_FOREACH(const reco::CandidatePtr& gamma, uniqueGammas) {
+        for(auto const& gamma : uniqueGammas) {
           toAdd->addDaughter(gamma);
         }
         // Update the four vector
@@ -212,10 +220,8 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     }
     // Apply the mass hypothesis if desired
     if (piZeroMass_ >= 0) {
-      std::for_each(
-          cleanPiZeros.begin(), cleanPiZeros.end(),
-          std::bind2nd(
-              std::mem_fun_ref(&reco::RecoTauPiZero::setMass), piZeroMass_));
+      for( auto& cleanPiZero: cleanPiZeros )
+         { cleanPiZero.setMass(this->piZeroMass_);};
     }
     // Add to association
     if ( verbosity_ >= 2 ) {
@@ -223,14 +229,14 @@ void RecoTauPiZeroProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     }
     association->setValue(jet.key(), cleanPiZeros);
   }
-  evt.put(association);
+  evt.put(std::move(association));
 }
 
 // Print some helpful information
 void RecoTauPiZeroProducer::print(
     const std::vector<reco::RecoTauPiZero>& piZeros, std::ostream& out) {
   const unsigned int width = 25;
-  BOOST_FOREACH(const reco::RecoTauPiZero& piZero, piZeros) {
+  for(auto const& piZero : piZeros) {
     out << piZero;
     out << "* Rankers:" << std::endl;
     for (rankerList::const_iterator ranker = rankers_.begin();

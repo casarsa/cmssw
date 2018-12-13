@@ -24,10 +24,12 @@ __email__ = 'mojedasa@cern.ch'
 import argparse
 import logging
 import os
+import re
 import subprocess
 
 import clang.cindex
 
+clang_version = None
 
 headers_template = '''
 #include "{headers}"
@@ -45,9 +47,9 @@ serialize_method_begin_template = '''template <class Archive>
 void {klass}::serialize(Archive & ar, const unsigned int)
 {{'''
 
-serialize_method_base_object_template = '    ar & boost::serialization::make_nvp("{base_object_name}", boost::serialization::base_object<{base_object_name}>(*this));'
+serialize_method_base_object_template = '    ar & boost::serialization::make_nvp("{base_object_name_sanitised}", boost::serialization::base_object<{base_object_name}>(*this));'
 
-serialize_method_member_template = '''    ar & BOOST_SERIALIZATION_NVP({member_name});'''
+serialize_method_member_template = '''    ar & boost::serialization::make_nvp("{member_name_sanitised}", {member_name});'''
 
 serialize_method_end = '''}
 '''
@@ -170,8 +172,8 @@ def get_serializable_classes_members(node, all_template_types=None, namespace=''
             if only_from_path is not None \
                 and child.location.file is not None \
                 and not child.location.file.name.startswith(only_from_path):
-                    logging.debug('Skipping since it is an external of this package: %s', child.spelling)
-                    continue
+                logging.debug('Skipping since it is an external of this package: %s', child.spelling)
+                continue
 
             serializable = is_serializable_class(child)
             if serializable:
@@ -197,7 +199,7 @@ def get_serializable_classes_members(node, all_template_types=None, namespace=''
                     else:
                         after_serialize_count = after_serialize_count + 1
 
-                        if member.kind != clang.cindex.CursorKind.UNEXPOSED_DECL:
+                        if not is_friend_decl(member.kind):
                             raise Exception('Expected unexposed declaration (friend) after serialize() but found something else: looks like the COND_SERIALIZABLE macro has been changed without updating the script.')
 
                         if 'COND_SERIALIZABLE' not in get_statement(member):
@@ -214,8 +216,8 @@ def get_serializable_classes_members(node, all_template_types=None, namespace=''
                 # Template non-type parameters (e.g. <int N>)
                 elif member.kind == clang.cindex.CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
                     type_string = get_type_string(member)
-		    if not type_string: 
-		       type_string = get_basic_type_string(member)
+                    if not type_string: 
+                        type_string = get_basic_type_string(member)
                     logging.info('    Found template non-type parameter: %s %s', type_string, member.spelling)
                     template_types.append((type_string, member.spelling))
 
@@ -270,10 +272,12 @@ def get_serializable_classes_members(node, all_template_types=None, namespace=''
                     clang.cindex.CursorKind.CONVERSION_FUNCTION,
                     clang.cindex.CursorKind.TYPE_REF,
                     clang.cindex.CursorKind.DECL_REF_EXPR,
+                    clang.cindex.CursorKind.CLASS_TEMPLATE,
+                    clang.cindex.CursorKind.TYPE_ALIAS_DECL,
                 ]):
                     logging.debug('Skipping member: %s %s %s %s', member.displayname, member.spelling, member.kind, member.type.kind)
 
-                elif member.kind == clang.cindex.CursorKind.UNEXPOSED_DECL:
+                elif is_friend_decl(member.kind):
                     statement = get_statement(member)
 
                     # Friends are unexposed but they are not data to serialize
@@ -294,6 +298,7 @@ def get_serializable_classes_members(node, all_template_types=None, namespace=''
                     raise Exception('Unexposed declaration. This probably means (at the time of writing) that an unknown class was found (may happen, for instance, when the compiler does not find the headers for std::vector, i.e. missing -I option): %s %s %s %s %s' % (member.displayname, member.spelling, member.kind, member.type.kind, statement))
 
                 else:
+                    statement = get_statement(member)
                     raise Exception('Unknown kind. Please fix the script: %s %s %s %s %s' % (member.displayname, member.spelling, member.kind, member.type.kind, statement))
 
             if template_types:
@@ -338,6 +343,27 @@ def get_flags(product_name, flags):
     command = "scram b echo_%s_%s | tail -1 | cut -d '=' -f '2-' | xargs -n1" % (product_name, flags)
     logging.debug('Running: %s', command)
     return subprocess.check_output(command, shell=True).splitlines()
+
+def get_clang_version():
+    """Extract clang version and set global clang_version and also return the same value."""
+    global clang_version
+    if clang_version is not None:
+        return clang_version
+    command = "clang --version | grep 'clang version' | sed 's/clang version//'"
+    logging.debug("Running: {0}".format(command))
+    (clang_version_major, clang_version_minor, clang_version_patchlevel) = subprocess.check_output(command, shell=True).splitlines()[0].strip().split('.', 3)
+    clang_version = (int(clang_version_major), int(clang_version_minor), int(clang_version_patchlevel))
+    logging.debug("Detected Clang version: {0}".format(clang_version))
+    return clang_version
+
+def is_friend_decl(memkind):
+    """Check if declaration is a friend"""
+    clangv = get_clang_version()
+    if clangv >= (4, 0, 0):
+        return memkind == clang.cindex.CursorKind.FRIEND_DECL
+    else:
+        return memkind == clang.cindex.CursorKind.UNEXPOSED_DECL
+    return false
 
 def log_flags(name, flags):
     logging.debug('%s = [', name)
@@ -386,6 +412,10 @@ def get_default_gcc_search_paths(gcc = 'g++', language = 'c++'):
 
     return paths
 
+def sanitise(var):
+    return re.sub('[^a-zA-Z0-9.,-:]', '-', var)
+
+
 class SerializationCodeGenerator(object):
 
     def __init__(self, scramFlags=None):
@@ -419,14 +449,15 @@ class SerializationCodeGenerator(object):
         product_name = '%s%s' % (self.split_path[1], self.split_path[2])
         logging.debug('product_name = %s', product_name)
 
-	if not scramFlags:
-	   cpp_flags = get_flags(product_name, 'CPPFLAGS')
-           cxx_flags = get_flags(product_name, 'CXXFLAGS')
-	else:
-	   cpp_flags = self.cleanFlags( scramFlags )
-	   cxx_flags = []
+        if not scramFlags:
+            cpp_flags = get_flags(product_name, 'CPPFLAGS')
+            cxx_flags = get_flags(product_name, 'CXXFLAGS')
+        else:
+            cpp_flags = self.cleanFlags( scramFlags )
+            cxx_flags = []
 
-        std_flags = get_default_gcc_search_paths()
+        # We are using libClang, thus we have to follow Clang include paths
+        std_flags = get_default_gcc_search_paths(gcc='clang++')
         log_flags('cpp_flags', cpp_flags)
         log_flags('cxx_flags', cxx_flags)
         log_flags('std_flags', std_flags)
@@ -441,43 +472,53 @@ class SerializationCodeGenerator(object):
         logging.info('Searching serializable classes in %s/%s ...', self.split_path[1], self.split_path[2])
 
         logging.debug('Parsing C++ classes in file %s ...', headers_h)
-        index = clang.cindex.Index.create()
+        # On macOS we need to costruct library search path
+        if "SCRAM_ARCH" in os.environ and re.match('osx10*',os.environ['SCRAM_ARCH']):
+            cindex=clang.cindex
+            libpath=os.path.dirname(os.path.realpath(clang.cindex.__file__))+"/../../lib"
+            cindex.Config.set_library_path(libpath)
+            index = cindex.Index.create()
+        else :
+            index = clang.cindex.Index.create()
         translation_unit = index.parse(headers_h, flags)
         if not translation_unit:
             raise Exception('Unable to load input.')
 
+        severity_names = ('Ignored', 'Note', 'Warning', 'Error', 'Fatal')
+        get_severity_name = lambda severity_num: severity_names[severity_num] if severity_num < len(severity_names) else 'Unknown'
+        max_severity_level = 0 # Ignored
         diagnostics = get_diagnostics(translation_unit)
         for diagnostic in diagnostics:
             logf = logging.error
 
             # Ignore some known warnings
             if diagnostic['spelling'].startswith('argument unused during compilation') \
-                or diagnostic['spelling'].startswith('unknown warning option') \
-                or diagnostic['spelling'] == "invalid argument '-std=c++11' not allowed with 'C/ObjC'" \
-                or diagnostic['spelling'] == "'stdarg.h' file not found" \
-                or diagnostic['spelling'] == "'stddef.h' file not found":
+                or diagnostic['spelling'].startswith('unknown warning option'):
                 logf = logging.debug
 
-            logf('Diagnostic: [%s] %s', diagnostic['severity'], diagnostic['spelling'])
+            logf('Diagnostic: [%s] %s', get_severity_name(diagnostic['severity']), diagnostic['spelling'])
             logf('   at line %s in %s', diagnostic['location'].line, diagnostic['location'].file)
 
+            max_severity_level = max(max_severity_level, diagnostic['severity'])
+
+        if max_severity_level >= 3: # Error
+            raise Exception('Please, resolve all errors before proceeding.')
 
         self.classes = get_serializable_classes_members(translation_unit.cursor, only_from_path=self._join_package_path())
-
 
     def _join_package_path(self, *path):
         return os.path.join(self.cmssw_base, self.split_path[0], self.split_path[1], self.split_path[2], *path)
 
     def cleanFlags(self, flagsIn):
-	flags = [ flag for flag in flagsIn if not flag.startswith(('-march', '-mtune', '-fdebug-prefix-map')) ]
-        blackList = ['--', '-fipa-pta']
+        flags = [ flag for flag in flagsIn if not flag.startswith(('-march', '-mtune', '-fdebug-prefix-map', '-ax', '-wd')) ]
+        blackList = ['--', '-fipa-pta', '-xSSE3', '-fno-crossjumping', '-fno-aggressive-loop-optimizations']
         return [x for x in flags if x not in blackList]
 
     def generate(self, outFileName):
 
-    	filename = outFileName
-	if not filename:  # in case we're not using scram, this may not be set, use the default then, assuming we're in the package dir ...
-	   filename = self._join_package_path('src', 'Serialization.cc')
+        filename = outFileName
+        if not filename:  # in case we're not using scram, this may not be set, use the default then, assuming we're in the package dir ...
+            filename = self._join_package_path('src', 'Serialization.cc')
 
         n_serializable_classes = 0
 
@@ -500,10 +541,12 @@ class SerializationCodeGenerator(object):
             source += serialize_method_begin_template.format(klass=klass) + '\n'
 
             for base_object_name in base_objects:
-                source += serialize_method_base_object_template.format(base_object_name=base_object_name) + '\n'
+                base_object_name_sanitised = sanitise(base_object_name)
+                source += serialize_method_base_object_template.format(base_object_name=base_object_name, base_object_name_sanitised=base_object_name_sanitised) + '\n'
 
             for member_name in members:
-                source += serialize_method_member_template.format(member_name=member_name) + '\n'
+                member_name_sanitised = sanitise(member_name)
+                source += serialize_method_member_template.format(member_name=member_name, member_name_sanitised=member_name_sanitised) + '\n'
 
             source += serialize_method_end
 
@@ -534,10 +577,10 @@ def main():
 
     logLevel = logging.INFO
     if opts.verbose < 1 and opts.output and opts.package:   # assume we're called by scram and reduce logging - but only if no verbose is requested
-       logLevel = logging.WARNING
+        logLevel = logging.WARNING
 
     if opts.verbose >= 1: 
-       logLevel = logging.DEBUG
+        logLevel = logging.DEBUG
 
     logging.basicConfig(
         format = '[%(asctime)s] %(levelname)s: %(message)s',
@@ -546,13 +589,13 @@ def main():
 
     if opts.package:  # we got a directory name to process, assume it's from scram and remove the last ('/src') dir from the path
         pkgDir = opts.package
-	if pkgDir.endswith('/src') :
-	    pkgDir, srcDir = os.path.split( opts.package )
+        if pkgDir.endswith('/src') :
+            pkgDir, srcDir = os.path.split( opts.package )
         os.chdir( pkgDir )
-	logging.info("Processing package in %s " % pkgDir)
+        logging.info("Processing package in %s " % pkgDir)
 
     if opts.output:
-       logging.info("Writing serialization code to %s " % opts.output)
+        logging.info("Writing serialization code to %s " % opts.output)
 
     SerializationCodeGenerator( scramFlags=args[1:] ).generate( opts.output )
 

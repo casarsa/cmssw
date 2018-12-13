@@ -1,6 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
-higPhotonJetHLTOfflineSource = cms.EDAnalyzer(
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+higPhotonJetHLTOfflineSource = DQMEDAnalyzer(
     "HigPhotonJetHLTOfflineSource",
     # Used when fetching triggerSummary and triggerResults
     hltProcessName = cms.string("HLT"),
@@ -25,10 +26,11 @@ higPhotonJetHLTOfflineSource = cms.EDAnalyzer(
         "HLT_Photon300_NoHE_v",
     ),
     # Location of plots in DQM
-    dirname = cms.untracked.string("HLT/Higgs/PhotonJet"), 
+#    dirname = cms.untracked.string("HLT/Higgs/PhotonJet"), 
+    dirname = cms.untracked.string("HLT/HIG/PhotonJet"), 
     verbose = cms.untracked.bool(False), # default: False
     triggerAccept = cms.untracked.bool(True), # default: True 
-    triggerResultsToken = cms.InputTag("TriggerResults"),
+    triggerResultsToken = cms.InputTag("TriggerResults","","HLT"),
     pvToken = cms.InputTag("offlinePrimaryVertices"),
     photonsToken = cms.InputTag("gedPhotons"),
     pfMetToken = cms.InputTag("pfMet"),

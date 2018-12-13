@@ -4,20 +4,21 @@ Specs:
 -- PNG as default batch file format
 -- we support http mode by sending string buf via meme type image/png. Sending a premade static plot to webserver is considered a uploading process instead of http dynamic graphical mode. 
 '''
+from __future__ import print_function
 import sys,os
 import numpy,datetime
 import matplotlib
 from RecoLuminosity.LumiDB import CommonUtil,lumiTime,csvReporter
 
 batchonly=False
-if not os.environ.has_key('DISPLAY') or not os.environ['DISPLAY']:
+if 'DISPLAY' not in os.environ or not os.environ['DISPLAY']:
     batchonly=True
     matplotlib.use('Agg',warn=False)
 else:
     try:
         from RecoLuminosity.LumiDB import lumiQTWidget  
     except ImportError:
-        print 'unable to import GUI backend, switch to batch only mode'
+        print('unable to import GUI backend, switch to batch only mode')
         matplotlib.use('Agg',warn=False)
         batchonly=True
 from matplotlib.backends.backend_agg import FigureCanvasAgg as CanvasBackend
@@ -125,7 +126,7 @@ class matplotRender():
                 v=float(r[-(len(labels)-i)-1])#the values to plot are always the last n fields
                 rawdata.setdefault(lab,[]).append((runnumber,v))
         if not rawdata:
-            print '[WARNING]: no data to plot , exit'
+            print('[WARNING]: no data to plot , exit')
             return
       
         tot=sum([t[1] for t in rawdata[referenceLabel]])
@@ -149,7 +150,7 @@ class matplotRender():
         elif yscale=='log':
             ax.set_yscale('log')
         else:
-            raise 'unsupported yscale ',yscale
+            raise RuntimeError('unsupported yscale '+yscale)
         ax.set_xlabel(r'Run',position=(0.95,0))
         ax.set_ylabel(r'L '+unitstring,position=(0,0.9))
         xticklabels=ax.get_xticklabels()
@@ -163,8 +164,7 @@ class matplotRender():
         ax.xaxis.set_minor_locator(minorLocator)
         ax.set_xbound(lower=xpoints[0],upper=xpoints[-1])
         ax.grid(True)
-        keylist=ypoints.keys()
-        keylist.sort()
+        keylist=sorted(ypoints.keys())
         keylist.insert(0,keylist.pop(keylist.index(referenceLabel)))#move refereceLabel to front from now on
         legendlist=[]
         head=['#Run']
@@ -172,7 +172,7 @@ class matplotRender():
         textsummaryline=['#'+str(len(xpoints))]
         for ylabel in keylist:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],label=ylabel,color=cl,drawstyle='steps')
             legendlist.append(ylabel+' '+'%.3f'%(ytotal[ylabel])+' '+unitstring)
@@ -184,7 +184,7 @@ class matplotRender():
             csvreport.writeRow(head)
             allruns=[int(t[0]) for t in rawdata[referenceLabel]]
             flat.insert(0,allruns)
-            rows=zip(*flat)
+            rows=list(zip(*flat))
             csvreport.writeRows([list(t) for t in rows])
             csvreport.writeRow(textsummaryhead)
             csvreport.writeRow(textsummaryline)
@@ -224,7 +224,7 @@ class matplotRender():
                 rawdata.setdefault(lab,[]).append((fillnum,runnum,v))
         #print 'fillrunDict ',fillrunDict
         if not rawdata:
-            print '[WARNING]: no data, do nothing'
+            print('[WARNING]: no data, do nothing')
             return
         tot=sum([t[2] for t in rawdata[referenceLabel]])
         beginfo=''
@@ -252,7 +252,7 @@ class matplotRender():
         elif yscale=='log':
             ax.set_yscale('log')
         else:
-            raise 'unsupported yscale ',yscale
+            raise RuntimeError('unsupported yscale '+yscale)
         xticklabels=ax.get_xticklabels()
         majorLocator=matplotlib.ticker.LinearLocator( nticks )
         majorFormatter=matplotlib.ticker.FormatStrFormatter('%d')
@@ -261,8 +261,7 @@ class matplotRender():
         ax.xaxis.set_major_formatter(majorFormatter)
         #ax.xaxis.set_minor_locator(minorLocator)
         ax.grid(True)
-        keylist=ypoints.keys()
-        keylist.sort()
+        keylist=sorted(ypoints.keys())
         keylist.insert(0,keylist.pop(keylist.index(referenceLabel)))#move refereceLabel to front from now on
         legendlist=[]
         head=['#fill','run']        
@@ -270,7 +269,7 @@ class matplotRender():
         textsummaryline=['#'+str(len(xpoints))]
         for ylabel in keylist:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],label=ylabel,color=cl,drawstyle='steps')
             legendlist.append(ylabel+' '+'%.3f'%(ytotal[ylabel])+' '+unitstring)
@@ -283,7 +282,7 @@ class matplotRender():
             allruns=[int(t[1]) for t in rawdata[referenceLabel]]
             flat.insert(0,allfills)
             flat.insert(1,allruns)
-            rows=zip(*flat)
+            rows=list(zip(*flat))
             csvreport.writeRow(head)
             csvreport.writeRows([list(t) for t in rows])
             csvreport.writeRow(textsummaryhead)
@@ -336,7 +335,7 @@ class matplotRender():
                 v=float(r[-(len(labels)-i)])
                 rawdata.setdefault(lab,[]).append((runnumber,starttime,stoptime,v))        
         if not rawdata:
-            print '[WARNING]: no data, do nothing'
+            print('[WARNING]: no data, do nothing')
             return
         tot=sum([t[3] for t in rawdata[referenceLabel]])
         (unitstring,denomitor)=guessLumiUnit(tot)
@@ -375,8 +374,7 @@ class matplotRender():
         for tx in xticklabels:
             tx.set_horizontalalignment('left')
         ax.grid(True)
-        keylist=ypoints.keys()
-        keylist.sort()
+        keylist=sorted(ypoints.keys())
         keylist.insert(0,keylist.pop(keylist.index(referenceLabel)))#move refereceLabel to front from now on
         legendlist=[]
         head=['#Run','StartTime','StopTime']
@@ -384,7 +382,7 @@ class matplotRender():
         textsummaryline=['#'+str(len(xpoints))]
         for ylabel in keylist:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],label=ylabel,color=cl,drawstyle='steps')
             legendlist.append(ylabel+' '+'%.3f'%(ytotal[ylabel])+' '+unitstring)
@@ -400,7 +398,7 @@ class matplotRender():
             flat.insert(0,allruns)
             flat.insert(1,allstarts)
             flat.insert(2,allstops)
-            rows=zip(*flat)
+            rows=list(zip(*flat))
             csvreport.writeRows([list(t) for t in rows])
             csvreport.writeRow(textsummaryhead)
             csvreport.writeRow(textsummaryline)
@@ -463,7 +461,7 @@ class matplotRender():
                 v=float(r[-(len(labels)-i)-1])
                 rawdata.setdefault(lab,[]).append((day,begrunls,endrunls,v))
         if not rawdata:
-            print '[WARNING]: no data, do nothing'
+            print('[WARNING]: no data, do nothing')
             return
         maxlum=max([t[3] for t in rawdata[referenceLabel]])
         minlum=min([t[3] for t in rawdata[referenceLabel] if t[3]>0]) #used only for log scale, fin the non-zero bottom
@@ -509,7 +507,7 @@ class matplotRender():
             flat.insert(1,allstarts)
             flat.insert(2,allstops)
             flat.append(alldates)
-            rows=zip(*flat)
+            rows=list(zip(*flat))
             csvreport.writeRows([list(t) for t in rows])
         yearStrMin=minTime.strftime('%Y')
         yearStrMax=maxTime.strftime('%Y')
@@ -523,7 +521,7 @@ class matplotRender():
         elif yscale=='log':
             ax.set_yscale('log')
         else:
-            raise 'unsupported yscale ',yscale        
+            raise RuntimeError('unsupported yscale '+yscale)        
         majorLoc=matplotlib.ticker.LinearLocator(numticks=nticks)
         minorLoc=matplotlib.ticker.LinearLocator(numticks=nticks*4)
         ax.xaxis.set_major_formatter(dateFmt)
@@ -540,7 +538,7 @@ class matplotRender():
         textsummaryline=['#'+str(len(alldays))]
         for ylabel in labels:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],label=ylabel,color=cl,drawstyle='steps')
             legendlist.append(ylabel+' Max '+'%.3f'%(ymax[ylabel])+' '+unitstring)
@@ -608,7 +606,7 @@ class matplotRender():
                 v=float(r[-(len(labels)-i)-1])
                 rawdata.setdefault(lab,[]).append((day,runnumber,lsnum,v))
         if not rawdata:
-            print '[WARNING]: no data, do nothing'
+            print('[WARNING]: no data, do nothing')
             return
         maxlum=max([t[3] for t in rawdata[referenceLabel]])
         minlum=min([t[3] for t in rawdata[referenceLabel] if t[3]>0]) #used only for log scale, fin the non-zero bottom
@@ -621,8 +619,7 @@ class matplotRender():
         MaxDay=maxTime.date().toordinal()
         fulldays=range(MinDay,MaxDay+1)
         for label in rawdata.keys():
-            yvalues=rawdata[label]
-            yvalues.sort()#sort by day
+            yvalues=sorted(rawdata[label])
             alldays=[t[0] for t in yvalues]
             alldates=[str(datetime.date.fromordinal(t)) for t in alldays]
             ypoints[label]=[]
@@ -654,7 +651,7 @@ class matplotRender():
             flat.insert(1,allruns)
             flat.insert(2,allls)
             flat.append(alldates)
-            rows=zip(*flat)
+            rows=list(zip(*flat))
             csvreport.writeRows([list(t) for t in rows])
             
         yearStrMin=minTime.strftime('%Y')
@@ -669,7 +666,7 @@ class matplotRender():
         elif yscale=='log':
             ax.set_yscale('log')
         else:
-            raise 'unsupported yscale ',yscale
+            raise RuntimeError('unsupported yscale '+yscale)
         majorLoc=matplotlib.ticker.LinearLocator(numticks=nticks)
         minorLoc=matplotlib.ticker.LinearLocator(numticks=nticks*4)
         ax.xaxis.set_major_formatter(dateFmt)
@@ -686,7 +683,7 @@ class matplotRender():
         textsummaryline=['#'+str(len(alldays))]
         for ylabel in labels:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],label='Max Inst',color=cl,drawstyle='steps')
             legendlist.append('Max Inst %.3f'%(ymax[ylabel])+' '+unitstring)
@@ -769,13 +766,12 @@ class matplotRender():
         for tx in xticklabels:
             tx.set_horizontalalignment('right')
         ax.grid(True)
-        keylist=ypoints.keys()
-        keylist.sort()
+        keylist=sorted(ypoints.keys())
         legendlist=[]
 
         for ylabel in keylist:
             cl='k'
-            if self.colormap.has_key(ylabel):
+            if ylabel in self.colormap:
                 cl=self.colormap[ylabel]
             ax.plot(xpoints,ypoints[ylabel],'.',label=ylabel,color=cl)
             legendlist.append(ylabel)      
@@ -806,7 +802,7 @@ class matplotRender():
     
     def drawInteractive(self):
         if batchonly:
-            print 'interactive mode is not available for your setup, exit'
+            print('interactive mode is not available for your setup, exit')
             sys.exit()
         aw=lumiQTWidget.ApplicationWindow(fig=self.__fig)
         aw.show()
@@ -814,7 +810,7 @@ class matplotRender():
         
 if __name__=='__main__':
     import csv
-    print '=====testing plotSumX_Run======'
+    print('=====testing plotSumX_Run======')
     f=open('/afs/cern.ch/cms/lumi/www/plots/operation/totallumivsrun-2011.csv','r')
     reader=csv.reader(f,delimiter=',')
     resultlines=[]
@@ -827,7 +823,7 @@ if __name__=='__main__':
     m.plotSumX_Run(rawdata={},resultlines=resultlines,minRun=None,maxRun=None,nticks=6,yscale='linear',withannotation=False)
     #m.drawPNG('totallumivsrun-2011test.png')
     m.drawInteractive()
-    print 'DONE'
+    print('DONE')
     
 '''
     print '=====testing plotSumX_Fill======'

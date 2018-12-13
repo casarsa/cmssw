@@ -15,6 +15,13 @@
 #include "TPaveLabel.h"
 #include <vector>
 
+void NormalizeHistogramsToFirst(TH1* h1, TH1* h2);
+void NormalizeHistogramsTo1(TH1* h1, TH1* h2);
+TH1* PlotRatiosHistograms(TH1* h1, TH1* h2);
+
+int ratioCounter = 0;
+
+
 /////
 // Uncomment the following line to get more debuggin output
 // #define DEBUG
@@ -37,6 +44,7 @@ void SetGlobalStyle() {
   //tyle->SetTitleYSize(0.3);
   //gStyle->SetLabelSize(0.6) 
   //gStyle->SetTextSize(0.5);
+  gStyle->SetOptStat(0);
 }
 //
 ////////////////////////////////////////////////////////////
@@ -59,12 +67,15 @@ void SetHistogramStyle(TH1* h, Style_t mstyle, Color_t color, Size_t msize = 0.7
   h->SetLineWidth(lwidth);
   h->GetYaxis()->SetTitleSize(tsize);
   h->GetYaxis()->SetTitleOffset(toffset);
+  h->GetXaxis()->SetLabelFont(63);
+  h->GetXaxis()->SetLabelSize(14); // labels will be 14 pixels
+  h->GetYaxis()->SetLabelFont(63);
+  h->GetYaxis()->SetLabelSize(14);
 }
 //
 ////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////
-//
 // This function finds the list of TDirectories in a branch
 // that match a given string
 
@@ -74,7 +85,7 @@ TList* GetListOfDirectories(TDirectory* dir, const char* match = 0) {
   TKey*  key    = 0;
   TKey*  oldkey = 0;
 
-  while ( key = (TKey*)nextkey() ) {
+  while (( key = (TKey*)nextkey() )) {
     TObject *obj = key->ReadObj();
     if ( obj->IsA()->InheritsFrom( "TDirectory" ) ) {
       TString theName = obj->GetName();
@@ -279,7 +290,7 @@ void PlotNHistograms(const TString& pdfFile,
 		     const char* canvasName, const char* canvasTitle,
 		     const TString& refLabel, const TString& newLabel,
 		     unsigned int nhistos, const char** hnames, const char** htitles = 0,
-		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0, bool *resol = false,
+		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0, bool *resol = 0,
 		     Double_t* minx = 0, Double_t* maxx = 0,
 		     Double_t* miny = 0, Double_t* maxy = 0) {
 #ifdef DEBUG
@@ -351,7 +362,7 @@ void PlotNHistograms(const TString& pdfFile,
 #endif
     rdir->GetObject(rcollname + "/" + hnames_tmp, rh);
     if (! rh) {
-      cout << "WARNING: Could not find a reference histogram or profile named " << hnames_tmp[i] 
+      cout << "WARNING: Could not find a reference histogram or profile named " << hnames_tmp
 	   << " in " << rdir->GetName() << endl;
       cout << "         Skipping" << endl;
       continue;
@@ -372,11 +383,11 @@ void PlotNHistograms(const TString& pdfFile,
     hnames_tmp=hnamesi;
     
     sdir->cd(scollname);
-    TIter next(gDirectory->GetListOfKeys());
-    TKey *key;
-    while ((key = (TKey*)next())) { 
+    TIter next2(gDirectory->GetListOfKeys());
+    TKey *key2;
+    while ((key2 = (TKey*)next2())) { 
     
-      TObject *obj = key->ReadObj();
+      TObject *obj = key2->ReadObj();
       TString temp = obj->GetName();
       if ( (temp.Contains("nhits_vs_eta_pfx")) &&
 	   hnamesi.Contains("hits_eta")
@@ -395,8 +406,8 @@ void PlotNHistograms(const TString& pdfFile,
 	 << " from " << sdir << endl;
 #endif
     sdir->GetObject(scollname + "/" + hnames_tmp, sh);
-    if (! rh) {
-      cout << "WARNING: Could not find a signal histogram or profile named " << hnames_tmp[i] 
+    if (! sh) {
+      cout << "WARNING: Could not find a signal histogram or profile named " << hnames_tmp
 	   << " in " << rdir->GetName() << endl;
       cout << "         Skipping" << endl;
       continue;
@@ -405,29 +416,29 @@ void PlotNHistograms(const TString& pdfFile,
     //If it is a 2D project it in Y... is this what we always want?
     if (TString(sh->IsA()->GetName()) == "TH2F") {
 #ifdef DEBUG
-      cout << "DEBUG: " << hnames_tmp[i] << " is a TH2F object... project in Y!" << endl;
+      cout << "DEBUG: " << hnames_tmp << " is a TH2F object... project in Y!" << endl;
 #endif
       TH1* proj = ((TH2F*) sh)->ProjectionY();
       sh = proj;
     }
 
-    if(TString(sh->GetName()).Contains(" vs "))norm= -999.;
+    if(TString(sh->GetName()).Contains(" vs "))norm[i]= -999.;
 
 
     // Normalize
-    if (norm == -1.)
+    if (norm[i] == -1.)
       NormalizeHistogramsTo1(rh, sh);
-    else if (norm == 0.)
+    else if (norm[i] == 0.)
       NormalizeHistogramsToFirst(rh,sh);
-    else if (norm == -999.){
+    else if (norm[i] == -999.){
       cout << "DEBUG: Normalizing histograms to nothing" << "..." << endl;
     }
     /*    else {
 #ifdef DEBUG
-      cout << "DEBUG: Normalizing histograms to " << norm << "..." << endl;
+      cout << "DEBUG: Normalizing histograms to " << norm[i] << "..." << endl;
 #endif
-      sh->Scale(norm);
-      rh->Scale(norm);
+      sh->Scale(norm[i]);
+      rh->Scale(norm[i]);
       }*/
 
 
@@ -456,7 +467,7 @@ void PlotNHistograms(const TString& pdfFile,
     }
     //Change y axis range
     if (miny) {
-      if (miny < -1E99) {
+      if (miny[i] < -1E99) {
 	rh->GetYaxis()->SetRangeUser(miny[i],maxy[i]);
 	sh->GetYaxis()->SetRangeUser(miny[i],maxy[i]);
       }
@@ -467,6 +478,22 @@ void PlotNHistograms(const TString& pdfFile,
     // Move to subpad
     canvas->cd(i+1);
     
+    TPad* pad1 = NULL;
+    TPad* pad2 = NULL;
+
+    pad1 = new TPad("pad1", "pad1", 0, 0.3, 1, 1.0);
+    pad2 = new TPad("pad2", "pad2", 0, 0.0, 1, 0.3);
+
+    pad1->SetTopMargin   (0.08);
+    pad1->SetBottomMargin(0.01);
+    pad1->Draw();
+
+    pad2->SetTopMargin   (0.05);
+    pad2->SetBottomMargin(0.45);
+    pad2->Draw();
+
+    pad1->cd();
+
     // Check Logy
     if (logy) {
       if (logy[i])
@@ -505,6 +532,12 @@ void PlotNHistograms(const TString& pdfFile,
 	  gPad->SetFillColor(kBlue-10);
       }
     }
+
+    pad2->cd();
+
+    TH1* ratioplot = PlotRatiosHistograms(rh, sh);
+    SetHistogramStyle(ratioplot, 21, 4);                                                   
+    ratioplot->Draw("ep");
   } // End loop
 
 
@@ -531,7 +564,8 @@ void PlotNHistograms(const TString& pdfFile,
   l->Draw();
   
   // Print Canvas
-  canvas->Print(pdfFile);
+  canvas->SaveAs(pdfFile+".pdf");
+  canvas->SaveAs(pdfFile+".png");
 
   // Clean memory
   // delete l;
@@ -577,7 +611,7 @@ void Plot6Histograms(const TString& pdfFile,
 		     const char* canvasName, const char* canvasTitle,
 		     const TString& refLabel, const TString& newLabel,
 		     const char** hnames, const char** htitles = 0,
-		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0,bool *resol=false,
+		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0,bool *resol=0,
 		     Double_t* minx = 0, Double_t* maxx = 0,
 		     Double_t* miny = 0, Double_t* maxy = 0) {
   
@@ -601,7 +635,7 @@ void Plot5Histograms(const TString& pdfFile,
 		     const char* canvasName, const char* canvasTitle,
 		     const TString& refLabel, const TString& newLabel,
 		     const char** hnames, const char** htitles = 0,
-		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0,bool *resol=false,
+		     bool* logy = 0, bool* doKolmo = 0, Double_t* norm = 0,bool *resol=0,
 		     Double_t* minx = 0, Double_t* maxx = 0,
 		     Double_t* miny = 0, Double_t* maxy = 0) {
   
@@ -644,7 +678,7 @@ void NormalizeHistogramsTo1(TH1* h1, TH1* h2) {
   if (!h1 || !h2) return;
   
   if ( h1->Integral() != 0 && h2->Integral() != 0 ) {
-∂    Double_t scale1 = 1.0/h1->Integral();
+    Double_t scale1 = 1.0/h1->Integral();
     Double_t scale2 = 1.0/h2->Integral();
     h1->Scale(scale1);
     h2->Scale(scale2);
@@ -783,3 +817,52 @@ void plot6histos(TCanvas *canvas,
 
 }
 */
+////////////////////////////////////////////////////////
+//
+// ratio plot from the two histograms 
+//
+/////////////////////////////////////////////////////////
+
+TH1* PlotRatiosHistograms(TH1* h1, TH1* h2){
+
+  ++ratioCounter;
+
+  Int_t nbinsx = h1->GetNbinsX();
+  Double_t xbins[nbinsx+1];
+
+  //Loop necessary since some histograms are TH1 while some are TProfile and do not allow us to use the clone function (SetBinContent do not exists for TProfiles)                                             
+  for (Int_t ibin=1; ibin<=nbinsx+1; ibin++) {
+    Float_t xmin = h1->GetBinLowEdge(ibin);
+    xbins[ibin-1] = xmin;
+  }
+
+  TH1F* h_ratio = new TH1F(Form("h_ratio_%d", ratioCounter), "", nbinsx, xbins);
+
+  for (Int_t ibin=1; ibin<=nbinsx; ibin++) {
+
+    Float_t h1Value = h1->GetBinContent(ibin);
+    Float_t h1Error = h1->GetBinError(ibin);
+
+    Float_t h2Value = h2->GetBinContent(ibin);
+    Float_t h2Error = h2->GetBinError(ibin);
+
+    Float_t ratioVal = 999;
+    Float_t ratioErr = 999;
+
+    if (h2Value > 0 || h2Value < 0) {
+      ratioVal = h1Value / h2Value;
+      ratioErr = h1Error / h2Value;
+    }
+
+    h_ratio->SetBinContent(ibin, ratioVal);
+    h_ratio->SetBinError  (ibin, ratioErr);
+
+  }
+
+  h_ratio->SetTitle("");
+  h_ratio->GetYaxis()->SetTitle("");
+  h_ratio->GetYaxis()->SetRangeUser(0.4, 1.6);
+
+  return h_ratio;
+
+}

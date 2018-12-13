@@ -47,7 +47,6 @@
 #include "DataFormats/TauReco/interface/PFTauDiscriminator.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include <memory>
-#include <boost/foreach.hpp>
 #include <TFormula.h>
 
 #include <memory>
@@ -61,7 +60,7 @@ class PFTauPrimaryVertexProducer final : public edm::stream::EDProducer<> {
   enum Alg{useInputPV=0, useFontPV};
 
   struct DiscCutPair{
-    DiscCutPair():discr_(0),cutFormula_(0){}
+    DiscCutPair():discr_(nullptr),cutFormula_(nullptr){}
     ~DiscCutPair(){delete cutFormula_;}
     const reco::PFTauDiscriminator* discr_;
     edm::EDGetTokenT<reco::PFTauDiscriminator> inputToken_;
@@ -71,8 +70,9 @@ class PFTauPrimaryVertexProducer final : public edm::stream::EDProducer<> {
   typedef std::vector<DiscCutPair*> DiscCutPairVec;
 
   explicit PFTauPrimaryVertexProducer(const edm::ParameterSet& iConfig);
-  ~PFTauPrimaryVertexProducer();
-  virtual void produce(edm::Event&,const edm::EventSetup&);
+  ~PFTauPrimaryVertexProducer() override;
+  void produce(edm::Event&,const edm::EventSetup&) override;
+
  private:
   edm::InputTag PFTauTag_;
   edm::EDGetTokenT<std::vector<reco::PFTau> >PFTauToken_;
@@ -84,9 +84,6 @@ class PFTauPrimaryVertexProducer final : public edm::stream::EDProducer<> {
   edm::EDGetTokenT<reco::VertexCollection> PVToken_;
   edm::InputTag beamSpotTag_;
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
-  edm::InputTag TrackCollectionTag_;
-  edm::EDGetTokenT<reco::TrackCollection> TrackCollectionToken_;
-  edm::InputTag TracksTag_;
   int Algorithm_;
   edm::ParameterSet qualityCutsPSet_;
   bool useBeamSpot_;
@@ -94,8 +91,8 @@ class PFTauPrimaryVertexProducer final : public edm::stream::EDProducer<> {
   bool RemoveMuonTracks_;
   bool RemoveElectronTracks_;
   DiscCutPairVec discriminators_;
-  std::auto_ptr<StringCutObjectSelector<reco::PFTau> > cut_;
-  std::auto_ptr<tau::RecoTauVertexAssociator> vertexAssociator_;
+  std::unique_ptr<StringCutObjectSelector<reco::PFTau> > cut_;
+  std::unique_ptr<tau::RecoTauVertexAssociator> vertexAssociator_;
 };
 
 PFTauPrimaryVertexProducer::PFTauPrimaryVertexProducer(const edm::ParameterSet& iConfig):
@@ -109,8 +106,6 @@ PFTauPrimaryVertexProducer::PFTauPrimaryVertexProducer(const edm::ParameterSet& 
   PVToken_(consumes<reco::VertexCollection>(PVTag_)),
   beamSpotTag_(iConfig.getParameter<edm::InputTag>("beamSpot")),
   beamSpotToken_(consumes<reco::BeamSpot>(beamSpotTag_)),
-  TrackCollectionTag_(iConfig.getParameter<edm::InputTag>("TrackCollectionTag")),
-  TrackCollectionToken_(consumes<reco::TrackCollection>(TrackCollectionTag_)),
   Algorithm_(iConfig.getParameter<int>("Algorithm")),
   qualityCutsPSet_(iConfig.getParameter<edm::ParameterSet>("qualityCuts")),
   useBeamSpot_(iConfig.getParameter<bool>("useBeamSpot")),
@@ -121,7 +116,7 @@ PFTauPrimaryVertexProducer::PFTauPrimaryVertexProducer(const edm::ParameterSet& 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   std::vector<edm::ParameterSet> discriminators =iConfig.getParameter<std::vector<edm::ParameterSet> >("discriminators");
   // Build each of our cuts
-  BOOST_FOREACH(const edm::ParameterSet &pset, discriminators) {
+  for(auto const& pset : discriminators) {
     DiscCutPair* newCut = new DiscCutPair();
     newCut->inputToken_ =consumes<reco::PFTauDiscriminator>(pset.getParameter<edm::InputTag>("discriminator"));
 
@@ -138,9 +133,7 @@ PFTauPrimaryVertexProducer::PFTauPrimaryVertexProducer(const edm::ParameterSet& 
   vertexAssociator_.reset(new tau::RecoTauVertexAssociator(qualityCutsPSet_,consumesCollector()));
 }
 
-PFTauPrimaryVertexProducer::~PFTauPrimaryVertexProducer(){
-
-}
+PFTauPrimaryVertexProducer::~PFTauPrimaryVertexProducer(){}
 
 void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetup& iSetup){
   // Obtain Collections
@@ -162,20 +155,21 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
   edm::Handle<reco::BeamSpot> beamSpot;
   iEvent.getByToken(beamSpotToken_,beamSpot);
 
-  edm::Handle<reco::TrackCollection> trackCollection;
-  iEvent.getByToken(TrackCollectionToken_,trackCollection);
-
   // Set Association Map
-  auto_ptr<edm::AssociationVector<PFTauRefProd, std::vector<reco::VertexRef> > > AVPFTauPV(new edm::AssociationVector<PFTauRefProd, std::vector<reco::VertexRef> >(PFTauRefProd(Tau)));
-  std::auto_ptr<VertexCollection>  VertexCollection_out= std::auto_ptr<VertexCollection>(new VertexCollection);
+  auto AVPFTauPV = std::make_unique<edm::AssociationVector<PFTauRefProd, std::vector<reco::VertexRef>>>(PFTauRefProd(Tau));
+  auto VertexCollection_out = std::make_unique<VertexCollection>();
   reco::VertexRefProd VertexRefProd_out = iEvent.getRefBeforePut<reco::VertexCollection>("PFTauPrimaryVertices");
 
   // Load each discriminator
-  BOOST_FOREACH(DiscCutPair *disc, discriminators_) {
+  for(auto& disc : discriminators_) {
     edm::Handle<reco::PFTauDiscriminator> discr;
     iEvent.getByToken(disc->inputToken_, discr);
     disc->discr_ = &(*discr);
   }
+
+  // Set event for VerexAssociator if needed
+  if(useInputPV==Algorithm_)
+    vertexAssociator_->setEvent(iEvent);
 
   // For each Tau Run Algorithim 
   if(Tau.isValid()){
@@ -183,7 +177,6 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
       reco::PFTauRef tau(Tau, iPFTau);
       reco::Vertex thePV;
       if(useInputPV==Algorithm_){
-	vertexAssociator_->setEvent(iEvent);
 	thePV =(*( vertexAssociator_->associatedVertex(*tau)));
       }
       else if(useFontPV==Algorithm_){
@@ -192,7 +185,7 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
       ///////////////////////
       // Check if it passed all the discrimiantors
       bool passed(true); 
-      BOOST_FOREACH(const DiscCutPair* disc, discriminators_) {
+      for(auto const& disc : discriminators_) {
         // Check this discriminator passes
 	bool passedDisc = true;
 	if ( disc->cutFormula_ )passedDisc = (disc->cutFormula_->Eval((*disc->discr_)[tau]) > 0.5);
@@ -236,27 +229,14 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// Get Non-Tau tracks
 	reco::TrackCollection nonTauTracks;
-// 	if (trackCollection.isValid()) {
-// 	  // remove tau tracks and only tracks associated with the vertex
-// 	  unsigned int idx = 0;
-// 	  for (reco::TrackCollection::const_iterator iTrk = trackCollection->begin(); iTrk != trackCollection->end(); ++iTrk, idx++) {
-// 	    reco::TrackRef tmpRef(trackCollection, idx);
-// 	    reco::TrackRef tmpRefForBase=tmpRef;
-// 	    bool isSigTrk = false;
-// 	    bool fromVertex=false;
-// 	    for (unsigned int sigTrk = 0; sigTrk < SignalTracks.size(); sigTrk++) {
-// 	      if (reco::TrackBaseRef(tmpRefForBase)==SignalTracks.at(sigTrk)){isSigTrk = true; break;}
-// 	    }
-// 	  if (!isSigTrk) nonSigTracks.push_back(*iTrk);
-// 	  }
-// 	}
-	
 	for(std::vector<reco::TrackBaseRef>::const_iterator vtxTrkRef=thePV.tracks_begin();vtxTrkRef<thePV.tracks_end();vtxTrkRef++){
+	  bool matched = false;
 	  for (unsigned int sigTrk = 0; sigTrk < SignalTracks.size(); sigTrk++) {
-	    if((*vtxTrkRef)!=SignalTracks[sigTrk] ){
-	      nonTauTracks.push_back(**vtxTrkRef);
+	    if ( (*vtxTrkRef) == SignalTracks[sigTrk] ) {
+	      matched = true;
 	    }
-          }
+	  }
+	  if ( !matched ) nonTauTracks.push_back(**vtxTrkRef);
 	}   
 	///////////////////////////////////////////////////////////////////////////////////////////////
 	// Refit the vertex
@@ -266,7 +246,7 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
 	  transTracks.push_back(transTrackBuilder->build(*iter));
 	}
 	bool FitOk(true);
-	if ( transTracks.size() >= 3 ) {
+	if ( transTracks.size() >= 2 ) {
 	  AdaptiveVertexFitter avf;
 	  avf.setWeightThreshold(0.1); //weight per track. allow almost every fit, else --> exception
 	  try {
@@ -286,8 +266,8 @@ void PFTauPrimaryVertexProducer::produce(edm::Event& iEvent,const edm::EventSetu
       AVPFTauPV->setValue(iPFTau, VRef);
     }
   }
-  iEvent.put(VertexCollection_out,"PFTauPrimaryVertices");
-  iEvent.put(AVPFTauPV);
+  iEvent.put(std::move(VertexCollection_out),"PFTauPrimaryVertices");
+  iEvent.put(std::move(AVPFTauPV));
 }
   
 DEFINE_FWK_MODULE(PFTauPrimaryVertexProducer);

@@ -116,11 +116,9 @@ void PiZeroAnalyzer::makePizero(const edm::EventSetup& es, const edm::Handle<Eca
   edm::ESHandle<CaloTopology> theCaloTopology;
   es.get<CaloTopologyRecord>().get(theCaloTopology);
 
-  const CaloSubdetectorGeometry *geometry_p;
   const CaloSubdetectorTopology *topology_p;
-  const CaloSubdetectorGeometry *geometryES_p;
-  geometry_p = geoHandle->getSubdetectorGeometry(DetId::Ecal,EcalBarrel);
-  geometryES_p = geoHandle->getSubdetectorGeometry(DetId::Ecal, EcalPreshower);
+  const CaloSubdetectorGeometry* geometry_p   = geoHandle->getSubdetectorGeometry(DetId::Ecal,EcalBarrel);
+  const CaloSubdetectorGeometry* geometryES_p = geoHandle->getSubdetectorGeometry(DetId::Ecal, EcalPreshower);
 
   // Parameters for the position calculation:
   PositionCalc posCalculator_ = PositionCalc(posCalcParameters_);
@@ -157,7 +155,7 @@ void PiZeroAnalyzer::makePizero(const edm::EventSetup& es, const edm::Handle<Eca
     if (energy > clusSeedThr_) seeds.push_back(*itb);
   } // Eb rechits
 
-  sort(seeds.begin(), seeds.end(), ecalRecHitLess());
+  sort(seeds.begin(), seeds.end(), [](auto& x, auto& y){return (x.energy() > y.energy());});
   for (std::vector<EcalRecHit>::iterator itseed=seeds.begin(); itseed!=seeds.end(); itseed++) {
     EBDetId seed_id = itseed->id();
     std::vector<EBDetId>::const_iterator usedIds;

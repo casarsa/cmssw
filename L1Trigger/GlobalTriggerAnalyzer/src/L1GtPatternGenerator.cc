@@ -99,7 +99,7 @@ template <class TRecord, typename TResult> static void extractRecordData(const e
 									 const std::string& instance, 
 									 TResult (TRecord::*rawFunctionPtr)() const,
 									 const std::string& prefix,
-                                                                         uint32_t (*packingFunction)(uint32_t) = NULL)
+                                                                         uint32_t (*packingFunction)(uint32_t) = nullptr)
 {
   // Extract record from event.
   edm::Handle<std::vector<TRecord> > handle;
@@ -117,7 +117,7 @@ template <class TRecord, typename TResult> static void extractRecordData(const e
     int bx = it->bx();
     L1GtPatternLine& line = allPatterns.getLine(eventNr, bx);
     uint32_t value = ((*it).*rawFunctionPtr)();
-    if(packingFunction != NULL) { 
+    if(packingFunction != nullptr) { 
         value = packingFunction(value);
     } 
 
@@ -285,7 +285,7 @@ void L1GtPatternGenerator::beginJob()
     edm::LogError("L1GtPatternGenerator") <<  "Failed to open output file " << m_fileName;
   }
 
-  m_writer = std::auto_ptr<L1GtPatternWriter>(new L1GtPatternWriter(m_fileStream, m_header, m_footer, m_columnNames, m_columnLengths, m_columnDefaults, m_bx, m_debug));
+  m_writer = std::unique_ptr<L1GtPatternWriter>(new L1GtPatternWriter(m_fileStream, m_header, m_footer, m_columnNames, m_columnLengths, m_columnDefaults, m_bx, m_debug));
 }
 
 /** Method called once each job just after ending the event loop.

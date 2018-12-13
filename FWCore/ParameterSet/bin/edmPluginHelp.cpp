@@ -13,6 +13,10 @@
 #include "FWCore/PluginManager/interface/PluginInfo.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescriptionFillerPluginFactory.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescriptionFillerBase.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/ParameterSet/interface/validateTopLevelParameterSets.h"
+#include "FWCore/ParameterSet/interface/DocFormatHelper.h"
+
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/PluginManager/interface/PluginManager.h"
@@ -51,6 +55,8 @@ static char const* const kPrintOnlyPluginsOpt = "printOnlyPlugins";
 static char const* const kPrintOnlyPluginsCommandOpt = "printOnlyPlugins,q";
 static char const* const kLineWidthOpt = "lineWidth";
 static char const* const kLineWidthCommandOpt = "lineWidth,w";
+static char const* const kTopLevelOpt = "topLevel";
+static char const* const kTopLevelCommandOpt = "topLevel,t";
 
 namespace {
 
@@ -95,26 +101,7 @@ namespace {
 
     ++iPlugin;
 
-    if (printOnlyPlugins) {
-
-      if (iPlugin == 1) {
-        os << std::setfill(' ') << std::setw(6) << "" << " ";
-        os << std::left << std::setw(50) << "Plugin Name"; 
-        os << " " << "Library Name" << "\n";
-        os << std::setfill(' ') << std::setw(6) << "" << " ";
-        os << std::left << std::setw(50) << "-----------"; 
-        os << " " << "------------" << "\n";
-      }
-      os << std::left << std::setw(6) << iPlugin << " " << std::setw(50) << pluginInfo.name_; 
-      os << " " << pluginInfo.loadable_.leaf() << "\n";
-      os.flags(oldFlags);
-      return;
-    }
-
-    os << std::left << iPlugin << "  " << pluginInfo.name_ << "  " << pluginInfo.loadable_.leaf() << "\n";
-    os.flags(oldFlags);
-
-    std::auto_ptr<edm::ParameterSetDescriptionFillerBase> filler;
+    std::unique_ptr<edm::ParameterSetDescriptionFillerBase> filler;
 
     try {
       filler.reset(factory->create(pluginInfo.name_));
@@ -123,13 +110,40 @@ namespace {
       os << "\nSTART ERROR FROM edmPluginHelp\n";
       os << "The executable \"edmPluginHelp\" encountered a problem while creating a\n"
                    "ParameterSetDescriptionFiller, probably related to loading a plugin.\n"
-                   "This plugin is being skipped.  Here is the info from the exception:\n" 
-                << e.what() << std::endl;
+                   "This plugin is being skipped.  Here is the info from the exception:\n"
+         << e.what() << std::endl;
       os << "END ERROR FROM edmPluginHelp\n\n";
       return;
     }
 
-    edm::ConfigurationDescriptions descriptions(filler->baseType());
+    std::string const & baseType = (filler->extendedBaseType().empty() ? filler->baseType() : filler->extendedBaseType());
+
+    if (printOnlyPlugins) {
+
+      os << std::setfill(' ');
+      os << std::left;
+      if (iPlugin == 1) {
+        os << std::setw(6) << "" << " ";
+        os << std::setw(50) << "Plugin Name";
+        os << std::setw(24) << "Plugin Type";
+        os << "Library Name" << "\n";
+        os << std::setw(6) << "" << " ";
+        os << std::setw(50) << "-----------";
+        os << std::setw(24) << "-----------";
+        os << "------------" << "\n";
+      }
+      os << std::setw(6) << iPlugin << " ";
+      os << std::setw(50) << pluginInfo.name_;
+      os << std::setw(24) << baseType;
+      os << pluginInfo.loadable_.leaf() << "\n";
+      os.flags(oldFlags);
+      return;
+    }
+
+    os << std::left << iPlugin << "  " << pluginInfo.name_ << "  (" << baseType << ")  " << pluginInfo.loadable_.leaf() << "\n";
+    os.flags(oldFlags);
+
+    edm::ConfigurationDescriptions descriptions(filler->baseType(), pluginInfo.name_);
 
     try {
       filler->fill(descriptions);
@@ -160,8 +174,42 @@ namespace {
       return;
     }
   }
-}
 
+  void printTopLevelParameterSets(bool brief, size_t lineWidth, std::string const& psetName) {
+
+    std::ostream & os = std::cout;
+
+    edm::ParameterSetDescription description;
+
+    if (psetName == "options") {
+      os << "\nDescription of \'options\' top level ParameterSet\n\n";
+      edm::fillOptionsDescription(description);
+
+    } else if (psetName == "maxEvents") {
+      os << "\nDescription of \'maxEvents\' top level ParameterSet\n\n";
+      edm::fillMaxEventsDescription(description);
+
+    } else if (psetName == "maxLuminosityBlocks") {
+      os << "\nDescription of \'maxLuminosityBlocks\' top level ParameterSet\n\n";
+      edm::fillMaxLuminosityBlocksDescription(description);
+
+    } else if (psetName == "maxSecondsUntilRampdown") {
+      os << "\nDescription of \'maxSecondsUntilRampdown\' top level ParameterSet\n\n";
+      edm::fillMaxSecondsUntilRampdownDescription(description);
+    } else {
+      throw cms::Exception("CommandLineArgument") << "Unrecognized name for top level parameter set. "
+        << "Allowed values are 'options', 'maxEvents', 'maxLuminosityBlocks', and 'maxSecondsUntilRampdown'";
+    }
+
+    edm::DocFormatHelper dfh;
+    dfh.setBrief(brief);
+    dfh.setLineWidth(lineWidth);
+    dfh.setSection("1");
+
+    description.print(os, dfh);
+    os << "\n";
+  }
+}
 // ---------------------------------------------------------------------------------
 
 int main (int argc, char **argv)
@@ -173,13 +221,13 @@ try {
   descString += "configure plugins. Output is ordered by plugin name. Within a\n";
   descString += "plugin, the labels and parameters are ordered based on the order\n";
   descString += "declared by the plugin. Formatted as follows:\n\n";
-  descString += "PluginName Library\n";
+  descString += "PluginName (PluginType) Library\n";
   descString += "  ModuleLabel\n";
   descString += "    Details of parameters corresponding to this module label\n\n";
   descString += "For more information about the output format see:\n";
   descString += "https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideConfigurationValidationAndHelp\n\n";
 
-  descString += "At least one of the following options must be used: -p, -l, -a, or -q\n\n";
+  descString += "At least one of the following options must be used: -p, -l, -a, -q, or -t\n\n";
   descString += "Allowed options:";
   boost::program_options::options_description desc(descString);   
   desc.add_options()
@@ -205,7 +253,9 @@ try {
                    "do not print parameter descriptions or module labels, just list plugins matching selection criteria")
                   (kLineWidthCommandOpt,
                    boost::program_options::value<unsigned>(),
-                   "try to limit lines to this length by inserting newlines between words in comments. Long words or names can cause the line length to exceed this limit. Defaults to terminal screen width or 80");
+                   "try to limit lines to this length by inserting newlines between words in comments. Long words or names can cause the line length to exceed this limit. Defaults to terminal screen width or 80")
+                  (kTopLevelCommandOpt, boost::program_options::value<std::string>(),
+                   "print only the description for the top level parameter set with this name. Allowed names are 'options', 'maxEvents', 'maxLuminosityBlocks', and 'maxSecondsUntilRampdown'.");
 
   boost::program_options::variables_map vm;
   try {
@@ -229,6 +279,7 @@ try {
   bool brief = false;
   bool printOnlyLabels = false;
   bool printOnlyPlugins = false;
+  std::string printOnlyTopLevel;
 
   if (vm.count(kPluginOpt)) {
     plugin = vm[kPluginOpt].as<std::string>();
@@ -239,8 +290,9 @@ try {
   if (!vm.count(kAllLibrariesOpt)) {
     if (!vm.count(kPluginOpt) &&
         !vm.count(kLibraryOpt) &&
-        !vm.count(kPrintOnlyPluginsOpt)) {
-      std::cerr << "\nERROR: At least one of the following options must be used: -p, -l, -a, or -q\n\n";
+        !vm.count(kPrintOnlyPluginsOpt) &&
+        !vm.count(kTopLevelOpt)) {
+      std::cerr << "\nERROR: At least one of the following options must be used: -p, -l, -a, -q, or -t\n\n";
       std::cerr << desc << std::endl;
       return 1;
     }
@@ -295,6 +347,12 @@ try {
 
   if (vm.count(kLineWidthOpt)) {
     lineWidth = vm[kLineWidthOpt].as<unsigned>();
+  }
+
+  if (vm.count(kTopLevelOpt)) {
+    printOnlyTopLevel = vm[kTopLevelOpt].as<std::string>();
+    printTopLevelParameterSets(brief, lineWidth, printOnlyTopLevel);
+    return 0;
   }
 
   // Get the list of plugins from the plugin cache

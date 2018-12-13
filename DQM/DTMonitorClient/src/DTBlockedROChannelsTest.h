@@ -15,13 +15,14 @@
 #include <FWCore/Framework/interface/EventSetup.h>
 #include <FWCore/Framework/interface/LuminosityBlock.h>
 #include "DataFormats/MuonDetId/interface/DTChamberId.h"
+#include <DQMServices/Core/interface/DQMEDHarvester.h>
 
 class DQMStore;
 class MonitorElement;
 class DTReadOutMapping;
 class DTTimeEvolutionHisto;
 
-class DTBlockedROChannelsTest: public edm::EDAnalyzer{
+class DTBlockedROChannelsTest: public DQMEDHarvester {
 
   public:
 
@@ -29,44 +30,37 @@ class DTBlockedROChannelsTest: public edm::EDAnalyzer{
     DTBlockedROChannelsTest(const edm::ParameterSet& ps);
 
     /// Destructor
-    ~DTBlockedROChannelsTest();
+    ~DTBlockedROChannelsTest() override;
 
   protected:
 
-    /// BeginJob
-    void beginJob();
-
     /// BeginRun
-    void beginRun(const edm::Run& run, const edm::EventSetup& c);
+    void beginRun(const edm::Run& , const edm::EventSetup&) override;
 
-    /// Analyze
-    void analyze(const edm::Event& e, const edm::EventSetup& c);
+    void fillChamberMap( DQMStore::IGetter & igetter, const edm::EventSetup& c); 
 
-    /// Endjob
-    void endJob();
-
-    void beginLuminosityBlock(edm::LuminosityBlock const& lumiSeg, edm::EventSetup const& context) ;
 
     /// DQM Client operations
-    void performClientDiagnostic();
+    void performClientDiagnostic(DQMStore::IGetter & igetter);
 
     /// DQM Client Diagnostic in online mode
-    void endLuminosityBlock(edm::LuminosityBlock const& lumiSeg, edm::EventSetup const& c);
+    void dqmEndLuminosityBlock(DQMStore::IBooker &, DQMStore::IGetter &, edm::LuminosityBlock const &, edm::EventSetup const&) override; 
+    void dqmEndJob(DQMStore::IBooker &, DQMStore::IGetter &) override;
 
-    /// DQM Client Diagnostic in offline mode
-    void endRun(edm::Run const& run, edm::EventSetup const& eSetup);
+private:
+    int readOutToGeometry(int dduId, int rosNumber, int robNumber, int& wheel, int &station, int& sector);
 
-  private:
-    int readOutToGeometry(int dduId, int rosNumber, int& wheel, int& sector);
-
-  private:
+    int theDDU(int crate, int slot, int link, bool tenDDU);
+    int theROS(int slot, int link);
+    int theROB(int slot, int link);
 
     //Number of onUpdates
     int nupdates;
 
     // prescale on the # of LS to update the test
     int prescaleFactor;
-
+    bool offlineMode;
+    bool checkUros;
     int nevents;
     int neventsPrev;
     unsigned int nLumiSegs;
@@ -75,16 +69,12 @@ class DTBlockedROChannelsTest: public edm::EDAnalyzer{
 
     int run;
 
-
-    DQMStore* dbe;
     edm::ESHandle<DTReadOutMapping> mapping;
 
 
     // Monitor Elements
-    std::map<int, MonitorElement*> wheelHitos;
+    std::map<int, MonitorElement*> wheelHistos;
     MonitorElement *summaryHisto;
-
-    bool offlineMode;
 
     std::map<int, double> resultsPerLumi;
     DTTimeEvolutionHisto* hSystFractionVsLS;
@@ -92,7 +82,7 @@ class DTBlockedROChannelsTest: public edm::EDAnalyzer{
 
     class DTRobBinsMap {
       public:
-        DTRobBinsMap(const int fed, const int ros, const DQMStore* dbe);
+        DTRobBinsMap(DQMStore::IGetter & igetter,const int fed, const int ros);
 
         DTRobBinsMap();
 
@@ -105,9 +95,9 @@ class DTBlockedROChannelsTest: public edm::EDAnalyzer{
 
         bool robChanged(int robBin);
 
-        double getChamberPercentage();
+        double getChamberPercentage(DQMStore::IGetter &);
 
-        void readNewValues();
+        void readNewValues(DQMStore::IGetter & igetter);
 
       private:
         int getValueRobBin(int robBin) const;
@@ -124,11 +114,44 @@ class DTBlockedROChannelsTest: public edm::EDAnalyzer{
 
         std::string rosHName;
         std::string dduHName;
-
-        const DQMStore* theDbe;
     };
 
     std::map<DTChamberId, DTRobBinsMap> chamberMap;
+
+   // For uROS starting in Year 2018
+    class DTLinkBinsMap{
+      public:
+        DTLinkBinsMap(DQMStore::IGetter & igetter,const int fed, const int mapSlot);
+
+        DTLinkBinsMap();
+
+        ~DTLinkBinsMap();
+
+        // add a rob to the set of robs
+        void addLinkBin(int linkBin);
+        void init(bool v) {init_ = v;}
+
+        bool linkChanged(int linkBin);
+
+        double getChamberPercentage(DQMStore::IGetter &);
+
+        void readNewValues(DQMStore::IGetter & igetter);
+
+      private:
+        int getValueLinkBin(int linkBin) const;
+
+        bool init_;
+
+        std::map<int, int> linksAndValues;
+
+        const MonitorElement* meuROS;
+
+        std::string urosHName;
+    };
+
+    std::map<DTChamberId, DTLinkBinsMap> chamberMapUros;
+
+
 
 };
 

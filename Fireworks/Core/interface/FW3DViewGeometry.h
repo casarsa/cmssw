@@ -32,7 +32,7 @@ class FW3DViewGeometry : public FWViewGeometryList
 
 public:
    FW3DViewGeometry( const fireworks::Context& context );
-   virtual ~FW3DViewGeometry();
+   ~FW3DViewGeometry() override;
 
    // ---------- const member functions ---------------------
 
@@ -47,10 +47,17 @@ public:
    void showPixelEndcap( bool );
    void showTrackerBarrel( bool );
    void showTrackerEndcap( bool );
-private:
-   FW3DViewGeometry(const FW3DViewGeometry&); // stop default
+   void showHGCalEE( bool );
+   TEveElementList const * const getHGCalEE() { return m_HGCalEEElements; }
+   void showHGCalHSi( bool );
+   TEveElementList const * const getHGCalHSi() { return m_HGCalHSiElements; }
+   void showHGCalHSc( bool );
+   TEveElementList const * const getHGCalHSc() { return m_HGCalHScElements; }
 
-   const FW3DViewGeometry& operator=(const FW3DViewGeometry&); // stop default
+ private:
+   FW3DViewGeometry(const FW3DViewGeometry&) = delete; // stop default
+
+   const FW3DViewGeometry& operator=(const FW3DViewGeometry&) = delete; // stop default
 
    // ---------- member data --------------------------------
 
@@ -62,6 +69,9 @@ private:
    TEveElementList*   m_pixelEndcapElements;
    TEveElementList*   m_trackerBarrelElements;
    TEveElementList*   m_trackerEndcapElements;
+   TEveElementList*   m_HGCalEEElements;
+   TEveElementList*   m_HGCalHSiElements;
+   TEveElementList*   m_HGCalHScElements;
 };
 
 #endif

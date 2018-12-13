@@ -39,21 +39,24 @@
 //
 // class decleration
 //
+namespace edm {
+  class HepMCProduct;
+}
 
 class HerwigMaxPtPartonFilter : public edm::EDFilter {
    public:
       explicit HerwigMaxPtPartonFilter(const edm::ParameterSet&);
-      ~HerwigMaxPtPartonFilter();
+      ~HerwigMaxPtPartonFilter() override;
 
 
-  virtual bool filter(edm::Event&, const edm::EventSetup&);
+  bool filter(edm::Event&, const edm::EventSetup&) override;
   private:
       // ----------member data ---------------------------
       
   TH2D *hFSPartons_JS_PtWgting;
   
 
-  std::string label_;
+  edm::EDGetTokenT<edm::HepMCProduct> token_;
   
   double minptcut;
   double maxptcut;

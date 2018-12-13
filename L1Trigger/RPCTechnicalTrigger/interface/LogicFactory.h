@@ -2,10 +2,10 @@
 #define LOGICFACTORY_H 1
 
 // Include files
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <map>
-
+#include <memory>
 /** @class LogicFactory LogicFactory.h
  *  
  *
@@ -27,22 +27,16 @@ public:
   
   bool Unregister( const Identifier & id )
   {
-    typename std::map<Identifier, LogicCreator>::const_iterator itr;
-    itr = m_associations.find(id);
-    if( itr != m_associations.end() ) {
-      delete ( itr->second )() ;
-    }
     return m_associations.erase(id) == 1;
   }
   
-  Ilogic* CreateObject( const Identifier & id )
+  std::unique_ptr<Ilogic> CreateObject( const Identifier & id ) const
   {
-    typename std::map<Identifier, LogicCreator>::const_iterator itr;
-    itr = m_associations.find( id );
+    auto itr = m_associations.find( id );
     
     if ( itr != m_associations.end() )  {
-      return ( itr->second )();
-    } else return NULL; // handle error
+      return std::unique_ptr<Ilogic>{( itr->second )()};
+    } else return nullptr; // handle error
   }
   
 protected:

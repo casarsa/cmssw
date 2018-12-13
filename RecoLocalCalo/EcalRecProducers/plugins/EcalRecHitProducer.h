@@ -27,9 +27,9 @@ class EcalRecHitProducer : public edm::stream::EDProducer<> {
 
         public:
                 explicit EcalRecHitProducer(const edm::ParameterSet& ps);
-                ~EcalRecHitProducer();
-                virtual void produce(edm::Event& evt, const edm::EventSetup& es);
-
+                ~EcalRecHitProducer() override;
+                void produce(edm::Event& evt, const edm::EventSetup& es) override;
+		static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
         private:
 
                 std::string ebRechitCollection_; // secondary name to be given to EB collection of hits

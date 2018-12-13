@@ -34,18 +34,21 @@
 //
 // class decleration
 //
+namespace edm {
+  class HepMCProduct;
+}
 
 class MCDecayingPionKaonFilter : public edm::EDFilter {
    public:
       explicit MCDecayingPionKaonFilter(const edm::ParameterSet&);
-      ~MCDecayingPionKaonFilter();
+      ~MCDecayingPionKaonFilter() override;
 
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
    private:
       // ----------member data ---------------------------
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        std::vector<int> particleID;  
        std::vector<double> ptMin;
        std::vector<double> etaMin;  

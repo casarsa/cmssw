@@ -37,7 +37,7 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 	PrintingPolicy Policy(LangOpts);
 	const Decl * D = AC->getDecl();
 	std::string dname =""; 
-	if (const NamedDecl * ND = llvm::dyn_cast<NamedDecl>(D)) dname = ND->getQualifiedNameAsString();
+	if (const NamedDecl * ND = llvm::dyn_cast_or_null<NamedDecl>(D)) dname = ND->getQualifiedNameAsString();
 	CXXMethodDecl * MD = CE->getMethodDecl();
 	if (!MD) return;
 	std::string mname = MD->getQualifiedNameAsString();
@@ -50,12 +50,12 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 	llvm::SmallString<100> buf;
 	llvm::raw_svector_ostream os(buf);
 	if ( mname == "edm::Event::getByLabel" || mname == "edm::Event::getManyByType" ) {
-//			if (const CXXRecordDecl * RD = llvm::dyn_cast<CXXMethodDecl>(D)->getParent() ) {
+//			if (const CXXRecordDecl * RD = llvm::dyn_cast_or_null<CXXMethodDecl>(D)->getParent() ) {
 //				llvm::errs()<<"class "<<RD->getQualifiedNameAsString()<<"\n";
 //				llvm::errs()<<"\n";
 //				}
 			os<<"function '";
-			llvm::dyn_cast<CXXMethodDecl>(D)->getNameForDiagnostic(os,Policy,1);
+			llvm::dyn_cast<CXXMethodDecl>(D)->getNameForDiagnostic(os,Policy,true);
 			os<<"' ";
 //			os<<"call expression '";
 //			CE->printPretty(os,0,Policy);
@@ -81,14 +81,14 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 				}
 				else { 
 					os<<" "<< qtname <<" ";
-					(*I)->printPretty(os,0,Policy);
+					(*I)->printPretty(os,nullptr,Policy);
 					os <<", ";
 				}
 			}
 			os <<"'\n";	
 		} else {
 			os <<"calls edm::Event::getManyByType with argument '";
-			QualType QT = CE->arg_begin()->getType();
+			QualType QT = (*CE->arg_begin())->getType();
 			const CXXRecordDecl * RD = QT->getAsCXXRecordDecl();
 			os << "getManyByType , ";
 			const ClassTemplateSpecializationDecl *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD);
@@ -108,9 +108,9 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 			PathDiagnosticLocation CELoc = 
 				PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(),AC);
 			BugType * BT = new BugType(Checker,"edm::getByLabel or edm::getManyByType called","optional") ;
-			BugReport * R = new BugReport(*BT,os.str(),CELoc);
+			std::unique_ptr<BugReport> R = llvm::make_unique<BugReport>(*BT,os.str(),CELoc);
 			R->addRange(CE->getSourceRange());
-			BR.emitReport(R);
+			BR.emitReport(std::move(R));
 	} 
 	else {
 		for (auto I=CE->arg_begin(), E=CE->arg_end(); I != E; ++I) {
@@ -122,7 +122,7 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 				std::string tname;
 				os<<"function '"<<dname<<"' ";
 				os<<"calls '";
-				MD->getNameForDiagnostic(os,Policy,1);
+				MD->getNameForDiagnostic(os,Policy,true);
 				os<<"' with argument of type '"<<qtname<<"'\n";
 //				llvm::errs()<<"\n";
 //				llvm::errs()<<"call expression passed edm::Event ";
@@ -133,9 +133,9 @@ void Walker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 				PathDiagnosticLocation CELoc = 
 					PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(),AC);
  				BugType * BT = new BugType(Checker,"function call with argument of type edm::Event","optional");
-				BugReport * R = new BugReport(*BT,os.str(),CELoc);
+				std::unique_ptr<BugReport> R = llvm::make_unique<BugReport>(*BT,os.str(),CELoc);
 				R->addRange(CE->getSourceRange());
-				BR.emitReport(R);
+				BR.emitReport(std::move(R));
 				}
 		}
 	}
@@ -160,8 +160,8 @@ void getByChecker::checkASTDecl(const FunctionTemplateDecl *TD, AnalysisManager&
 	clang::ento::PathDiagnosticLocation DLoc =clang::ento::PathDiagnosticLocation::createBegin( TD, SM );
 	if ( SM.isInSystemHeader(DLoc.asLocation()) || SM.isInExternCSystemHeader(DLoc.asLocation()) ) return;
 
-	for (FunctionTemplateDecl::spec_iterator I = const_cast<clang::FunctionTemplateDecl *>(TD)->spec_begin(), 
-			E = const_cast<clang::FunctionTemplateDecl *>(TD)->spec_end(); I != E; ++I) 
+	for (auto I = TD->spec_begin(), 
+			E = TD->spec_end(); I != E; ++I) 
 		{
 			if (I->doesThisDeclarationHaveABody()) {
 				clangcms::Walker walker(this,BR, mgr.getAnalysisDeclContext(*I));

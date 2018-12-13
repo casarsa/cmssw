@@ -19,7 +19,6 @@
 
 // system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
@@ -28,7 +27,7 @@
 #include "FWCore/Framework/interface/ESHandle.h"
 
 // OMDS stuff
-#include "RelationalAccess/ISession.h"
+#include "RelationalAccess/ISessionProxy.h"
 #include "RelationalAccess/ITransaction.h"
 #include "RelationalAccess/IRelationalDomain.h"
 #include "RelationalAccess/ISchema.h"
@@ -39,9 +38,7 @@
 #include "CoralBase/Attribute.h"
 #include "CoralKernel/Context.h"
 
-#include "CondCore/DBCommon/interface/DbConnection.h"
-#include "CondCore/DBCommon/interface/DbConnectionConfiguration.h"
-#include "CondCore/DBCommon/interface/DbTransaction.h"
+#include "CondCore/CondDB/interface/ConnectionPool.h"
 // end OMDS stuff
 
 #include "CondFormats/RunInfo/interface/RunInfo.h"
@@ -58,9 +55,9 @@
 class L1RCTOmdsFedVectorProducer : public edm::ESProducer {
 public:
   L1RCTOmdsFedVectorProducer(const edm::ParameterSet&);
-  ~L1RCTOmdsFedVectorProducer();
+  ~L1RCTOmdsFedVectorProducer() override;
   
-  typedef boost::shared_ptr<RunInfo> ReturnType;
+  using ReturnType = std::unique_ptr<RunInfo>;
   
   ReturnType produce(const RunInfoRcd&);
 private:
@@ -114,9 +111,6 @@ L1RCTOmdsFedVectorProducer::produce(const RunInfoRcd& iRecord)
 {
   //  std::cout << "ENTERING L1RCTOmdsFedVectorProducer::produce()" << std::endl;
 
-  using namespace edm::es;
-  boost::shared_ptr<RunInfo> pRunInfo ;
-
   //  std::cout << "GETTING FED VECTOR FROM OMDS" << std::endl;
   
   // GETTING ALREADY-EXISTING RUNINFO OUT OF ES TO FIND OUT RUN NUMBER
@@ -126,26 +120,24 @@ L1RCTOmdsFedVectorProducer::produce(const RunInfoRcd& iRecord)
   int runNumber = summary->m_run; 
   
   // CREATING NEW RUNINFO WHICH WILL GET NEW FED VECTOR AND BE RETURNED
-  pRunInfo = boost::shared_ptr<RunInfo>( new RunInfo() ); 
+  auto pRunInfo = std::make_unique<RunInfo>(); 
   
   
   // DO THE DATABASE STUFF
   
   //make connection object
-  cond::DbConnection         connection;
+  cond::persistency::ConnectionPool        connection;
   
   //set in configuration object authentication path
-  connection.configuration().setAuthenticationPath(authpath);
+  connection.setAuthenticationPath(authpath);
   connection.configure();
   
   //create session object from connection
-  cond::DbSession session = connection.createSession();
+  cond::persistency::Session session = connection.createSession(connectionString,true  );
   
-  session.open(connectionString,true);
-
   session.transaction().start(true); // (true=readOnly)
 
-  coral::ISchema& schema = session.schema("CMS_RUNINFO");
+  coral::ISchema& schema = session.coralSession().schema("CMS_RUNINFO");
 
   //condition
   coral::AttributeList conditionData;

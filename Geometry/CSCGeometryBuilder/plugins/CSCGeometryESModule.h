@@ -9,11 +9,13 @@
  */
 
 #include <FWCore/Framework/interface/ESProducer.h>
+#include "FWCore/Framework/interface/ESProductHost.h"
 #include <FWCore/ParameterSet/interface/ParameterSet.h>
+#include "FWCore/Utilities/interface/ReusableObjectHolder.h"
 #include <Geometry/Records/interface/MuonGeometryRecord.h>
 #include <Geometry/CSCGeometry/interface/CSCGeometry.h>
-#include <boost/shared_ptr.hpp>
 
+#include <memory>
 #include <string>
 
 class CSCGeometryESModule : public edm::ESProducer {
@@ -22,21 +24,22 @@ public:
   CSCGeometryESModule(const edm::ParameterSet& p);
 
   /// Destructor
-  virtual ~CSCGeometryESModule();
+  ~CSCGeometryESModule() override;
 
   /// Produce CSCGeometry
-  boost::shared_ptr<CSCGeometry> produce(const MuonGeometryRecord& record);
+  std::shared_ptr<CSCGeometry> produce(const MuonGeometryRecord& record);
 
 private:  
 
-  /// Called when geometry description changes
-  void muonNumberingChanged_( const MuonNumberingRecord& );
-  void cscRecoGeometryChanged_( const CSCRecoGeometryRcd& );
-  void cscRecoDigiParametersChanged_( const CSCRecoDigiParametersRcd& );
 
-  void initCSCGeometry_(const MuonGeometryRecord& );
-  boost::shared_ptr<CSCGeometry> cscGeometry;
-  bool recreateGeometry_;
+  using HostType = edm::ESProductHost<CSCGeometry,
+                                      MuonNumberingRecord,
+                                      CSCRecoGeometryRcd,
+                                      CSCRecoDigiParametersRcd>;
+
+  void initCSCGeometry_(const MuonGeometryRecord&, std::shared_ptr<HostType>& host);
+
+  edm::ReusableObjectHolder<HostType> holder_;
 
   // Flags for controlling geometry modelling during build of CSCGeometry
   bool useRealWireGeometry;
@@ -48,12 +51,5 @@ private:
   bool useDDD_; // whether to build from DDD or DB
   const std::string alignmentsLabel_;
   const std::string myLabel_;
-
 };
 #endif
-
-
-
-
-
-

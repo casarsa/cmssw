@@ -25,6 +25,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <atomic>
 
 #include "DbClient.h"
 
@@ -95,6 +96,7 @@ class SiStripConfigDb {
   friend class LatencyHistosUsingDb;
   friend class FineDelayHistosUsingDb;
   friend class CalibrationHistosUsingDb;
+  friend class DaqScopeModeHistosUsingDb;
 
   // Utility and tests
   friend class SiStripPartition;
@@ -452,9 +454,9 @@ class SiStripConfigDb {
   bool openConnection_;
   
   /** Static counter of instances of this class. */
-  static uint32_t cntr_;
+  static std::atomic<uint32_t> cntr_;
 
-  static bool allowCalibUpload_;
+  static std::atomic<bool> allowCalibUpload_;
 
   
 };

@@ -55,9 +55,7 @@ class VarProcessor {
 
 	virtual ~VarProcessor() {}
 	virtual std::string getInstanceName() const;
-#ifndef __GCCXML__
         virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
 
   COND_SERIALIZABLE;
 };
@@ -77,9 +75,7 @@ class Variable {
 
 class ProcOptional : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	std::vector<double>		neutralPos;
 
   COND_SERIALIZABLE;
@@ -87,17 +83,13 @@ class ProcOptional : public VarProcessor {
 
 class ProcCount : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
   COND_SERIALIZABLE;
 };
 
 class ProcClassed : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	unsigned int			nClasses;
 
   COND_SERIALIZABLE;
@@ -105,9 +97,7 @@ class ProcClassed : public VarProcessor {
 
 class ProcSplitter : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	unsigned int			nFirst;
 
   COND_SERIALIZABLE;
@@ -115,9 +105,7 @@ class ProcSplitter : public VarProcessor {
 
 class ProcForeach : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	unsigned int			nProcs;
 
   COND_SERIALIZABLE;
@@ -125,9 +113,7 @@ class ProcForeach : public VarProcessor {
 
 class ProcSort : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	unsigned int			sortByIndex;
 	bool				descending;
 
@@ -136,9 +122,7 @@ class ProcSort : public VarProcessor {
 
 class ProcCategory : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	typedef std::vector<double> BinLimits;
 
 	std::vector<BinLimits>		variableBinLimits;
@@ -149,9 +133,7 @@ class ProcCategory : public VarProcessor {
 
 class ProcNormalize : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	std::vector<HistogramF>		distr;
 	int				categoryIdx;
 
@@ -160,9 +142,7 @@ class ProcNormalize : public VarProcessor {
 
 class ProcLikelihood : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	class SigBkg {
 	    public:
 		HistogramF		background;
@@ -185,9 +165,7 @@ class ProcLikelihood : public VarProcessor {
 
 class ProcLinear : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	std::vector<double>		coeffs;
 	double				offset;
 
@@ -196,9 +174,7 @@ class ProcLinear : public VarProcessor {
 
 class ProcMultiply : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	typedef std::vector<unsigned int>	Config;
 
 	unsigned int			in;
@@ -209,9 +185,7 @@ class ProcMultiply : public VarProcessor {
 
 class ProcMatrix : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	Matrix				matrix;
 
   COND_SERIALIZABLE;
@@ -219,10 +193,8 @@ class ProcMatrix : public VarProcessor {
 
 class ProcExternal : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
-	virtual std::string getInstanceName() const;
+        std::unique_ptr<VarProcessor> clone() const override;
+	std::string getInstanceName() const override;
 
 	std::string			method;
 	std::vector<unsigned char>	store;
@@ -232,9 +204,7 @@ class ProcExternal : public VarProcessor {
 
 class ProcMLP : public VarProcessor {
     public:
-#ifndef __GCCXML__
-        virtual std::unique_ptr<VarProcessor> clone() const;
-#endif
+        std::unique_ptr<VarProcessor> clone() const override;
 	typedef std::pair<double, std::vector<double> >	Neuron;
 	typedef std::pair<std::vector<Neuron>, bool>	Layer;
 

@@ -8,6 +8,7 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackingRecHit/interface/TrackingRecHit.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -39,9 +40,9 @@ SiStripQualityHotStripIdentifier::SiStripQualityHotStripIdentifier(const edm::Pa
 SiStripQualityHotStripIdentifier::~SiStripQualityHotStripIdentifier(){
 }
 
-SiStripBadStrip* SiStripQualityHotStripIdentifier::getNewObject(){
+std::unique_ptr<SiStripBadStrip> SiStripQualityHotStripIdentifier::getNewObject(){
 
-  SiStripBadStrip* obj=new SiStripBadStrip();
+  auto obj = std::make_unique<SiStripBadStrip>();
   
   edm::ParameterSet parameters=conf_.getParameter<edm::ParameterSet>("AlgoParameters");
   std::string AlgoName = parameters.getParameter<std::string>("AlgoName");
@@ -85,7 +86,7 @@ SiStripBadStrip* SiStripQualityHotStripIdentifier::getNewObject(){
 void SiStripQualityHotStripIdentifier::algoBeginRun(const edm::Run& run, const edm::EventSetup& iSetup){
   //Retrieve tracker topology from geometry
   edm::ESHandle<TrackerTopology> tTopoHandle;
-  iSetup.get<IdealGeometryRecord>().get(tTopoHandle);
+  iSetup.get<TrackerTopologyRcd>().get(tTopoHandle);
   tTopo = tTopoHandle.product();
  
   resetHistos(); 

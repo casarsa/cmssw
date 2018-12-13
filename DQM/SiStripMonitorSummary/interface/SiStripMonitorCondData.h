@@ -45,13 +45,13 @@ class SiStripMonitorCondData : public edm::EDAnalyzer {
  
    explicit SiStripMonitorCondData(const edm::ParameterSet&);
  
-   ~SiStripMonitorCondData();
+   ~SiStripMonitorCondData() override;
    
-   virtual void beginJob() ;  
-   virtual void beginRun(edm::Run const& run, edm::EventSetup const& eSetup);
-   virtual void analyze(const edm::Event&, const edm::EventSetup&);
-   virtual void endRun(edm::Run const& run, edm::EventSetup const& eSetup);
-   virtual void endJob() ;
+   void beginJob() override ;  
+   void beginRun(edm::Run const& run, edm::EventSetup const& eSetup) override;
+   void analyze(const edm::Event&, const edm::EventSetup&) override;
+   void endRun(edm::Run const& run, edm::EventSetup const& eSetup) override;
+   void endJob() override ;
   
   
  private:  
@@ -70,15 +70,15 @@ class SiStripMonitorCondData : public edm::EDAnalyzer {
      
    std::string outPutFileName;
 
-   SiStripPedestalsDQM*           pedestalsDQM_;
-   SiStripNoisesDQM*                 noisesDQM_; 
-   SiStripThresholdDQM*        lowthresholdDQM_; 
-   SiStripThresholdDQM*       highthresholdDQM_; 
-   SiStripQualityDQM*               qualityDQM_; 
-   SiStripApvGainsDQM*             apvgainsDQM_;  
-   SiStripLorentzAngleDQM*     lorentzangleDQM_; 
-   SiStripBackPlaneCorrectionDQM*     bpcorrectionDQM_; 
-   SiStripCablingDQM*               cablingDQM_;  
+   std::unique_ptr<SiStripPedestalsDQM>                  pedestalsDQM_;
+   std::unique_ptr<SiStripNoisesDQM>                        noisesDQM_; 
+   std::unique_ptr<SiStripThresholdDQM>               lowthresholdDQM_; 
+   std::unique_ptr<SiStripThresholdDQM>              highthresholdDQM_; 
+   std::unique_ptr<SiStripQualityDQM>                      qualityDQM_; 
+   std::unique_ptr<SiStripApvGainsDQM>                    apvgainsDQM_;  
+   std::unique_ptr<SiStripLorentzAngleDQM>            lorentzangleDQM_; 
+   std::unique_ptr<SiStripBackPlaneCorrectionDQM>     bpcorrectionDQM_; 
+   std::unique_ptr<SiStripCablingDQM>                      cablingDQM_;  
   
 };
 

@@ -92,9 +92,18 @@ public:
 
 //hopefully is never called!
 const std::vector<const GeometricSearchDet*>& TIDLayer::components() const{
-  static std::vector<const GeometricSearchDet*> crap;
-  for ( auto c: theComps) crap.push_back(c);
-  return crap;
+  if( not theComponents) {
+    auto temp = std::make_unique<std::vector<const GeometricSearchDet*>>();
+    temp->reserve(3);
+    for ( auto c: theComps) temp->push_back(c);
+    std::vector<const GeometricSearchDet*>* expected = nullptr;
+    if(theComponents.compare_exchange_strong(expected,temp.get())) {
+      //this thread set the value
+      temp.release();
+    }
+  }
+
+  return *theComponents;
  }
 
 
@@ -112,7 +121,9 @@ TIDLayer::fillRingPars(int i) {
 
 
 TIDLayer::TIDLayer(vector<const TIDRing*>& rings) :
-  RingedForwardLayer(true) {
+  RingedForwardLayer(true),
+  theComponents{nullptr}
+{
   //They should be already R-ordered. TO BE CHECKED!!
   //sort( theRings.begin(), theRings.end(), DetLessR());
 
@@ -171,6 +182,8 @@ TIDLayer::computeDisk( const vector<const TIDRing*>& rings) const
 
 TIDLayer::~TIDLayer(){
   for (auto c : theComps) delete c;
+
+  delete theComponents.load();
 } 
 
   
@@ -190,7 +203,11 @@ TIDLayer::groupedCompatibleDetsV( const TrajectoryStateOnSurface& startingState,
   std::array<vector<DetGroup>,3> groupsAtRingLevel;
   //order is ring3,ring1,ring2 i.e. 2 0 1
   //                                0 1 2  
+#ifdef __INTEL_COMPILER
+  const int ringOrder[3]{1,2,0};
+#else
   constexpr int ringOrder[3]{1,2,0};
+#endif
   auto index = [&ringIndices,& ringOrder](int i) { return ringOrder[ringIndices[i]];};
 
   auto & closestResult =  groupsAtRingLevel[index(0)];

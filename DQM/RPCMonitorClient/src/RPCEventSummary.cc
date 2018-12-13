@@ -62,26 +62,26 @@ void RPCEventSummary::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStor
     edm::eventsetup::EventSetupRecordKey recordKey(edm::eventsetup::EventSetupRecordKey::TypeTag::findType("RunInfoRcd"));
     
     int defaultValue = 1;
-    
-    if(0 != setup.find( recordKey ) ) {
+    isIn_ = true;
+
+    if(auto runInfoRec = setup.tryToGet<RunInfoRcd>()) {
       defaultValue = -1;
       //get fed summary information
       edm::ESHandle<RunInfo> sumFED;
-      setup.get<RunInfoRcd>().get(sumFED);    
+      runInfoRec->get(sumFED);
       std::vector<int> FedsInIds= sumFED->m_fed_in;   
       unsigned int f = 0;
-      bool flag = false;
-      while(!flag && f < FedsInIds.size()) {
+      isIn_ = false;
+      while(!isIn_ && f < FedsInIds.size()) {
 	int fedID=FedsInIds[f];
 	//make sure fed id is in allowed range  
 	if(fedID>=FEDRange_.first && fedID<=FEDRange_.second) {
 	  defaultValue = 1;
-	  flag = true;
+	  isIn_ = true;
 	} 
       f++;
       }   
     }   
-    
     
     MonitorElement* me;
     ibooker.setCurrentFolder(eventInfoPath_);
@@ -89,12 +89,12 @@ void RPCEventSummary::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStor
     //a global summary float [0,1] providing a global summary of the status 
     //and showing the goodness of the data taken by the the sub-system 
     std::string histoName="reportSummary";
-    me=0;
+    me=nullptr;
     me = ibooker.bookFloat(histoName);
     me->Fill(defaultValue);
     
     //TH2F ME providing a mapof values[0-1] to show if problems are localized or distributed
-    me=0;    
+    me=nullptr;    
     me = ibooker.book2D("reportSummaryMap", "RPC Report Summary Map", 15, -7.5, 7.5, 12, 0.5 ,12.5);
     
     //customize the 2d histo
@@ -156,7 +156,7 @@ void RPCEventSummary::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStor
     
     
     for(unsigned int i=0; i<segmentNames.size(); i++){
-      me =0;
+      me =nullptr;
       me = ibooker.bookFloat(segmentNames[i]);
       me->Fill(defaultValue);
     }
@@ -165,8 +165,9 @@ void RPCEventSummary::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStor
     init_ = true;
   }
 
-
-  if(!offlineDQM_  && lumiCounter_%prescaleFactor_ == 0 ){
+  
+  
+  if(isIn_ && !offlineDQM_  && lumiCounter_%prescaleFactor_ == 0 ){
     this->clientOperation(igetter);
   }
 
@@ -178,7 +179,7 @@ void RPCEventSummary::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStor
 
 void RPCEventSummary::dqmEndJob(DQMStore::IBooker & ibooker, DQMStore::IGetter & igetter){ 
   
-  this->clientOperation(igetter);
+  if(isIn_) { this->clientOperation(igetter);}
 }
 
 void RPCEventSummary::clientOperation( DQMStore::IGetter & igetter){

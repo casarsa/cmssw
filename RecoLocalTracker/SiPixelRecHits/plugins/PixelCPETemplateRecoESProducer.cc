@@ -4,6 +4,8 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
@@ -33,7 +35,7 @@ PixelCPETemplateRecoESProducer::PixelCPETemplateRecoESProducer(const edm::Parame
 
 PixelCPETemplateRecoESProducer::~PixelCPETemplateRecoESProducer() {}
 
-boost::shared_ptr<PixelClusterParameterEstimator> 
+std::unique_ptr<PixelClusterParameterEstimator> 
 PixelCPETemplateRecoESProducer::produce(const TkPixelCPERecord & iRecord){ 
 
   ESHandle<MagneticField> magfield;
@@ -42,22 +44,23 @@ PixelCPETemplateRecoESProducer::produce(const TkPixelCPERecord & iRecord){
   edm::ESHandle<TrackerGeometry> pDD;
   iRecord.getRecord<TrackerDigiGeometryRecord>().get( pDD );
 
+  edm::ESHandle<TrackerTopology> hTT;
+  iRecord.getRecord<TrackerDigiGeometryRecord>().getRecord<TrackerTopologyRcd>().get(hTT);
+
   edm::ESHandle<SiPixelLorentzAngle> lorentzAngle;
-  const SiPixelLorentzAngle * lorentzAngleProduct = 0;
+  const SiPixelLorentzAngle * lorentzAngleProduct = nullptr;
   if(DoLorentz_) { //  LA correction from alignment 
     iRecord.getRecord<SiPixelLorentzAngleRcd>().get("fromAlignment",lorentzAngle);
     lorentzAngleProduct = lorentzAngle.product();
   } else { // Normal, deafult LA actually is NOT needed
     //iRecord.getRecord<SiPixelLorentzAngleRcd>().get(lorentzAngle);
-    lorentzAngleProduct=NULL;  // null is ok becuse LA is not use by templates in this mode
+    lorentzAngleProduct=nullptr;  // null is ok becuse LA is not use by templates in this mode
   }
 
   ESHandle<SiPixelTemplateDBObject> templateDBobject;
   iRecord.getRecord<SiPixelTemplateDBObjectESProducerRcd>().get(templateDBobject);
 
-  //  cpe_  = boost::shared_ptr<PixelClusterParameterEstimator>(new PixelCPETemplateReco(pset_,magfield.product(),lorentzAngle.product(),templateDBobject.product() ));
-  cpe_  = boost::shared_ptr<PixelClusterParameterEstimator>(new PixelCPETemplateReco(pset_,magfield.product(),*pDD.product(),lorentzAngleProduct,templateDBobject.product() ));
-  return cpe_;
+  return std::make_unique<PixelCPETemplateReco>(pset_,magfield.product(),*pDD.product(),*hTT.product(),lorentzAngleProduct,templateDBobject.product() );
 }
 
 

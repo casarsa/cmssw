@@ -28,11 +28,7 @@
  *
  *  The user must implement in his derived class the abstract method below
  *
- *  virtual MyCalibration * getNewObject()=0;
- *
- *  in this method, the user must create a new instance of the DB object and 
- *  return a pointer to it. The object must be created with "new" and never 
- *  be deleted by the user: it will be the FWK that takes control over it.
+ *  virtual std::unique_ptr<MyCalibration> getNewObject()=0;
  *
  *  The user can optionally implement the following methods 
  *
@@ -139,7 +135,6 @@
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Run.h"
-#include "CondCore/DBCommon/interface/Time.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -159,7 +154,7 @@ class ConditionDBWriter : public edm::EDAnalyzer {
   
 public:
 
-  explicit ConditionDBWriter(const edm::ParameterSet& iConfig) : LumiBlockMode_(false), RunMode_(false), JobMode_(false), AlgoDrivenMode_(false), Time_(0), setSinceTime_(false), firstRun_(true)
+  explicit ConditionDBWriter(const edm::ParameterSet& iConfig) : minRunRange_(1<<31), maxRunRange_(0), LumiBlockMode_(false), RunMode_(false), JobMode_(false), AlgoDrivenMode_(false), Time_(0), setSinceTime_(false), firstRun_(true)
   {
     edm::LogInfo("ConditionDBWriter::ConditionDBWriter()") << std::endl;
     SinceAppendMode_=iConfig.getParameter<bool>("SinceAppendMode");
@@ -172,12 +167,13 @@ public:
     Record_=iConfig.getParameter<std::string>("Record");
     doStore_=iConfig.getParameter<bool>("doStoreOnDB");
     timeFromEndRun_=iConfig.getUntrackedParameter<bool>("TimeFromEndRun", false);
-    
+    timeFromStartOfRunRange_=iConfig.getUntrackedParameter<bool>("TimeFromStartOfRunRange", false);
+
     if(! SinceAppendMode_ ) 
       edm::LogError("ConditionDBWriter::endJob(): ERROR - only SinceAppendMode support!!!!");
   }
   
-  virtual ~ConditionDBWriter()
+  ~ConditionDBWriter() override
   {
     edm::LogInfo("ConditionDBWriter::~ConditionDBWriter()") << std::endl;
   }
@@ -186,7 +182,7 @@ private:
   
   // method to be implemented by derived class. Must return a pointer to the DB object to be stored, which must have been created with "new". The derived class looses control on it (must not "delete" it at any time in its code!) 
   
-  virtual T * getNewObject()=0;
+  virtual std::unique_ptr<T> getNewObject()=0;
   
   
   // Optional methods that may be implemented (technically "overridden") in the derived classes if needed
@@ -204,9 +200,9 @@ private:
   //Will be called at the end of the job
   virtual void algoEndJob(){};
 
-  void beginJob() {}
+  void beginJob() override {}
 
-  void beginRun(const edm::Run & run, const edm::EventSetup &  es)
+  void beginRun(const edm::Run & run, const edm::EventSetup &  es) override
   {
     if( firstRun_ ) {
       edm::LogInfo("ConditionDBWriter::beginJob") << std::endl;
@@ -214,19 +210,23 @@ private:
       algoBeginJob(es);
       firstRun_ = false;
     }
+
+    if( run.id().run() < minRunRange_ ) minRunRange_=run.id().run();
+    if( run.id().run() > maxRunRange_ ) maxRunRange_=run.id().run();
+
     edm::LogInfo("ConditionDBWriter::beginRun") << std::endl;
     if(RunMode_ && SinceAppendMode_) setSinceTime_=true;
     algoBeginRun(run,es);
   }
   
-  void beginLuminosityBlock(const edm::LuminosityBlock & lumiBlock, const edm::EventSetup & iSetup)
+  void beginLuminosityBlock(const edm::LuminosityBlock & lumiBlock, const edm::EventSetup & iSetup) override
   {
     edm::LogInfo("ConditionDBWriter::beginLuminosityBlock") << std::endl;
     if(LumiBlockMode_ && SinceAppendMode_) setSinceTime_=true;
     algoBeginLuminosityBlock(lumiBlock, iSetup);
   }
 
-  void analyze(const edm::Event& event, const edm::EventSetup& iSetup)
+  void analyze(const edm::Event& event, const edm::EventSetup& iSetup) override
   {
     if(setSinceTime_ ){
       setTime(); //set new since time for possible next upload to DB  
@@ -235,14 +235,14 @@ private:
     algoAnalyze(event, iSetup);
   }
   
-  void endLuminosityBlock(const edm::LuminosityBlock & lumiBlock, const edm::EventSetup & es)
+  void endLuminosityBlock(const edm::LuminosityBlock & lumiBlock, const edm::EventSetup & es) override
   {
     edm::LogInfo("ConditionDBWriter::endLuminosityBlock") << std::endl;
     algoEndLuminosityBlock(lumiBlock, es);
     
     if(LumiBlockMode_){
       
-      T * objPointer = getNewObject();
+      std::unique_ptr<T> objPointer = getNewObject();
       
       if(objPointer ){
 	storeOnDb(objPointer);
@@ -255,7 +255,7 @@ private:
   
   virtual void algoEndLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &){};
 
-  void endRun(const edm::Run & run, const edm::EventSetup & es)
+  void endRun(const edm::Run & run, const edm::EventSetup & es) override
   {
     edm::LogInfo("ConditionDBWriter::endRun") << std::endl;
     
@@ -263,7 +263,7 @@ private:
     
     if(RunMode_){
       
-      T * objPointer = getNewObject();
+      std::unique_ptr<T> objPointer = getNewObject();
       
       if(objPointer ){
 	if( timeFromEndRun_ ) Time_ = run.id().run();
@@ -275,7 +275,7 @@ private:
     }
   }
   
-  void endJob()
+  void endJob() override
   {
     edm::LogInfo("ConditionDBWriter::endJob") << std::endl;
     
@@ -283,10 +283,10 @@ private:
     
     if(JobMode_){
       
-      T * objPointer = getNewObject();
+      std::unique_ptr<T> objPointer = getNewObject();
       
       if( objPointer ){
-	storeOnDb(objPointer);
+        storeOnDb(objPointer);
       }
       
       else {
@@ -296,7 +296,7 @@ private:
     }
   }
 
-  void storeOnDb(T * objPointer)
+  void storeOnDb(std::unique_ptr<T>& objPointer)
   {
     edm::LogInfo("ConditionDBWriter::storeOnDb ")  << std::endl;
     
@@ -318,9 +318,14 @@ private:
     cond::Time_t since = 
       ( mydbservice->isNewTagRequest(Record_) && !timeFromEndRun_ ) ? mydbservice->beginOfTime() : Time_;
 
+    //overwrite tim in the case we have the flag TimeFromStartOfRunRange set to on
+    if (timeFromStartOfRunRange_ ) since = minRunRange_; 
+
     edm::LogInfo("ConditionDBWriter") << "appending a new object to tag " 
 				      <<Record_ <<" in since mode " << std::endl;
-    mydbservice->writeOne<T>(objPointer, since, Record_);
+
+    // The Framework will take control over the DB object now, therefore the release.
+    mydbservice->writeOne<T>(objPointer.release(), since, Record_);
   }
 
   void setTime()
@@ -342,19 +347,19 @@ protected:
 
   void storeOnDbNow()
   {
-    T * objPointer = 0;
-    
     if(AlgoDrivenMode_){
       
       setSinceTime_=true;
       
-      objPointer = getNewObject();
+      std::unique_ptr<T> objPointer = getNewObject();
       
       if (!objPointer ) {
-	edm::LogError("ConditionDBWriter::storeOnDbNow: ERROR - requested to store on DB a new object (module configuration is algo driven based IOV), but received NULL pointer...will not store anything on the DB") << std::endl;
-	return;
+        edm::LogError("ConditionDBWriter::storeOnDbNow: ERROR - requested to store on DB a new object (module configuration is algo driven based IOV), but received NULL pointer...will not store anything on the DB") << std::endl;
+        return;
       }
-      else {storeOnDb(objPointer);}
+      else {
+        storeOnDb(objPointer);
+      }
       
     }
     else {
@@ -372,6 +377,9 @@ protected:
   void setDoStore(const bool doStore) {doStore_ = doStore;}
 
 private:
+
+  unsigned int minRunRange_;
+  unsigned int maxRunRange_;
   
   bool SinceAppendMode_; // till or since append mode 
 
@@ -389,6 +397,7 @@ private:
   bool firstRun_;
 
   bool timeFromEndRun_;
+  bool timeFromStartOfRunRange_;
 };
 
 #endif

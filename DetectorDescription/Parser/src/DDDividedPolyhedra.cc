@@ -1,19 +1,24 @@
-//
-// ********************************************************************
-// 25.04.04 - M. Case ddd-ize G4ParameterisationPolyhedra*
-//---------------------------------------------------------------------
 #include "DetectorDescription/Parser/src/DDDividedPolyhedra.h"
-#include "DetectorDescription/Parser/src/DDXMLElement.h"
-
+#include "DetectorDescription/Core/interface/DDRotationMatrix.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
+#include "DetectorDescription/Core/interface/DDMaterial.h"
 #include "DetectorDescription/Core/interface/DDName.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
-#include "DetectorDescription/Core/interface/DDMaterial.h"
+#include "DetectorDescription/Core/interface/DDTransform.h"
+#include "DetectorDescription/Core/interface/DDUnits.h"
+#include "DetectorDescription/Parser/src/DDDividedGeometryObject.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
-#include "DetectorDescription/Base/interface/DDdebug.h"
-#include "DetectorDescription/Base/interface/DDRotationMatrix.h"
+#include <cstddef>
+#include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "CLHEP/Units/GlobalSystemOfUnits.h"
+class DDCompactView;
+
+using namespace dd::operators;
 
 DDDividedPolyhedraRho::DDDividedPolyhedraRho( const DDDivision& div, DDCompactView* cpv )
   : DDDividedGeometryObject( div, cpv )
@@ -35,24 +40,7 @@ DDDividedPolyhedraRho::DDDividedPolyhedraRho( const DDDivision& div, DDCompactVi
 				 , div_.nReplicas()
 				 , div_.offset() );
   }
-
-  //     for (int i = 0; i < compNDiv_; ++i)
-  //      {
-  //        DDpos(  makeDDLogicalPart(i)
-  //  	      , div_.parent()
-  //  	      , i
-  //  	      , makeDDTranslation(i)
-  //  	      , makeDDRotation(i)
-  //  	      , &div_
-  //  	      );
-  //      } 
- 
-  DCOUT_V ('P', " DDDividedPolyhedraRho - # divisions " << compNDiv_  << " = " << div_.nReplicas() << "\n Offset " << div_.offset() << " Width " << compWidth_ << " = " << div_.width() << "\n");
-
 }
-
-DDDividedPolyhedraRho::~DDDividedPolyhedraRho( void )
-{}
 
 void
 DDDividedPolyhedraRho::checkParametersValidity( void )
@@ -130,8 +118,8 @@ DDDividedPolyhedraRho::makeDDLogicalPart( const int copyNo ) const
   //   phedra.SetOriginalParameters(&origparam); // copy values & transfer pointers
   //   phedra.Reset();                           // reset to new solid parameters
   
-  DDName solname(div_.parent().ddname().name() + "_DIVCHILD" + DDXMLElement::itostr(copyNo) 
-		 , div_.parent().ddname().ns());
+  DDName solname(div_.parent().ddname().name() + "_DIVCHILD" + std::to_string(copyNo), 
+		 div_.parent().ddname().ns());
   
   DDSolid dsol = DDSolidFactory::polyhedra(solname
 					   , msol.sides()
@@ -141,7 +129,6 @@ DDDividedPolyhedraRho::makeDDLogicalPart( const int copyNo ) const
 					   , newrMinVec
 					   , newrMaxVec);
   DDLogicalPart ddlp = DDLogicalPart(solname, usemat, dsol);
-  DCOUT_V ('P', "DDDividedPolyhedraRho:makeDDLogicalPart lp:" <<  ddlp);
   return ddlp;
 }
 
@@ -152,12 +139,11 @@ DDDividedPolyhedraPhi::DDDividedPolyhedraPhi( const DDDivision& div, DDCompactVi
   setType( "DivisionPolyhedraPhi" );
 
   DDPolyhedra msol = (DDPolyhedra)(div_.parent().solid());
-  //  double deltaPhi = msol->GetEndPhi() - msol->GetStartPhi();
   
   if( divisionType_ == DivWIDTH )
   {
     //If you divide a tube of 360 degrees the offset displaces the starting angle, but you still fill the 360 degrees
-    if( msol.deltaPhi() == 360.*deg ) {
+    if( msol.deltaPhi() == 360._deg ) {
       compNDiv_ = calculateNDiv( msol.deltaPhi(), div_.width(), 0. );
     }else {
       compNDiv_ = calculateNDiv( msol.deltaPhi(), div_.width(), div_.offset() );
@@ -165,19 +151,14 @@ DDDividedPolyhedraPhi::DDDividedPolyhedraPhi( const DDDivision& div, DDCompactVi
   }
   else if( divisionType_ == DivNDIV )
   {
-    if( msol.deltaPhi() == 360.*deg ) {
+    if( msol.deltaPhi() == 360._deg ) {
       compWidth_ = calculateWidth( msol.deltaPhi(), div_.nReplicas(), 0. );
     }else {
       // original line looks wrong!
       compWidth_ = calculateWidth( msol.deltaPhi(), div_.nReplicas(), div_.offset() );
     }
   }
- 
-  DCOUT_V ('P', " DDDividedPolyhedraRho - # divisions " << compNDiv_  << " = " << div_.nReplicas() << "\n Offset " << div_.offset() << " Width " << compWidth_ << " = " << div_.width() << "\n");
 }
-
-DDDividedPolyhedraPhi::~DDDividedPolyhedraPhi( void )
-{}
 
 double
 DDDividedPolyhedraPhi::getMaxParameter( void ) const
@@ -239,21 +220,14 @@ DDDividedPolyhedraPhi::makeDDTranslation( const int copyNo ) const
 DDRotation
 DDDividedPolyhedraPhi::makeDDRotation( const int copyNo ) const
 {
-
+  DDRotation myddrot; // sets to identity.
   double posi = ( copyNo - 1 ) * compWidth_;
+  DDName ddrotname( div_.parent().ddname().name() +
+		    "_DIVCHILD_ROT" + std::to_string( copyNo ),
+		    div_.parent().ddname().ns());
+  myddrot = DDrot( ddrotname, changeRotMatrix( posi ));
 
-  DCOUT_V ('P', " DDDividedPolyhedraPhi - position: " << posi/deg << "\n copyNo: " << copyNo << " - compWidth_: " << compWidth_/deg << "\n");
-  
-  //  ChangeRotMatrix( physVol, -posi );
-  DDRotationMatrix* rotMat = changeRotMatrix( posi);
-  // how to name the rotation??
-  // i do not like this...
-  DDName ddrotname(div_.parent().ddname().name() + "_DIVCHILD_ROT" + DDXMLElement::itostr(copyNo)
-		   , div_.parent().ddname().ns());
-  DDRotation myddrot = DDrot(ddrotname, rotMat);
-  DCOUT_V ('P', "DDDividedPolyhedra::makeDDRotation: copyNo = " << copyNo << " rotation = " << myddrot);
   return myddrot;
-
 }
 
 DDLogicalPart
@@ -278,7 +252,6 @@ DDDividedPolyhedraPhi::makeDDLogicalPart( const int copyNo ) const
   DDLogicalPart ddlp(solname);
   if (!ddlp.isDefined().second)
     DDLogicalPart ddlp2 = DDLogicalPart(solname, usemat, dsol);
-  DCOUT_V ('P', "DDDividedPolyhedraPhi::makeDDLogicalPart() ddlp = " << ddlp);
   return ddlp;
 }
 
@@ -302,15 +275,8 @@ DDDividedPolyhedraZ::DDDividedPolyhedraZ( const DDDivision& div, DDCompactView* 
     compWidth_ = calculateWidth( zvec[zvec.size() - 1] - zvec[0],
 				 div_.nReplicas(),
 				 div_.offset());
-    // ?what?      CalculateNDiv( zvec[zvec.size() - 1] - zvec[0], origparamMother->Z_values[origparamMother->Num_z_planes-1]
-    //       - origparamMother->Z_values[0] , nDiv, offset );
   }
-  
-  DCOUT_V ('P', " DDDividedPolyhedraZ - # divisions " << compNDiv_ << " = " << div_.nReplicas() << "\n Offset " << " = " << div_.offset() << "\n Width " << compWidth_ << " = " << div_.width());
 }
-					   
-DDDividedPolyhedraZ::~DDDividedPolyhedraZ( void )
-{}
 
 double
 DDDividedPolyhedraZ::getMaxParameter( void ) const
@@ -380,8 +346,6 @@ DDDividedPolyhedraZ::makeDDTranslation( const int copyNo ) const
   
   DDTranslation tr(0,0,posi);
   //----- calculate rotation matrix: unit
-  
-  DCOUT_V ('P', " DDDividedPolyhedraZ - position: " << posi << "\n copyNo: " << copyNo << " - offset: " << div_.offset()/deg << " - compWidth_: " << compWidth_/deg << " translation = " << tr);
   return tr;
 }
 
@@ -405,15 +369,15 @@ DDDividedPolyhedraZ::makeDDLogicalPart( const int copyNo ) const
 
   double posi = ( zvec[ copyNo ] + zvec[ copyNo + 1 ] ) / 2.0;
   
-  DDName solname( div_.parent().ddname().name() + "_DIVCHILD" + DDXMLElement::itostr( copyNo ),
+  DDName solname( div_.parent().ddname().name() + "_DIVCHILD" + std::to_string( copyNo ),
 		  div_.parent().ddname().ns());
   std::vector<double> newRmin, newRmax, newZ;
-  newZ.push_back( zvec[ copyNo ] - posi );
-  newZ.push_back( zvec[ copyNo + 1 ] - posi );
-  newRmin.push_back( rminvec[ copyNo ]);
-  newRmin.push_back( rminvec[ copyNo + 1 ]);
-  newRmax.push_back( rmaxvec[ copyNo ]);
-  newRmax.push_back( rmaxvec[ copyNo + 1 ]);
+  newZ.emplace_back( zvec[ copyNo ] - posi );
+  newZ.emplace_back( zvec[ copyNo + 1 ] - posi );
+  newRmin.emplace_back( rminvec[ copyNo ]);
+  newRmin.emplace_back( rminvec[ copyNo + 1 ]);
+  newRmax.emplace_back( rmaxvec[ copyNo ]);
+  newRmax.emplace_back( rmaxvec[ copyNo + 1 ]);
 
   DDSolid dsol = DDSolidFactory::polyhedra( solname,
 					    msol.sides(),
@@ -423,8 +387,6 @@ DDDividedPolyhedraZ::makeDDLogicalPart( const int copyNo ) const
 					    newRmin,
 					    newRmax );
   DDLogicalPart lp( solname, usemat, dsol );
-
-  DCOUT_V( 'P', "DDDividedPolyhedraZ::makeDDLogicalPart" << "\n-- Parametrised phedra copy-number: " << copyNo << "\n-- DDLogicalPart " << lp );
   return lp;
 }
 

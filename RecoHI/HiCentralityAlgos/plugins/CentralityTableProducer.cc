@@ -24,11 +24,11 @@
 
 #include "DataFormats/Common/interface/Ref.h"
 
+#include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
+
 #include "CondFormats/DataRecord/interface/HeavyIonRcd.h"
 #include "CondFormats/HIObjects/interface/CentralityTable.h"
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
-
-#include "RecoHI/HiCentralityAlgos/interface/CentralityProvider.h"
 
 #include <TFile.h>
 
@@ -40,13 +40,11 @@ using namespace std;
 class CentralityTableProducer : public edm::EDAnalyzer {
    public:
       explicit CentralityTableProducer(const edm::ParameterSet&);
-      explicit CentralityTableProducer(const edm::ParameterSet&, const edm::EventSetup&, edm::ConsumesCollector &&);
-      ~CentralityTableProducer();
+      ~CentralityTableProducer() override;
 
    private:
-      virtual void beginRun(const edm::EventSetup&) ;
-      virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override ;
+      void analyze(const edm::Event&, const edm::EventSetup&) override;
+      void endJob() override ;
    void printBin(const CentralityTable::CBin*);
       // ----------member data ---------------------------
 
@@ -63,7 +61,6 @@ class CentralityTableProducer : public edm::EDAnalyzer {
    string rootTag_;
    ofstream text_;
 
-   CentralityProvider *cent;
    CentralityTable* CT;
    const CentralityBins* CB;
 
@@ -82,15 +79,13 @@ class CentralityTableProducer : public edm::EDAnalyzer {
 //
 // constructors and destructor
 //
-CentralityTableProducer::CentralityTableProducer(const edm::ParameterSet& iConfig){}
-
-CentralityTableProducer::CentralityTableProducer(const edm::ParameterSet& iConfig, const edm::EventSetup& iSetup, edm::ConsumesCollector && iC):
+CentralityTableProducer::CentralityTableProducer(const edm::ParameterSet& iConfig):
    text_("bins.txt"),
    runnum_(0)
 {
    //now do what ever initialization is needed
-   makeDBFromTFile_ = iConfig.getUntrackedParameter<bool>("makeDBFromTFile",1);
-   makeTFileFromDB_ = iConfig.getUntrackedParameter<bool>("makeTFileFromDB",0);
+   makeDBFromTFile_ = iConfig.getUntrackedParameter<bool>("makeDBFromTFile",true);
+   makeTFileFromDB_ = iConfig.getUntrackedParameter<bool>("makeTFileFromDB",false);
    firstRunOnly_ = iConfig.getUntrackedParameter<bool>("isMC",false);
    debug_ = iConfig.getUntrackedParameter<bool>("debug",false);
    if(makeDBFromTFile_){
@@ -99,7 +94,6 @@ CentralityTableProducer::CentralityTableProducer(const edm::ParameterSet& iConfi
       inputTFile_  = new TFile(inputTFileName_.data(),"read");
       cout<<inputTFileName_.data()<<endl;
    }
-   cent =  new CentralityProvider(iSetup, std::move(iC));
 }
 
 CentralityTableProducer::~CentralityTableProducer()
@@ -120,18 +114,11 @@ CentralityTableProducer::analyze(const edm::Event& iEvent, const edm::EventSetup
   if((!firstRunOnly_ && runnum_ != iEvent.id().run()) || (firstRunOnly_ && runnum_ == 0)){
     runnum_ = iEvent.id().run();
     cout<<"Adding table for run : "<<runnum_<<endl;
-    cent->newRun(iSetup);
-    if(debug_) cent->print();
     TFileDirectory subDir = fs->mkdir(Form("run%d",runnum_));
-    CB = subDir.make<CentralityBins>((CentralityBins) *cent);
+    CB = subDir.make<CentralityBins>();
   }    
 }
 
-// ------------ method called once each job just before starting event loop  ------------
-void 
-CentralityTableProducer::beginRun(const edm::EventSetup& iSetup)
-{
-}
 
 // ------------ method called once each job just after ending the event loop  ------------
 void 

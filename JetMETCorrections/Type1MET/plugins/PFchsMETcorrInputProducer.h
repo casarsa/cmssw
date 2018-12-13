@@ -14,7 +14,7 @@
  *
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -29,16 +29,16 @@
 
 #include <string>
 
-class PFchsMETcorrInputProducer : public edm::EDProducer  
+class PFchsMETcorrInputProducer : public edm::stream::EDProducer<>  
 {
  public:
 
   explicit PFchsMETcorrInputProducer(const edm::ParameterSet&);
-  ~PFchsMETcorrInputProducer();
+  ~PFchsMETcorrInputProducer() override;
     
  private:
 
-  void produce(edm::Event&, const edm::EventSetup&);
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
   std::string moduleLabel_;
 

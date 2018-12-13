@@ -18,7 +18,6 @@
 //
 
 #include "HLTrigger/JetMET/interface/HLTCATopTagFilter.h"
-#include <typeinfo>
 
 using namespace std;
 using namespace reco;
@@ -41,7 +40,7 @@ HLTCATopTagFilter::HLTCATopTagFilter(const edm::ParameterSet& iConfig) : HLTFilt
 }
 
 
-HLTCATopTagFilter::~HLTCATopTagFilter(){}
+HLTCATopTagFilter::~HLTCATopTagFilter()= default;
 
 
 void HLTCATopTagFilter::fillDescriptions(edm::ConfigurationDescriptions& descriptions){
@@ -80,9 +79,9 @@ bool HLTCATopTagFilter::hltFilter( edm::Event& iEvent, const edm::EventSetup& iS
   CATopJetProperties properties;
 
   // Now loop over the hard jets and do kinematic cuts
-  reco::BasicJetCollection::const_iterator ihardJet = pBasicJets->begin(),
+  auto ihardJet = pBasicJets->begin(),
     ihardJetEnd = pBasicJets->end();
-  reco::PFJetCollection::const_iterator ipfJet = pfJets->begin();
+  auto ipfJet = pfJets->begin();
   bool pass = false;
   
   for ( ; ihardJet != ihardJetEnd; ++ihardJet, ++ipfJet ) {
@@ -112,5 +111,5 @@ bool HLTCATopTagFilter::hltFilter( edm::Event& iEvent, const edm::EventSetup& iS
 
  
 
-//define this as a plug-in
+// declare this class as a framework plugin
 DEFINE_FWK_MODULE(HLTCATopTagFilter);

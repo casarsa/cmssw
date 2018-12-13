@@ -16,6 +16,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 
@@ -38,9 +39,11 @@ namespace edm {
     virtual void registerThinnedAssociations(ProductRegistry const& productRegistry,
                                              ThinnedAssociationsHelper& thinnedAssociationsHelper) override;
   private:
-    std::unique_ptr<Selector> selector_;
+    edm::propagate_const<std::unique_ptr<Selector>> selector_;
     edm::EDGetTokenT<Collection> inputToken_;
     edm::InputTag inputTag_;
+    edm::EDPutTokenT<Collection> outputToken_;
+    edm::EDPutTokenT<ThinnedAssociation> thinnedOutToken_;
   };
 
   template <typename Collection, typename Selector>
@@ -51,8 +54,8 @@ namespace edm {
     inputTag_ = pset.getParameter<InputTag>("inputTag");
     inputToken_ = consumes<Collection>(inputTag_);
 
-    produces<Collection>();
-    produces<ThinnedAssociation>();
+    outputToken_ = produces<Collection>();
+    thinnedOutToken_ = produces<ThinnedAssociation>();
   }
 
   template <typename Collection, typename Selector>
@@ -79,22 +82,22 @@ namespace edm {
     edm::Event const& constEvent = event;
     selector_->preChoose(inputCollection, constEvent, eventSetup);
 
-    std::auto_ptr<Collection> thinnedCollection(new Collection);
-    std::auto_ptr<ThinnedAssociation> thinnedAssociation(new ThinnedAssociation);
+    Collection thinnedCollection;
+    ThinnedAssociation thinnedAssociation;
 
     unsigned int iIndex = 0;
     for(auto iter = inputCollection->begin(), iterEnd = inputCollection->end();
         iter != iterEnd; ++iter, ++iIndex) {
       if(selector_->choose(iIndex, *iter)) {
-        thinnedCollection->push_back(*iter);
-        thinnedAssociation->push_back(iIndex);
+        thinnedCollection.push_back(*iter);
+        thinnedAssociation.push_back(iIndex);
       }
     }
-    OrphanHandle<Collection> orphanHandle = event.put(thinnedCollection);
+    OrphanHandle<Collection> orphanHandle = event.emplace(outputToken_,std::move(thinnedCollection));
 
-    thinnedAssociation->setParentCollectionID(inputCollection.id());
-    thinnedAssociation->setThinnedCollectionID(orphanHandle.id());
-    event.put(thinnedAssociation);
+    thinnedAssociation.setParentCollectionID(inputCollection.id());
+    thinnedAssociation.setThinnedCollectionID(orphanHandle.id());
+    event.emplace(thinnedOutToken_,std::move(thinnedAssociation));
   }
 
   template <typename Collection, typename Selector>

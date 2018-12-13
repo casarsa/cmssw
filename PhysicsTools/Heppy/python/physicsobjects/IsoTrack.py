@@ -1,7 +1,8 @@
-from PhysicsTools.Heppy.physicsobjects.Lepton import Lepton
+from PhysicsTools.Heppy.physicsobjects.PhysicsObject import *
+import ROOT
 import math
 
-class IsoTrack( Lepton ):
+class IsoTrack( PhysicsObject ):
     
     def __init__(self, isoTrack):
         self.isoTrack = isoTrack
@@ -10,24 +11,6 @@ class IsoTrack( Lepton ):
     def relIso(self, dummy1, dummy2):
         '''Just making the tau behave as a lepton.'''
         return -1
-
-    def relIso(self, dummy1, dummy2):
-        '''Just making the tau behave as a lepton.'''
-        return -1
-
-    def mvaId(self):
-        '''For a transparent treatment of electrons, muons and taus. Returns -99'''
-        return -99
-
-    def dxy(self, vertex=None):
-        if vertex is None:
-            vertex = self.associatedVertex
-        return self.physObj.dxy()
-
-    def dz(self, vertex=None):
-        if vertex is None:
-            vertex = self.associatedVertex
-        return self.physObj.dz()
 
     def __str__(self):
         lep = super(IsoTrack, self).__str__()

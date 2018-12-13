@@ -4,10 +4,11 @@
 
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 
+#include "TrackingTools/DetLayers/interface/GeometricSearchDet.h"
 #include "TrackingTools/DetLayers/interface/MeasurementEstimator.h"
 #include "TrackingTools/DetLayers/interface/rangesIntersect.h"
-#include "TrackingTools/DetLayers/interface/PhiLess.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
+#include "DataFormats/GeometryVector/interface/VectorUtil.h"
 
 #pragma GCC visibility push(hidden)
 namespace barrelUtil {
@@ -52,7 +53,8 @@ namespace barrelUtil {
     // detector phi range
     std::pair<float,float> phiRange(phi-phiWin, phi+phiWin);
     
-    return rangesIntersect(phiRange, gsdet.surface().phiSpan(), PhiLess());
+    return rangesIntersect(phiRange, gsdet.surface().phiSpan(),
+            [](auto x, auto y){ return Geom::phiLess(x,y); });
   } 
   
 

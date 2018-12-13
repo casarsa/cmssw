@@ -53,7 +53,7 @@
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/CommonDetUnit/interface/GlobalTrackingGeometry.h"
 #include "Geometry/Records/interface/GlobalTrackingGeometryRecord.h"
-#include "Geometry/TrackingGeometryAligner/interface/GeometryAligner.h"
+#include "Geometry/CommonTopologies/interface/GeometryAligner.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
@@ -94,7 +94,7 @@
 
 #include<iostream>
 #include<cmath>
-#include<assert.h>
+#include<cassert>
 #include<fstream>
 #include<iomanip>
 
@@ -109,7 +109,7 @@ using namespace reco;
 class GlobalTrackerMuonAlignment : public edm::EDAnalyzer {
  public:
   explicit GlobalTrackerMuonAlignment(const edm::ParameterSet&);
-  ~GlobalTrackerMuonAlignment();
+  ~GlobalTrackerMuonAlignment() override;
 
   void analyzeTrackTrack(const edm::Event&, const edm::EventSetup&);
   void analyzeTrackTrajectory(const edm::Event&, const edm::EventSetup&);
@@ -145,9 +145,9 @@ class GlobalTrackerMuonAlignment : public edm::EDAnalyzer {
 
  private:
 
-  virtual void beginJob() override ;
-  virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-  virtual void endJob() override ;
+  void beginJob() override ;
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void endJob() override ;
   
   // ----------member data ---------------------------
 
@@ -758,10 +758,10 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrack
 
     if( isolatedMuonMode_ ){      //------------------------------- Isolated Muon -----
       const Surface& refSurface = innerMuTSOS.surface(); 
-      ReferenceCountingPointer<TangentPlane> 
+      ConstReferenceCountingPointer<TangentPlane> 
 	tpMuLocal(refSurface.tangentPlane(innerMuTSOS.localPosition()));
       Nl = tpMuLocal->normalVector();
-      ReferenceCountingPointer<TangentPlane> 
+      ConstReferenceCountingPointer<TangentPlane> 
       tpMuGlobal(refSurface.tangentPlane(innerMuTSOS.globalPosition()));
       GlobalVector Ng = tpMuGlobal->normalVector();
       Surface* surf = (Surface*)&refSurface;
@@ -819,7 +819,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrack
 	if(debug_) std::cout<<" -----    Out - In -----"<<std::endl;
 
         const Surface& refSurface = innerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(innerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 
@@ -876,7 +876,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrack
 	if(debug_) std::cout<<" -----    In - Out -----"<<std::endl;
 
 	const Surface& refSurface = outerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(outerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 		
@@ -934,7 +934,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrack
 	continue;
 
 	const Surface& refSurface = outerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(outerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 		
@@ -1029,7 +1029,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrack
     AlgebraicSymMatrix55 Cml(tsosMuon.localError().matrix() + extrapolationT.localError().matrix());
     bool ierrLoc = !m.Invert();
     if (ierrLoc && debug_ && info) { 
-      std::cout<< " ==== Error inverting Local covariance matrix ==== "<<std::cout;
+      std::cout<< " ==== Error inverting Local covariance matrix ==== "<<std::endl;
       continue;}
     double chi_Loc = ROOT::Math::Similarity(Vml,m);
     if(debug_)
@@ -1477,10 +1477,10 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrajectory
     if( isolatedMuonMode_ ){      //------------------------------- Isolated Muon --- Out-In --
       if(debug_) std::cout<<" ------ Isolated (out-in) ----- "<<std::endl;
       const Surface& refSurface = innerMuTSOS.surface(); 
-      ReferenceCountingPointer<TangentPlane> 
+      ConstReferenceCountingPointer<TangentPlane> 
 	tpMuLocal(refSurface.tangentPlane(innerMuTSOS.localPosition()));
       Nl = tpMuLocal->normalVector();
-      ReferenceCountingPointer<TangentPlane> 
+      ConstReferenceCountingPointer<TangentPlane> 
       tpMuGlobal(refSurface.tangentPlane(innerMuTSOS.globalPosition()));
       GlobalVector Ng = tpMuGlobal->normalVector();
       Surface* surf = (Surface*)&refSurface;
@@ -1550,7 +1550,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrajectory
 	if(debug_) std::cout<<" -----    Out - In -----"<<std::endl;
 
         const Surface& refSurface = innerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(innerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 
@@ -1617,7 +1617,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrajectory
 	if(debug_) std::cout<<" -----    In - Out -----"<<std::endl;
 
 	const Surface& refSurface = outerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(outerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 		
@@ -1686,7 +1686,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrajectory
 	continue;
 
 	const Surface& refSurface = outerMuTSOS.surface(); 
-	ReferenceCountingPointer<TangentPlane> 
+	ConstReferenceCountingPointer<TangentPlane> 
 	  tpMuGlobal(refSurface.tangentPlane(outerMuTSOS.globalPosition()));
 	Nl = tpMuGlobal->normalVector();
 		
@@ -1802,7 +1802,7 @@ void GlobalTrackerMuonAlignment::analyzeTrackTrajectory
     AlgebraicSymMatrix55 Cml(tsosMuon.localError().matrix() + extrapolationT.localError().matrix());
     bool ierrLoc = !m.Invert();
     if (ierrLoc && debug_ && info) { 
-      std::cout<< " ==== Error inverting Local covariance matrix ==== "<<std::cout;
+      std::cout<< " ==== Error inverting Local covariance matrix ==== "<<std::endl;
       continue;}
     double chi_Loc = ROOT::Math::Similarity(Vml,m);
     if(debug_)
@@ -2993,21 +2993,21 @@ GlobalTrackerMuonAlignment::trackFitter(reco::TrackRef alongTr, reco::TransientT
 			     alongTTr.outermostMeasurementState());
     this->debugTrajectorySOS(" initialTSOS for theFitter ", initialTSOS);
     std::cout<<" . . . . . trajVec.size() "<<trajVec.size()<<std::endl;
-    if(trajVec.size()) this->debugTrajectory(" theFitter trajectory ", trajVec[0]);
+    if(!trajVec.empty()) this->debugTrajectory(" theFitter trajectory ", trajVec[0]);
   }
 
   if(!smooth){
-    if(trajVec.size()) trackFittedTSOS = trajVec[0].lastMeasurement().updatedState();}
+    if(!trajVec.empty()) trackFittedTSOS = trajVec[0].lastMeasurement().updatedState();}
   else{
     std::vector<Trajectory> trajSVec;
-    if (trajVec.size()){
+    if (!trajVec.empty()){
       if(direction == alongMomentum) trajSVec = theSmoother->trajectories(*(trajVec.begin()));
       else                           trajSVec = theSmootherOp->trajectories(*(trajVec.begin()));
     }
     if(info) std::cout<<" . . . . trajSVec.size() "<<trajSVec.size()<<std::endl;
-    if(trajSVec.size()) this->debugTrajectorySOSv("smoothed geom InnermostState",
+    if(!trajSVec.empty()) this->debugTrajectorySOSv("smoothed geom InnermostState",
 						  trajSVec[0].geometricalInnermostState());
-    if(trajSVec.size()) trackFittedTSOS = trajSVec[0].geometricalInnermostState();
+    if(!trajSVec.empty()) trackFittedTSOS = trajSVec[0].geometricalInnermostState();
   }
 
   if(info) this->debugTrajectorySOSv(" trackFittedTSOS ", trackFittedTSOS);
@@ -3090,21 +3090,21 @@ GlobalTrackerMuonAlignment::muonFitter(reco::TrackRef alongTr, reco::TransientTr
 			     alongTTr.outermostMeasurementState());
     this->debugTrajectorySOS(" initialTSOS for theFitter ", initialTSOS);
     std::cout<<" . . . . . trajVec.size() "<<trajVec.size()<<std::endl;
-    if(trajVec.size()) this->debugTrajectory(" theFitter trajectory ", trajVec[0]);
+    if(!trajVec.empty()) this->debugTrajectory(" theFitter trajectory ", trajVec[0]);
   }
 
   if(!smooth){
-    if(trajVec.size()) trackFittedTSOS = trajVec[0].lastMeasurement().updatedState();}
+    if(!trajVec.empty()) trackFittedTSOS = trajVec[0].lastMeasurement().updatedState();}
   else{
     std::vector<Trajectory> trajSVec;
-    if (trajVec.size()){
+    if (!trajVec.empty()){
       if(direction == alongMomentum) trajSVec = theSmoother->trajectories(*(trajVec.begin()));
       else                           trajSVec = theSmootherOp->trajectories(*(trajVec.begin()));
     }
     if(info) std::cout<<" . . . . trajSVec.size() "<<trajSVec.size()<<std::endl;
-    if(trajSVec.size()) this->debugTrajectorySOSv("smoothed geom InnermostState",
+    if(!trajSVec.empty()) this->debugTrajectorySOSv("smoothed geom InnermostState",
 						  trajSVec[0].geometricalInnermostState());
-    if(trajSVec.size()) trackFittedTSOS = trajSVec[0].geometricalInnermostState();
+    if(!trajSVec.empty()) trackFittedTSOS = trajSVec[0].geometricalInnermostState();
   }
 
 } // end of muonFitter

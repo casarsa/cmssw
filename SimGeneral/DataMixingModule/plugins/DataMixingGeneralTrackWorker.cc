@@ -7,13 +7,8 @@
 #include <map>
 #include <memory>
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Framework/interface/ConstProductRegistry.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/Provenance/interface/Provenance.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
 //
 //
 #include "DataMixingGeneralTrackWorker.h"
@@ -58,7 +53,7 @@ namespace edm
 
     // Create new track list; Rely on the fact that addSignals gets called first...
 
-    NewTrackList_ = std::auto_ptr<reco::TrackCollection>(new reco::TrackCollection());
+    NewTrackList_ = std::unique_ptr<reco::TrackCollection>(new reco::TrackCollection());
 
     // grab tracks, store copy
 
@@ -112,7 +107,7 @@ namespace edm
 
     // put collection
 
-    e.put( NewTrackList_, GeneralTrackCollectionDM_ );
+    e.put(std::move(NewTrackList_), GeneralTrackCollectionDM_);
 
     // clear local storage for this event
     //NewTrackList_.clear();

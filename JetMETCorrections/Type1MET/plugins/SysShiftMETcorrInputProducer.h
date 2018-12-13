@@ -12,7 +12,7 @@
  *
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -25,16 +25,16 @@
 
 #include <string>
 
-class SysShiftMETcorrInputProducer : public edm::EDProducer  
+class SysShiftMETcorrInputProducer : public edm::stream::EDProducer<>  
 {
  public:
 
   explicit SysShiftMETcorrInputProducer(const edm::ParameterSet&);
-  ~SysShiftMETcorrInputProducer();
+  ~SysShiftMETcorrInputProducer() override;
     
  private:
 
-  void produce(edm::Event&, const edm::EventSetup&);
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
   std::string moduleLabel_;
 

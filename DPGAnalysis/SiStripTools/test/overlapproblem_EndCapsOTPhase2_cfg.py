@@ -8,7 +8,7 @@ process = cms.Process("OverlapProblem")
 options = VarParsing.VarParsing("analysis")
 
 options.register('globalTag',
-                 "DONOTEXIST::All",
+                 "DONOTEXIST",
                  VarParsing.VarParsing.multiplicity.singleton, # singleton or list
                  VarParsing.VarParsing.varType.string,          # string, int, or float
                  "GlobalTag")
@@ -79,7 +79,7 @@ process.source = cms.Source("PoolSource",
 
 #process.load("Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff")
 #process.load("Configuration.StandardSequences.GeometryDB_cff")
-process.load('Configuration.Geometry.GeometryExtended2023MuonReco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D3Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
 #process.load("Configuration.Geometry.GeometryExtendedPhaseIPixelReco_cff")
 #process.load("Configuration.Geometry.GeometryExtendedPhaseIPixel_cff")
@@ -87,7 +87,7 @@ process.load("Configuration.StandardSequences.Reconstruction_cff")
 
 
 
-process.load("SimTracker.TrackAssociation.TrackAssociatorByHits_cfi")
+process.load("SimTracker.TrackAssociatorProducers.trackAssociatorByHits_cfi")
 
 
 from SLHCUpgradeSimulations.Configuration.phase2TkCustomsBE5DPixel10D import *
@@ -162,7 +162,7 @@ process.seqMultProd = cms.Sequence(
                                    )
 
 process.load("DPGAnalysis.SiStripTools.occupancyplots_cfi")
-process.occupancyplots.file = cms.untracked.FileInPath("SLHCUpgradeSimulations/Geometry/data/PhaseII/Pixel10D/PixelSkimmedGeometry.txt")
+process.occupancyplots.file = cms.untracked.FileInPath("SLHCUpgradeSimulations/Geometry/data/PhaseII/Tilted/PixelSkimmedGeometry.txt")
 
 process.pixeloccupancyplots = process.occupancyplots.clone()
 process.pixeloccupancyplots.wantedSubDets = process.spclusmultprod.wantedSubDets
@@ -224,9 +224,9 @@ process.trackcount.wanted2DHistos=cms.untracked.bool(True)
 
 #----GlobalTag ------------------------
 
-process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
-#process.GlobalTag.globaltag = options.globalTag
-from Configuration.AlCa.GlobalTag import GlobalTag
+process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_condDBv2_cff")
+from Configuration.AlCa.GlobalTag_condDBv2 import GlobalTag
+#process.GlobalTag = GlobalTag(process.GlobalTag, options.globalTag, '')
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 
 process.siStripQualityESProducer.ListOfRecordToMerge=cms.VPSet(
@@ -254,6 +254,7 @@ process.myrereco = cms.Sequence(
 
 process.p0 = cms.Path(   process.myrereco +
                          process.seqTrackRefitting
+                       + process.trackAssociatorByHits
                        + process.overlapproblemtsosanalyzer
                        + process.overlapproblemtsosall
                        + process.seqProducers

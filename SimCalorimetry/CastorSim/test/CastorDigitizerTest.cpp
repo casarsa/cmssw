@@ -153,14 +153,15 @@ int main() {
 
 */
 
-edm::ParameterSet emptyPSet;
-CastorDbService calibratorHandle(emptyPSet);
+  CastorDbService calibratorHandle;
 
 //  CastorDbService calibratorHandle;
   calibratorHandle.setData(&pedestals);
   calibratorHandle.setData(&pedestalWidths);
   calibratorHandle.setData(&gains);
   calibratorHandle.setData(&gainWidths);
+  calibratorHandle.buildCalibrations();
+  calibratorHandle.buildCalibWidths();
   cout << "set data" << std::endl;
   bool addNoise = false;
 
@@ -174,7 +175,7 @@ CastorDbService calibratorHandle(emptyPSet);
 
   castorDigitizer.setDetIds(hcastorDetIds);
   cout << "setDetIds" << std::endl;
-  auto_ptr<CastorDigiCollection> castorResult(new CastorDigiCollection);
+  unique_ptr<CastorDigiCollection> castorResult(new CastorDigiCollection);
   cout << "castorResult" << std::endl;
   cout << "test hit correction" << std::endl;
   //something breaks here!

@@ -27,7 +27,8 @@ class MatchJet {
   /// match the collections
   void matchCollections(const edm::RefToBaseVector<reco::Jet> & refJets,
                         const edm::RefToBaseVector<reco::Jet> & recJets,
-                        const edm::EventSetup & es);
+			const reco::JetCorrector * corrector
+                        );
 
   /// Returns the matched "reference" jet
   edm::RefToBase<reco::Jet>
@@ -42,8 +43,8 @@ class MatchJet {
   CorrectJet recJetCorrector;
 
   double maxChi2;
-  double sigmaDeltaR;
-  double sigmaDeltaE;
+  double sigmaDeltaR2;
+  double sigmaDeltaE2;
   double threshold;
 };
 

@@ -49,22 +49,20 @@ class L1GctElectronSorter : public L1GctProcessor
   
   /// comparison operator for sort, used here and in the ElectronFinalSort
   /// Candidates of equal rank are sorted by priority, with the lower value given precedence
-  struct rank_gt : public std::binary_function<prioritisedEmCand, prioritisedEmCand, bool> {
-    bool operator()(const prioritisedEmCand& x, const prioritisedEmCand& y) {
-      return ( x.rank() > y.rank() || ( (x.rank() == y.rank()) && (x.priority < y.priority) ) ) ;
-    }
-  };
+  static bool rankByGt(const prioritisedEmCand& x, const prioritisedEmCand& y) {
+    return ( x.rank() > y.rank() || ( (x.rank() == y.rank()) && (x.priority < y.priority) ) ) ;
+  }
 
   /// constructor; set type (isolated or non-isolated)
   L1GctElectronSorter(int nInputs, bool iso);
   ///   
-  ~L1GctElectronSorter();
+  ~L1GctElectronSorter() override;
   ///
   /// get input data from sources
-  virtual void fetchInput();
+  void fetchInput() override;
   ///
   /// process the data, fill output buffers
-  virtual void process();
+  void process() override;
   ///
   /// set input candidate
   void setInputEmCand(const L1CaloEmCand& cand);
@@ -80,11 +78,11 @@ class L1GctElectronSorter : public L1GctProcessor
  protected:
 
   /// Separate reset methods for the processor itself and any data stored in pipelines
-  virtual void resetProcessor();
-  virtual void resetPipelines() {}
+  void resetProcessor() override;
+  void resetPipelines() override {}
 
   /// Initialise inputs with null objects for the correct bunch crossing if required
-  virtual void setupObjects();
+  void setupObjects() override;
 
  private:
   ///

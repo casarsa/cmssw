@@ -1,11 +1,13 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 import optparse
 import commands
 import pprint
 import re
 import os
 import sys
+import six
 
 piecesRE     = re.compile (r'(.+?)\s+"(\S+)"\s+"(\S*)"\s+"(\S+)"')
 #colonRE      = re.compile (r':+')
@@ -132,7 +134,7 @@ if __name__ == "__main__":
     # import this until command line options are parsed.
     from Validation.Tools.GenObject import GenObject
     if len (args) < 1 or len (args) > 2:
-        raise RuntimeError, "You must provide 1 or 2 root files"
+        raise RuntimeError("You must provide 1 or 2 root files")
 
     ###########################
     ## Check Queuing Options ##
@@ -149,8 +151,8 @@ if __name__ == "__main__":
         # make sure we aren't trying to use options that should not be
         # used with the queueing system
         if options.compRoot or options.summary or options.summaryFull:
-            raise RuntimeError, "You can not use --compRoot or --summary "\
-                  "in --queue mode"
+            raise RuntimeError("You can not use --compRoot or --summary "\
+                  "in --queue mode")
 
     ##############################
     ## Make Sure CMSSW is Setup ##
@@ -158,7 +160,7 @@ if __name__ == "__main__":
     base         = os.environ.get ('CMSSW_BASE')
     release_base = os.environ.get ('CMSSW_RELEASE_BASE')
     if not base or not release_base:
-        raise RuntimeError, "You must have already setup a CMSSW environment."
+        raise RuntimeError("You must have already setup a CMSSW environment.")
     # find command
     found = False
     for directory in [base, release_base]:
@@ -167,17 +169,17 @@ if __name__ == "__main__":
             found = True
             break
     if not found:
-        raise RuntimeError, "Can not find %s" % command
+        raise RuntimeError("Can not find %s" % command)
     if not options.noQueue:
         fullCommand = queueCommand % fullCommand
     if not os.path.isdir (logDir):
         os.mkdir (logDir)
         if not os.path.isdir (logDir):
-            raise RuntimeError, "Can't create %s directory" % logDir
+            raise RuntimeError("Can't create %s directory" % logDir)
     if options.compRoot and not os.path.isdir (compRootDir):
         os.mkdir (compRootDir)
         if not os.path.isdir (compRootDir):
-            raise RuntimeError, "Can't create %s directory" % compRootDir
+            raise RuntimeError("Can't create %s directory" % compRootDir)
     logPrefix      = logDir      + '/'
     compRootPrefix = compRootDir + '/'
     if options.prefix:
@@ -189,36 +191,36 @@ if __name__ == "__main__":
     else:
         filename2 = filename1
     if not os.path.exists (filename1) or not os.path.exists (filename2):
-        raise RuntimeError, "Can not find '%s' or '%s'" % (filename1, filename2)
+        raise RuntimeError("Can not find '%s' or '%s'" % (filename1, filename2))
     # if verboseDebug is set, set verbose as well
     if options.verboseDebug:
         options.verbose = True
     if options.verbose:
-        print "files", filename1, filename2
+        print("files", filename1, filename2)
     if options.singletons and not options.describeOnly:
-        raise RuntimeError, "--singletons can only be used with "\
-              "--describeOnly option"
+        raise RuntimeError("--singletons can only be used with "\
+              "--describeOnly option")
     if options.privateMemberData and not options.describeOnly:
-        raise RuntimeError, "--privateMemberData can only be used with "\
-              "--describeOnly option"
+        raise RuntimeError("--privateMemberData can only be used with "\
+              "--describeOnly option")
     if options.singletons:
         containerList.append (singletonRE)
 
     #############################
     ## Run edmDumpEventContent ##
     #############################
-    print "Getting edmDumpEventContent output"
+    print("Getting edmDumpEventContent output")
     regexLine = ""
     for regex in options.regex:
         regexLine += ' "--regex=%s"' % regex
     dumpCommand = 'edmDumpEventContent %s %s' % (regexLine, filename1)
     if options.verboseDebug:
-        print dumpCommand, '\n'
+        print(dumpCommand, '\n')
     output = commands.getoutput (dumpCommand).split("\n")
     if not len(output):
-        raise RuntimeError, "No output from edmDumpEventContent."
+        raise RuntimeError("No output from edmDumpEventContent.")
     if options.verboseDebug:
-        print "output:\n", "\n".join(output)
+        print("output:\n", "\n".join(output))
     collection = {}
     total = failed = skipped = useless = 0
     for line in output:
@@ -236,7 +238,7 @@ if __name__ == "__main__":
    #########################################
    ## Run useReflexToDescribeForGenObject ##
    #########################################
-    for key, value in sorted (collection.iteritems()):
+    for key, value in sorted (six.iteritems(collection)):
         name      = value[0].name
         prettyName = nonAlphaRE.sub('', name)
         descriptionName = prettyName + '.txt'
@@ -244,7 +246,7 @@ if __name__ == "__main__":
                and os.path.getsize (descriptionName) \
                and not options.forceDescribe:
             if options.verbose:
-                print '%s exists.  Skipping' % descriptionName
+                print('%s exists.  Skipping' % descriptionName)
             continue
         #print name, prettyName, key
         describeCmd = "%s %s %s useReflexToDescribeForGenObject.py %s '--type=%s'" \
@@ -255,29 +257,29 @@ if __name__ == "__main__":
         if options.precision:
             describeCmd += " --precision=" + options.precision
         if options.verbose:
-            print "describing %s" % name
+            print("describing %s" % name)
         if options.verboseDebug:
-            print describeCmd, '\n'
+            print(describeCmd, '\n')
         returnCode = os.system (describeCmd)
         if returnCode:
             # return codes are shifted by 8 bits:
             if returnCode == GenObject.uselessReturnCode << 8:
                 useless += 1
             else:
-                print "Error trying to describe '%s'.  Continuing.\n" % \
-                      (name)
+                print("Error trying to describe '%s'.  Continuing.\n" % \
+                      (name))
                 failed += 1
     if options.describeOnly:
-        print "Total: %3d  Skipped: %3d   Failed: %3d  Useless: %3d" % \
-              (total, skipped, failed, useless)
+        print("Total: %3d  Skipped: %3d   Failed: %3d  Useless: %3d" % \
+              (total, skipped, failed, useless))
         if not options.noQueue:
-            print "Note: Failed not recorded when using queuing system."
+            print("Note: Failed not recorded when using queuing system.")
         sys.exit()
 
     ##################################
     ## Run edmOneToOneComparison.py ##
     ##################################
-    for key, value in sorted (collection.iteritems()):
+    for key, value in sorted (six.iteritems(collection)):
         #print "%-40s" % key,
         for obj in value:
             # print "  ", obj.label(),
@@ -309,9 +311,9 @@ if __name__ == "__main__":
             if options.strictPairing:
                 fullCompareCmd += ' --strictPairing'
             if options.verbose:
-                print "comparing branch %s %s" % (name, obj.label())
+                print("comparing branch %s %s" % (name, obj.label()))
             if options.verboseDebug:
-                print fullCompareCmd,'\n'
+                print(fullCompareCmd,'\n')
             os.system (fullCompareCmd)
 
     ##################################
@@ -328,5 +330,5 @@ if __name__ == "__main__":
             summaryOptions = '--counts'
         summaryCmd = 'summarizeEdmComparisonLogfiles.py %s %s logfiles' \
                      % (summaryOptions, summaryMask)
-        print summaryCmd
-        print commands.getoutput (summaryCmd)
+        print(summaryCmd)
+        print(commands.getoutput (summaryCmd))

@@ -6,9 +6,11 @@
 // The modifications for EvtGen 1.3.0 are implemented by Ian M. Nugent
 // I would like to thank the EvtGen developers, in particular John Black, and Mikhail Kirsanov for their assistance.
 //
+// January 2015: Setting of coherent or incoherent B mixing included by Eduard Burelo 
+// January 2015: Adding new feature to allow users to provide new evtgen models
 
-
-#include "GeneratorInterface/EvtGenInterface/interface/EvtGenInterface.h"
+#include "GeneratorInterface/EvtGenInterface/plugins/EvtGenUserModels/EvtModelUserReg.h"
+#include "GeneratorInterface/EvtGenInterface/plugins/EvtGen/EvtGenInterface.h"
 
 #include "GeneratorInterface/EvtGenInterface/interface/EvtGenFactory.h"
 #include "GeneratorInterface/EvtGenInterface/interface/myEvtRandomEngine.h"
@@ -22,7 +24,8 @@
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Run.h"
-#include "Utilities/General/interface/FileInPath.h"
+#include "FWCore/ParameterSet/interface/FileInPath.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "CLHEP/Random/RandFlat.h"
 #include "DataFormats/GeometryVector/interface/GlobalVector.h"
@@ -41,7 +44,11 @@
 
 #include "TString.h"
 #include <string>
-#include <stdlib.h> 
+#include <cstdlib> 
+#include <cstdio>
+
+#include "boost/filesystem.hpp"
+#include "boost/filesystem/path.hpp"
 
 using namespace gen;
 using namespace edm;
@@ -65,7 +72,7 @@ void EvtGenInterface::SetDefault_m_PDGs(){
   m_PDGs.push_back( 523 ) ;
   m_PDGs.push_back( 513 ) ;
   m_PDGs.push_back( 533 ) ;
-  m_PDGs.push_back( 531 ) ;
+  m_PDGs.push_back( 531 ) ; //B_s0
   
   m_PDGs.push_back( 15 ) ;
   
@@ -284,6 +291,10 @@ EvtGenInterface::~EvtGenInterface(){
 }
 
 void EvtGenInterface::init(){
+  // flags for pythia8
+  fSpecialSettings.push_back("Pythia8:ParticleDecays:mixB = off");
+  //
+
   edm::FileInPath decay_table(fPSet->getParameter<std::string>("decay_table"));
   edm::FileInPath pdt(fPSet->getParameter<edm::FileInPath>("particle_property_file"));
 
@@ -294,15 +305,16 @@ void EvtGenInterface::init(){
   //Setup evtGen following instructions on http://evtgen.warwick.ac.uk/docs/external/ 
   bool convertPythiaCodes=fPSet->getUntrackedParameter<bool>("convertPythiaCodes",true); // Specify if we want to use Pythia 6 physics codes for decays
   std::string pythiaDir = getenv ("PYTHIA8DATA"); // Specify the pythia xml data directory to use the default PYTHIA8DATA location
-  if(pythiaDir==NULL){ 
-    std::cout << "EvtGenInterface::init() PYTHIA8DATA not defined. Terminating program " << std::endl; exit(0);
+  if(pythiaDir.empty()){
+    edm::LogError("EvtGenInterface::~EvtGenInterface") << "EvtGenInterface::init() PYTHIA8DATA not defined. Terminating program "; 
+    exit(0);
   }
   std::string photonType("gamma");                // Specify the photon type for Photos
   bool useEvtGenRandom(true);                     // Specify if we want to use the EvtGen random number engine for these generators
   
   // Set up the default external generator list: Photos, Pythia and/or Tauola
   EvtExternalGenList genList(convertPythiaCodes, pythiaDir, photonType, useEvtGenRandom);
-  EvtAbsRadCorr* radCorrEngine=0; 
+  EvtAbsRadCorr* radCorrEngine=nullptr; 
   if(usePhotos) radCorrEngine = genList.getPhotosModel(); // Get interface to radiative correction engine
   std::list<EvtDecayBase*> extraModels = genList.getListOfModels(); // get interface to Pythia and Tauola
   std::list<EvtDecayBase*> myExtraModels;
@@ -313,18 +325,58 @@ void EvtGenInterface::init(){
     if(name.Contains("PYTHIA") && usePythia) myExtraModels.push_back(*it);
     if(name.Contains("TAUOLA") && useTauola) myExtraModels.push_back(*it);
   }
+
+  //Set up user evtgen models
   
+  EvtModelUserReg userList; 
+  std::list<EvtDecayBase*> userModels = userList.getUserModels(); // get interface to user models
+  for(unsigned int i=0; i<userModels.size();i++){
+    std::list<EvtDecayBase*>::iterator it = userModels.begin();
+    std::advance(it,i);
+    TString name=(*it)->getName();
+    edm::LogInfo("EvtGenInterface::~EvtGenInterface") << "Adding user model: "<<name;
+    myExtraModels.push_back(*it);
+  }
+  
+
+  
+  // Set up the incoherent (1) or coherent (0) B mixing option
+  BmixingOption = fPSet->getUntrackedParameter<int>("B_Mixing",1);
+  if(BmixingOption!=0 && BmixingOption!=1){
+   throw cms::Exception("Configuration") << "EvtGenProducer requires B_Mixing to be 0 (coherent) or 1 (incoherent) \n"
+     "Please fix this in your configuration.";
+  }
+
   //////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Create the EvtGen generator object, passing the external generators
-  m_EvtGen = new EvtGen(decay_table.fullPath().c_str(),pdt.fullPath().c_str(),the_engine,radCorrEngine,&myExtraModels);
+  m_EvtGen = new EvtGen(decay_table.fullPath().c_str(),pdt.fullPath().c_str(),the_engine,radCorrEngine,&myExtraModels,BmixingOption);
   
   // Add additional user information
   if (fPSet->exists("user_decay_file")){
-    std::vector<std::string> user_decays = fPSet->getParameter<std::vector<std::string> >("user_decay_files");
+    std::vector<std::string> user_decays = fPSet->getParameter<std::vector<std::string> >("user_decay_file");
     for(unsigned int i=0;i<user_decays.size();i++){
       edm::FileInPath user_decay(user_decays.at(i)); 
       m_EvtGen->readUDecay(user_decay.fullPath().c_str());
     }
+  }
+
+  if (fPSet->exists("user_decay_embedded")){
+    std::vector<std::string> user_decay_lines = fPSet->getParameter<std::vector<std::string> >("user_decay_embedded");
+    auto tmp_dir = boost::filesystem::temp_directory_path();
+    tmp_dir += "/%%%%-%%%%-%%%%-%%%%";
+    auto tmp_path = boost::filesystem::unique_path(tmp_dir);
+    std::string user_decay_tmp = std::string(tmp_path.c_str());
+    FILE* tmpf = std::fopen(user_decay_tmp.c_str(), "w");
+    if (!tmpf) {
+        edm::LogError("EvtGenInterface::~EvtGenInterface") << "EvtGenInterface::init() fails when trying to open a temporary file for embedded user.dec. Terminating program ";
+        exit(0);
+    }
+    for (unsigned int i=0; i<user_decay_lines.size(); i++) {
+        user_decay_lines.at(i) += "\n";
+        std::fputs(user_decay_lines.at(i).c_str(), tmpf);
+    }
+    std::fclose(tmpf);
+    m_EvtGen->readUDecay(user_decay_tmp.c_str());
   }
 
   // setup pdgid which the generator/hadronizer should not decay
@@ -332,17 +384,17 @@ void EvtGenInterface::init(){
     std::vector<int> tmpPIDs = fPSet->getParameter< std::vector<int> >("operates_on_particles");
     m_PDGs.clear();
     bool goodinput=false;
-    if(tmpPIDs.size()>0){ if(tmpPIDs.size()==1 && tmpPIDs[0]==0) goodinput=false;}
+    if(!tmpPIDs.empty()){ if(tmpPIDs.size()==1 && tmpPIDs[0]==0) goodinput=false;
+                          else goodinput=true;
+                        }
     else{goodinput=false;}
     if(goodinput) m_PDGs = tmpPIDs;
     else SetDefault_m_PDGs();
   }
   else SetDefault_m_PDGs();
 
-
-
   for(unsigned int i=0;i<m_PDGs.size();i++){
-    std::cout << "EvtGenInterface::init() Particles to Operate on: " << m_PDGs[i] << std::endl;
+    edm::LogInfo("EvtGenInterface::~EvtGenInterface") << "EvtGenInterface::init() Particles to Operate on: " << m_PDGs[i];
   }
 
   // Obtain information to set polarization of particles 
@@ -370,7 +422,10 @@ void EvtGenInterface::init(){
       forced_pdgids.push_back(EvtPDL::getStdHep(found));   // force_pdgids is the list of stdhep codes
     }
   }
-
+  edm::LogInfo("EvtGenInterface::~EvtGenInterface") << "Number of Forced Paricles is: " << forced_pdgids.size() << std::endl;
+  for(unsigned int j=0;j<forced_id.size();j++){
+    edm::LogInfo("EvtGenInterface::~EvtGenInterface") << "Forced Paricles are: " << forced_pdgids.at(j) << " " << forced_id.at(j) << std::endl;
+  }
   // Ignore decays are particles that are not to be decayed by EvtGen
   if (fPSet->exists("list_ignored_pdgids")){
     ignore_pdgids = fPSet->getUntrackedParameter< std::vector<int> >("list_ignored_pdgids");
@@ -388,35 +443,85 @@ HepMC::GenEvent* EvtGenInterface::decay( HepMC::GenEvent* evt ){
       << "the event and beginLuminosityBlock methods, which is not allowed.\n";
   }
   CLHEP::RandFlat m_flat(*the_engine->engine(), 0., 1.);
-  
+
+  // decay all request unforced particles and store the forced decays to later decay one per event
+  unsigned int nisforced=0;
+  std::vector<std::vector<HepMC::GenParticle*> > forcedparticles;
+  for(unsigned int i=0;i<forced_pdgids.size();i++) forcedparticles.push_back(std::vector<HepMC::GenParticle*>());
+
+  // notice this is a dynamic loop
   for (HepMC::GenEvent::particle_const_iterator p= evt->particles_begin(); p != evt->particles_end(); ++p){
     if((*p)->status()==1){                                // all particles to be decays are set to status 1 by generator.hadronizer
       int idHep = (*p)->pdg_id();
-      EvtId idEvt = EvtPDL::evtIdFromStdHep(idHep);
-      for(unsigned int i=0;i<forced_pdgids.size();i++){             // First check if part with forced decay in that case do not decay immediately 
-	if(idHep == forced_pdgids[i]){
-	  idEvt = forced_id[i];
+      bool isignore=false;
+      for(unsigned int i=0;i<ignore_pdgids.size();i++){
+	if(idHep==ignore_pdgids[i])isignore=true;
+      }
+      if (!isignore){
+        bool isforced=false;
+	for(unsigned int i=0;i<forced_pdgids.size();i++){
+          if(idHep==forced_pdgids[i]){
+            forcedparticles.at(i).push_back(*p);      // storing and counting forced decays.
+            nisforced++;
+            isforced=true;
+            break;
+          }
+        }
+        bool isDefaultEvtGen=false;
+	for(unsigned int i=0;i<m_PDGs.size();i++){
+	  if(abs(idHep)==abs(m_PDGs[i])){
+	    isDefaultEvtGen=true;
+	    break;
+	  }
+	}
+        EvtId idEvt = EvtPDL::evtIdFromStdHep(idHep);
+	int ipart = idEvt.getId();
+	EvtDecayTable *evtDecayTable=EvtDecayTable::getInstance();
+	if(!isforced && isDefaultEvtGen && ipart!=-1 && evtDecayTable->getNMode(ipart)!=0){
+	  addToHepMC(*p,idEvt,evt,true);                // generate decay and remove daugther if they are forced
 	}
       }
-      int ipart = idEvt.getId();
-      if (ipart==-1) continue;                           // particle not known to EvtGen       
-      EvtDecayTable *evtDecayTable=EvtDecayTable::getInstance();
-      if (evtDecayTable->getNMode(ipart)==0) continue;   // particles stable for EvtGen
-      addToHepMC(*p,idEvt,evt);                     // generate decay
     }
   }
+
+  // decay all forced particles (only 1/event is forced)... with no mixing allowed
+  unsigned int which = (unsigned int)(nisforced*flat());
+  if(which==nisforced && nisforced>0) which=nisforced-1;
+
+  unsigned int idx=0;
+  for (unsigned int i=0; i<forcedparticles.size(); i++){
+    for (unsigned int j=0; j<forcedparticles.at(i).size(); j++){
+      EvtId idEvt = EvtPDL::evtIdFromStdHep(forcedparticles.at(i).at(j)->pdg_id()); // "standard" decay Id
+      if ( idx==which ) {
+        idEvt = forced_id[i];              // force decay Id
+        edm::LogInfo("EvtGenInterface::decay ") << EvtPDL::getStdHep(idEvt) << " will force to decay " << idx+1
+             << " out of " << nisforced  << std::endl;        
+      }
+      bool decayed = false;
+      while(!decayed){decayed=addToHepMC(forcedparticles.at(i).at(j),idEvt,evt,false);} 
+      idx++;
+    }
+  }
+
+  // add code to ensure all particles have an end vertex and if they are undecayed with no end vertes set to status 1
+  for (HepMC::GenEvent::particle_const_iterator p= evt->particles_begin(); p != evt->particles_end(); ++p){
+    if((*p)->end_vertex() && (*p)->status() == 1)edm::LogWarning("EvtGenInterface::decay error: incorrect status!"); //(*p)->set_status(2);
+    if((*p)->end_vertex() && (*p)->end_vertex()->particles_out_size()==0) edm::LogWarning("EvtGenInterface::decay error: empty end vertex!");
+  } 
   return evt;
 }
 
 // Add particle to MC
-void EvtGenInterface::addToHepMC(HepMC::GenParticle* partHep,const EvtId &idEvt, HepMC::GenEvent* theEvent){
+bool EvtGenInterface::addToHepMC(HepMC::GenParticle* partHep,const EvtId &idEvt, HepMC::GenEvent* theEvent, bool del_daug) {
   // Set up the parent particle from the HepMC GenEvent tree. 
   //EvtVector4R pInit(EvtPDL::getMass(idEvt),partHep->momentum().px(),partHep->momentum().py(),partHep->momentum().pz());
   EvtVector4R pInit(partHep->momentum().e(),partHep->momentum().px(),partHep->momentum().py(),partHep->momentum().pz()); 
   EvtParticle* parent = EvtParticleFactory::particleFactory(idEvt, pInit);
+  HepMC::FourVector posHep = (partHep->production_vertex())->position();
+  EvtVector4R vInit(posHep.t(),posHep.x(),posHep.y(),posHep.z());
   // Reset polarization if requested....
   if(EvtPDL::getSpinType(idEvt) == EvtSpinType::DIRAC && polarizations.count(partHep->pdg_id())>0){
-    HepMC::FourVector momHep = partHep->momentum();
+    const HepMC::FourVector& momHep = partHep->momentum();
     EvtVector4R momEvt;
     momEvt.set(momHep.t(),momHep.x(),momHep.y(),momHep.z());
     // Particle is spin 1/2, so we can polarize it. Check polarizations map for particle, grab its polarization if it exists
@@ -437,18 +542,22 @@ void EvtGenInterface::addToHepMC(HepMC::GenParticle* partHep,const EvtId &idEvt,
   if(parent){
     // Generate the event
      m_EvtGen->generateDecay(parent);
-    
-    // Write out the results
+     if (del_daug) go_through_daughters(parent);  // will delete all daugthers which are listed as forced, to allow decay them later 
+
+    // create HepMCTree
     EvtHepMCEvent evtHepMCEvent;
-    evtHepMCEvent.constructEvent(parent);
+    evtHepMCEvent.constructEvent(parent,vInit);
     HepMC::GenEvent* evtGenHepMCTree = evtHepMCEvent.getEvent();
+    parent->deleteTree();
 
     // update the event using a recursive function
     if(!evtGenHepMCTree->particles_empty()) update_particles(partHep,theEvent,(*evtGenHepMCTree->particles_begin()));
 
-    //clean up
-    parent->deleteTree();
+  } else {
+    // this should never hapend, in such case, speak out.
+    return false;
   }
+  return true;
 }        
 
 //Recursivley add EvtGen decay to to Event Decy tree
@@ -459,33 +568,17 @@ void EvtGenInterface::update_particles(HepMC::GenParticle* partHep,HepMC::GenEve
       theEvent->add_vertex(vtx);
       vtx->add_particle_in(partHep);
     }
-    if(p->end_vertex()->particles_out_size()!=0){
-      for(HepMC::GenVertex::particles_out_const_iterator d=p->end_vertex()->particles_out_const_begin(); d!=p->end_vertex()->particles_out_const_end();d++){
+    if ( p->end_vertex()->particles_out_size()!=0 ){
+      
+      for ( HepMC::GenVertex::particles_out_const_iterator d=p->end_vertex()->particles_out_const_begin(); 
+            d!=p->end_vertex()->particles_out_const_end();d++ ){
 
-	// Create daughter and add to event
-	HepMC::GenParticle *daughter = new HepMC::GenParticle((*d)->momentum(),(*d)->pdg_id(),(*d)->status());
-	daughter->suggest_barcode(theEvent->particles_size()+1);
-	partHep->end_vertex()->add_particle_out(daughter);
-	
-        // Ensure forced decays are done with the alias
-        bool isforced=false;
-        for(unsigned int i=0;i<forced_pdgids.size();i++){
-          if(daughter->pdg_id()==forced_pdgids[i]){
-            addToHepMC(daughter,forced_id[i],theEvent);
-            break;
-          }
-        }
-        if(isforced)continue;
-
-	// check to see if particle is on list of patricles not be decayed by EvtGen
-	bool isignore=false;
-	for(unsigned int i=0;i<ignore_pdgids.size();i++){
-	  if(daughter->pdg_id()==ignore_pdgids[i])isignore=true;
-	}
-	
-	// Recursively add daughters
-	if((*d)->end_vertex() && !isignore) update_particles(daughter,theEvent,(*d));
+	  HepMC::GenParticle *daughter = new HepMC::GenParticle((*d)->momentum(),(*d)->pdg_id(),(*d)->status());
+          daughter->suggest_barcode(theEvent->particles_size()+1);
+          partHep->end_vertex()->add_particle_out(daughter);
+	  if((*d)->end_vertex()) update_particles(daughter,theEvent,(*d)); // if daugthers add them as well
       }
+      partHep->set_status(p->status());
     }
   }
 }
@@ -503,6 +596,51 @@ double EvtGenInterface::flat(){
       << "event and beginLuminosityBlock methods, which is not allowed.\n";
   }
   return fRandomEngine->flat();
+}
+
+
+bool EvtGenInterface::findLastinChain(HepMC::GenParticle* &p){
+  if(p->end_vertex()){
+    if(p->end_vertex()->particles_out_size()!=0){
+      for(HepMC::GenVertex::particles_out_const_iterator d=p->end_vertex()->particles_out_const_begin(); d!=p->end_vertex()->particles_out_const_end();d++){
+	if(abs((*d)->pdg_id())==abs(p->pdg_id())){
+	  p=*d;
+	  findLastinChain(p);
+	  return false;
+	}
+      }
+    }
+  }
+  return true;
+}
+
+bool EvtGenInterface::hasnoDaughter(HepMC::GenParticle* p){
+  if(p->end_vertex()){
+    if(p->end_vertex()->particles_out_size()!=0){
+      return false;
+    }
+  }
+  return true;
+}
+
+void EvtGenInterface::go_through_daughters(EvtParticle* part) {
+  int NDaug=part->getNDaug();
+  if (NDaug) {
+      EvtParticle* Daughter;
+      for (int i=0;i<NDaug;i++)	{
+	  Daughter=part->getDaug(i);
+          int idHep = Daughter->getPDGId();
+	  int found=0;
+          for (unsigned int j=0;j<forced_pdgids.size();j++) {
+              if (idHep == forced_pdgids[j]) {
+                 found = 1;
+                 Daughter->deleteDaughters();
+                 break;
+              }
+          }
+	  if (!found) go_through_daughters(Daughter);
+	}
+    }
 }
 
 DEFINE_EDM_PLUGIN(EvtGenFactory, gen::EvtGenInterface, "EvtGen130");

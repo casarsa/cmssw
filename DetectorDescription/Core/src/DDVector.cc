@@ -1,24 +1,21 @@
 #include "DetectorDescription/Core/interface/DDVector.h"
-//#include "DetectorDescription/Base/interface/DDException.h"
 
-// Evaluator 
-//#include "DetectorDescription/ExprAlgo/interface/ExprEvalSingleton.h"
+#include <utility>
 
+DDVector::DDVector()
+  : DDBase< DDName, std::unique_ptr<std::vector< double >>>()
+{}
 
-
-DDVector::DDVector() : DDBase<DDName,std::vector<double>*>() { }
-
-
-DDVector::DDVector(const DDName & name) : DDBase<DDName,std::vector<double>*>() 
+DDVector::DDVector( const DDName & name )
+  : DDBase< DDName, std::unique_ptr<std::vector< double >>>() 
 {
-  prep_ = StoreT::instance().create(name);
+  create( name );
 }
 
-DDVector::DDVector(const DDName & name,std::vector<double>* vals)
+DDVector::DDVector( const DDName & name, std::unique_ptr<std::vector<double> > vals )
 {
-  prep_ = StoreT::instance().create(name,vals);
+  create( name, std::move( vals ));
 }  
-
 
 std::ostream & operator<<(std::ostream & os, const DDVector & cons)
 {
@@ -37,9 +34,6 @@ std::ostream & operator<<(std::ostream & os, const DDVector & cons)
   }  
   return os;
 }
-
-
-
 
 DDVector::operator std::vector<int>() const
 {

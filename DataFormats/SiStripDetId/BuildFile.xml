@@ -1,4 +1,6 @@
-<use   name="rootrflx"/>
+<use   name="DataFormats/DetId"/>
+<use   name="DataFormats/TrackerCommon"/>
+
 <export>
   <lib   name="1"/>
 </export>

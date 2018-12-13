@@ -57,7 +57,7 @@ namespace fwliteeswriter {
       mutable const void* m_data;
    };
    struct Handle {
-      Handle(const DataInfo* iInfo): m_data(0), m_info(iInfo) {}
+      Handle(const DataInfo* iInfo): m_data(nullptr), m_info(iInfo) {}
       const void* m_data;
       const DataInfo* m_info;
       const edm::eventsetup::ComponentDescription* m_desc;
@@ -69,17 +69,17 @@ namespace edm {
    namespace eventsetup {
       
       template <> 
-      void EventSetupRecord::getImplementation<fwliteeswriter::DummyType>(fwliteeswriter::DummyType const *& iData ,
-                                                                          const char* iName,
-                                                                          const ComponentDescription*& iDesc,
-                                                                          bool iTransientAccessOnly,
-                                                                          std::shared_ptr<ESHandleExceptionFactory>& whyFailedFactory) const {
+      void EventSetupRecordImpl::getImplementation<fwliteeswriter::DummyType>(fwliteeswriter::DummyType const *& iData ,
+                                                                              const char* iName,
+                                                                              const ComponentDescription*& iDesc,
+                                                                              bool iTransientAccessOnly,
+                                                                              std::shared_ptr<ESHandleExceptionFactory>& whyFailedFactory) const {
          DataKey dataKey(*(iData->m_tag),
                          iName,
                          DataKey::kDoNotCopyMemory);
          
          const void* pValue = this->getFromProxy(dataKey,iDesc,iTransientAccessOnly);
-         if(0==pValue) {
+         if(nullptr==pValue) {
 	   throw cms::Exception("NoProxyException")<<"No data of type \""<<iData->m_tag->name()<<"\" with label \""<<
 	     iName<<"\" in record \""<<this->key().name()<<"\"";
          }
@@ -87,15 +87,16 @@ namespace edm {
       }
       
       template<>
-      void EventSetupRecord::get<fwliteeswriter::Handle>(const std::string& iName, fwliteeswriter::Handle& iHolder) const {
+      bool EventSetupRecord::get<fwliteeswriter::Handle>(const std::string& iName, fwliteeswriter::Handle& iHolder) const {
          fwliteeswriter::DummyType t;
          t.m_tag = &(iHolder.m_info->m_tag);
          const fwliteeswriter::DummyType* value = &t;
-         const ComponentDescription* desc = 0;
+         const ComponentDescription* desc = nullptr;
          std::shared_ptr<ESHandleExceptionFactory> dummy;
-         this->getImplementation(value, iName.c_str(),desc,true, dummy);
+         impl_->getImplementation(value, iName.c_str(),desc,true, dummy);
          iHolder.m_data = t.m_data;
          iHolder.m_desc = desc;
+         return true;
       }
       
    }
@@ -110,16 +111,16 @@ namespace  {
                     TFile* iFile,
                     std::vector<DataInfo>& ioInfo):
       m_key(iRec),
-      m_record(0),
+      m_record(),
       m_writer(m_key.name(),iFile),
       m_cacheID(0) {
          m_dataInfos.swap(ioInfo);
       }
       
       void update(const edm::EventSetup& iSetup) {
-         if(0==m_record) {
+         if(not m_record) {
             m_record = iSetup.find(m_key);
-            assert(0!=m_record);
+            assert(m_record);
          }
          if(m_cacheID != m_record->cacheIdentifier()) {
             m_cacheID = m_record->cacheIdentifier();
@@ -139,7 +140,7 @@ namespace  {
       }
    private:
       edm::eventsetup::EventSetupRecordKey m_key;
-      const edm::eventsetup::EventSetupRecord* m_record;
+     std::optional<edm::eventsetup::EventSetupRecordGeneric> m_record;
       fwlite::RecordWriter m_writer;
       unsigned long long m_cacheID;
       std::vector<DataInfo> m_dataInfos;
@@ -150,20 +151,20 @@ namespace  {
 class FWLiteESRecordWriterAnalyzer : public edm::EDAnalyzer {
    public:
       explicit FWLiteESRecordWriterAnalyzer(const edm::ParameterSet&);
-      ~FWLiteESRecordWriterAnalyzer();
+      ~FWLiteESRecordWriterAnalyzer() override;
 
 
    private:
-      virtual void beginJob() override ;
-      virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-      virtual void endJob() override ;
-      virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
-      virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
+      void beginJob() override ;
+      void analyze(const edm::Event&, const edm::EventSetup&) override;
+      void endJob() override ;
+      void beginRun(edm::Run const&, edm::EventSetup const&) override;
+      void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
    
       void update(const edm::EventSetup&);
 
       // ----------member data ---------------------------
-   std::vector<boost::shared_ptr<RecordHandler> > m_handlers;
+   std::vector<std::shared_ptr<RecordHandler> > m_handlers;
    
    std::map<std::string, std::vector<std::pair<std::string,std::string> > > m_recordToDataNames;
    TFile* m_file;
@@ -183,7 +184,7 @@ class FWLiteESRecordWriterAnalyzer : public edm::EDAnalyzer {
 FWLiteESRecordWriterAnalyzer::FWLiteESRecordWriterAnalyzer(const edm::ParameterSet& iConfig)
 {
    std::vector<std::string> names = iConfig.getParameterNamesForType<std::vector<edm::ParameterSet> >(false);
-   if (0 == names.size()) {
+   if (names.empty()) {
       throw edm::Exception(edm::errors::Configuration)<<"No VPSets were given in configuration";
    }
    for (std::vector<std::string>::const_iterator it = names.begin(), itEnd=names.end(); it != itEnd; ++it) {
@@ -232,8 +233,8 @@ FWLiteESRecordWriterAnalyzer::update(const edm::EventSetup& iSetup)
          }
          edm::eventsetup::EventSetupRecordKey rKey(tt);
          
-         const edm::eventsetup::EventSetupRecord* rec = iSetup.find(tt);
-         if(0==rec) {
+         auto rec = iSetup.find(tt);
+         if(not rec) {
             throw cms::Exception("UnknownESRecordType")<<"The name '"<<it->first<<"' is not associated with a type which is not an EventSetupRecord.\n"
             "Please check your spelling.";
          }
@@ -267,11 +268,11 @@ FWLiteESRecordWriterAnalyzer::update(const edm::EventSetup& iSetup)
             }
             dataInfos.push_back(DataInfo(tt,itData->second));
          }
-         m_handlers.push_back( boost::shared_ptr<RecordHandler>( new RecordHandler(rKey,m_file,dataInfos) ) );
+         m_handlers.push_back( std::make_shared<RecordHandler>(rKey,m_file,dataInfos) );
       }
    }
    
-   for(std::vector<boost::shared_ptr<RecordHandler> >::iterator it = m_handlers.begin(),itEnd = m_handlers.end();
+   for(std::vector<std::shared_ptr<RecordHandler> >::iterator it = m_handlers.begin(),itEnd = m_handlers.end();
        it != itEnd;
        ++it) {
       (*it)->update(iSetup);

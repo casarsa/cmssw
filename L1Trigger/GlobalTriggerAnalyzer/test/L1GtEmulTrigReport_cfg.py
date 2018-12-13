@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # cfg file to run L1 Global Trigger emulator on a file containing the output of the 
 # GCT system and GMT system ("digi"), followed by the L1 trigger report
@@ -11,10 +12,11 @@ import sys
 
 process = cms.Process("L1GtEmulTrigReport")
 
-print '\n'
+# import number of events, sample and global tag 
+print('\n')
 from L1Trigger.GlobalTriggerAnalyzer.UserOptions_cff import *
 if errorUserOptions == True :
-    print '\nError returned by UserOptions_cff\n'
+    print('\nError returned by UserOptions_cff\n')
     sys.exit()
 
 # L1 menu selection via L1Trigger_custom - expert choice, do it only if you know what you do

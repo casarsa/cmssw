@@ -1,4 +1,4 @@
-#ifndef DataMixingPileupCopy_h
+#ifndef SimDataMixingPileupCopy_h
 #define SimDataMixingPileupCopy_h
 
 /** \class DataMixingPileupCopy
@@ -23,12 +23,15 @@
 #include "DataFormats/Common/interface/Handle.h"
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
-#include "SimDataFormats/CrossingFrame/interface/CrossingFramePlaybackInfoExtended.h"
+#include "SimDataFormats/CrossingFrame/interface/CrossingFramePlaybackInfoNew.h"
 
 #include <map>
 #include <vector>
 #include <string>
 
+namespace reco{
+  class GenParticle; 
+}
 
 namespace edm
 {
@@ -50,6 +53,7 @@ namespace edm
       void addPileupInfo(const edm::EventPrincipal*,unsigned int EventId,
                          ModuleCallingContext const* mcc);
 
+      void getPileupInfo(std::vector<PileupSummaryInfo> &ps, int &bs) { ps=PileupSummaryStorage_; bs=bsStorage_;}
 
     private:
 
@@ -57,13 +61,18 @@ namespace edm
 
 
       edm::InputTag PileupInfoInputTag_ ;     // InputTag for PileupSummaryInfo
+      edm::InputTag BunchSpacingInputTag_ ;     // InputTag for bunch spacing int
       edm::InputTag CFPlaybackInputTag_   ;   // InputTag for CrossingFrame Playback information
 
+      std::vector<edm::InputTag> GenPUProtonsInputTags_ ;
    
-      CrossingFramePlaybackInfoExtended CrossingFramePlaybackStorage_;
+      CrossingFramePlaybackInfoNew CrossingFramePlaybackStorage_;
 
       std::vector<PileupSummaryInfo> PileupSummaryStorage_;
+      int bsStorage_;
 
+      std::vector<std::string> GenPUProtons_labels_;
+      std::vector<std::vector<reco::GenParticle> > GenPUProtons_;
 
       //      unsigned int eventId_; //=0 for signal, from 1-n for pileup events
 
@@ -74,4 +83,4 @@ namespace edm
     };
 }//edm
 
-#endif
+#endif // SimDataMixingPileupCopy_h

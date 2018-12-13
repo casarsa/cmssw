@@ -7,12 +7,7 @@
 #include <map>
 #include <memory>
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Framework/interface/ConstProductRegistry.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/Provenance/interface/Provenance.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
 //
 //
 #include "DataMixingEMWorker.h"
@@ -80,7 +75,7 @@ namespace edm
 
    Handle< EBRecHitCollection > pEBRecHits;
 
-   const EBRecHitCollection*  EBRecHits = 0;
+   const EBRecHitCollection*  EBRecHits = nullptr;
 
    if(e.getByToken(EBRecHitToken_, pEBRecHits) ){
      EBRecHits = pEBRecHits.product(); // get a ptr to the product
@@ -107,7 +102,7 @@ namespace edm
 
    Handle< EERecHitCollection > pEERecHits;
 
-   const EERecHitCollection*  EERecHits = 0;
+   const EERecHitCollection*  EERecHits = nullptr;
 
    
    if(e.getByToken(EERecHitToken_, pEERecHits) ){
@@ -135,7 +130,7 @@ namespace edm
 
    Handle< ESRecHitCollection > pESRecHits;
 
-   const ESRecHitCollection*  ESRecHits = 0;
+   const ESRecHitCollection*  ESRecHits = nullptr;
 
    
    if(e.getByToken( ESRecHitToken_, pESRecHits) ){
@@ -253,9 +248,9 @@ namespace edm
   void DataMixingEMWorker::putEM(edm::Event &e) {
 
     // collection of rechits to put in the event
-    std::auto_ptr< EBRecHitCollection > EBrechits( new EBRecHitCollection );
-    std::auto_ptr< EERecHitCollection > EErechits( new EERecHitCollection );
-    std::auto_ptr< ESRecHitCollection > ESrechits( new ESRecHitCollection );
+    std::unique_ptr< EBRecHitCollection > EBrechits( new EBRecHitCollection );
+    std::unique_ptr< EERecHitCollection > EErechits( new EERecHitCollection );
+    std::unique_ptr< ESRecHitCollection > ESrechits( new ESRecHitCollection );
 
     // loop over the maps we have, re-making individual hits or digis if necessary.
     DetId formerID = 0;
@@ -376,9 +371,9 @@ namespace edm
     LogInfo("DataMixingEMWorker") << "total # EE Merged rechits: " << EErechits->size() ;
     LogInfo("DataMixingEMWorker") << "total # ES Merged rechits: " << ESrechits->size() ;
 
-    e.put( EBrechits, EBRecHitCollectionDM_ );
-    e.put( EErechits, EERecHitCollectionDM_ );
-    e.put( ESrechits, ESRecHitCollectionDM_ );
+    e.put(std::move(EBrechits), EBRecHitCollectionDM_ );
+    e.put(std::move(EErechits), EERecHitCollectionDM_ );
+    e.put(std::move(ESrechits), ESRecHitCollectionDM_ );
     
     // clear local storage after this event
 

@@ -77,51 +77,17 @@ ElectronConversionRejectionValidator::ElectronConversionRejectionValidator( cons
   beamspotToken_ = consumes<reco::BeamSpot>(
       pset.getUntrackedParameter<edm::InputTag> ("beamspot",
                                                  edm::InputTag("offlineBeamSpot")));
+
+  nEvt_=0;
+  nEntry_=0;
 }
-
-
-
-
 
 ElectronConversionRejectionValidator::~ElectronConversionRejectionValidator() {}
 
 
+void ElectronConversionRejectionValidator::bookHistograms(DQMStore::IBooker & ibooker,
+  edm::Run const &, edm::EventSetup const & ){
 
-
-void  ElectronConversionRejectionValidator::beginJob() {
-
-  nEvt_=0;
-  nEntry_=0;
-
-
-  dbe_ = 0;
-  dbe_ = edm::Service<DQMStore>().operator->();
-
-
-
-  //   double dPhiTracksMin = parameters_.getParameter<double>("dPhiTracksMin");
-  //   double dPhiTracksMax = parameters_.getParameter<double>("dPhiTracksMax");
-  //   int dPhiTracksBin = parameters_.getParameter<int>("dPhiTracksBin");
-
-  //   double eoverpMin = parameters_.getParameter<double>("eoverpMin");
-  //   double eoverpMax = parameters_.getParameter<double>("eoverpMax");
-  //   int    eoverpBin = parameters_.getParameter<int>("eoverpBin");
-
-
-  //  double dEtaTracksMin = parameters_.getParameter<double>("dEtaTracksMin");  // unused
-  //  double dEtaTracksMax = parameters_.getParameter<double>("dEtaTracksMax"); // unused
-  //  int    dEtaTracksBin = parameters_.getParameter<int>("dEtaTracksBin");  // unused
-
-  //   double dCotTracksMin = parameters_.getParameter<double>("dCotTracksMin");
-  //   double dCotTracksMax = parameters_.getParameter<double>("dCotTracksMax");
-  //   int    dCotTracksBin = parameters_.getParameter<int>("dCotTracksBin");
-
-
-
-}
-
-
-void ElectronConversionRejectionValidator::bookHistograms(void) {
   double ptMin = parameters_.getParameter<double>("ptMin");
   double ptMax = parameters_.getParameter<double>("ptMax");
   int ptBin = parameters_.getParameter<int>("ptBin");
@@ -146,56 +112,47 @@ void ElectronConversionRejectionValidator::bookHistograms(void) {
   double zMin = parameters_.getParameter<double>("zMin");
   double zMax = parameters_.getParameter<double>("zMax");
   int    zBin = parameters_.getParameter<int>("zBin");
-  if (dbe_) {
 
-    //// All MC photons
-    // SC from reco photons
+  //// All MC photons
+  // SC from reco photons
 
-    //TString simfolder = TString(
-    //std::string simpath = dqmpath_ + "SimulationInfo";
-    dbe_->setCurrentFolder(dqmpath_);
-    //
-    // simulation information about conversions
-    // Histograms for efficiencies
-    h_elePtAll_ = dbe_->book1D("elePtAll","# of Electrons",ptBin,ptMin,ptMax);
-    h_eleEtaAll_ = dbe_->book1D("eleEtaAll","# of Electrons",etaBin,etaMin,etaMax);
-    h_elePhiAll_ = dbe_->book1D("elePhiAll","# of Electrons",phiBin,phiMin,phiMax);
+  //TString simfolder = TString(
+  //std::string simpath = dqmpath_ + "SimulationInfo";
+  ibooker.setCurrentFolder(dqmpath_);
+  //
+  // simulation information about conversions
+  // Histograms for efficiencies
+  h_elePtAll_ = ibooker.book1D("elePtAll", "# of Electrons", ptBin, ptMin, ptMax);
+  h_eleEtaAll_ = ibooker.book1D("eleEtaAll", "# of Electrons", etaBin, etaMin, etaMax);
+  h_elePhiAll_ = ibooker.book1D("elePhiAll", "# of Electrons", phiBin, phiMin, phiMax);
 
-    h_elePtPass_ = dbe_->book1D("elePtPass","# of Electrons",ptBin,ptMin,ptMax);
-    h_eleEtaPass_ = dbe_->book1D("eleEtaPass","# of Electrons",etaBin,etaMin,etaMax);
-    h_elePhiPass_ = dbe_->book1D("elePhiPass","# of Electrons",phiBin,phiMin,phiMax);
+  h_elePtPass_ = ibooker.book1D("elePtPass", "# of Electrons", ptBin, ptMin, ptMax);
+  h_eleEtaPass_ = ibooker.book1D("eleEtaPass", "# of Electrons", etaBin, etaMin, etaMax);
+  h_elePhiPass_ = ibooker.book1D("elePhiPass", "# of Electrons", phiBin, phiMin, phiMax);
 
-    h_elePtFail_ = dbe_->book1D("elePtFail","# of Electrons",ptBin,ptMin,ptMax);
-    h_eleEtaFail_ = dbe_->book1D("eleEtaFail","# of Electrons",etaBin,etaMin,etaMax);
-    h_elePhiFail_ = dbe_->book1D("elePhiFail","# of Electrons",phiBin,phiMin,phiMax);
+  h_elePtFail_ = ibooker.book1D("elePtFail", "# of Electrons", ptBin, ptMin, ptMax);
+  h_eleEtaFail_ = ibooker.book1D("eleEtaFail", "# of Electrons",etaBin, etaMin, etaMax);
+  h_elePhiFail_ = ibooker.book1D("elePhiFail", "# of Electrons", phiBin, phiMin, phiMax);
 
-    h_convPt_ = dbe_->book1D("convPt","# of Electrons",ptBin,ptMin,ptMax);
-    h_convEta_ = dbe_->book1D("convEta","# of Electrons",etaBin,etaMin,etaMax);
-    h_convPhi_ = dbe_->book1D("convPhi","# of Electrons",phiBin,phiMin,phiMax);
-    h_convRho_ = dbe_->book1D("convRho","# of Electrons",rhoBin,rhoMin,rhoMax);
-    h_convZ_ = dbe_->book1D("convZ","# of Electrons",zBin,zMin,zMax);
-    h_convProb_ = dbe_->book1D("convProb","# of Electrons",100,0.0,1.0);
+  h_convPt_ = ibooker.book1D("convPt", "# of Electrons", ptBin, ptMin, ptMax);
+  h_convEta_ = ibooker.book1D("convEta", "# of Electrons", etaBin, etaMin, etaMax);
+  h_convPhi_ = ibooker.book1D("convPhi", "# of Electrons", phiBin, phiMin, phiMax);
+  h_convRho_ = ibooker.book1D("convRho", "# of Electrons", rhoBin, rhoMin, rhoMax);
+  h_convZ_ = ibooker.book1D("convZ", "# of Electrons", zBin, zMin, zMax);
+  h_convProb_ = ibooker.book1D("convProb", "# of Electrons", 100, 0.0, 1.0);
 
-    h_convLeadTrackpt_ = dbe_->book1D("convLeadTrackpt","# of Electrons",trackptBin,trackptMin,trackptMax);
-    h_convTrailTrackpt_ = dbe_->book1D("convTrailTrackpt","# of Electrons",trackptBin,trackptMin,trackptMax);
-    h_convLog10TrailTrackpt_ = dbe_->book1D("convLog10TrailTrackpt","# of Electrons",ptBin,-2.0,3.0);
+  h_convLeadTrackpt_ = ibooker.book1D("convLeadTrackpt", "# of Electrons", trackptBin,
+      trackptMin, trackptMax);
 
-    h_convLeadTrackAlgo_ = dbe_->book1D("convLeadTrackAlgo","# of Electrons",31,-0.5,30.5);
-    h_convTrailTrackAlgo_ = dbe_->book1D("convLeadTrackAlgo","# of Electrons",31,-0.5,30.5);
-  } // if DQM
+  h_convTrailTrackpt_ = ibooker.book1D("convTrailTrackpt", "# of Electrons", trackptBin,
+      trackptMin, trackptMax);
+
+  h_convLog10TrailTrackpt_ = ibooker.book1D("convLog10TrailTrackpt", "# of Electrons",
+      ptBin, -2.0, 3.0);
+
+  h_convLeadTrackAlgo_ = ibooker.book1D("convLeadTrackAlgo", "# of Electrons", reco::TrackBase::algoSize, -0.5, reco::TrackBase::algoSize-0.5);
+  h_convTrailTrackAlgo_ = ibooker.book1D("convLeadTrackAlgo", "# of Electrons", reco::TrackBase::algoSize, -0.5, reco::TrackBase::algoSize-0.5);
 }
-
-
-void ElectronConversionRejectionValidator::beginRun (edm::Run const & r,
-                                                      edm::EventSetup const & theEventSetup) {
-  bookHistograms();
-}
-
-void ElectronConversionRejectionValidator::endRun (edm::Run& r,
-                                                    edm::EventSetup const & theEventSetup) {
-}
-
-
 
 void ElectronConversionRejectionValidator::analyze( const edm::Event& e, const edm::EventSetup& esup ) {
 
@@ -251,7 +208,7 @@ void ElectronConversionRejectionValidator::analyze( const edm::Event& e, const e
     //apply basic pre-selection cuts to remove the conversions with obviously displaced tracks which will anyways be
     //removed from the analysis by the hit pattern or impact parameter requirements
     if (iele->pt() < elePtMin_) continue;
-    if (iele->gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS) > eleExpectedHitsInnerMax_) continue;
+    if (iele->gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS) > eleExpectedHitsInnerMax_) continue;
     if ( std::abs(iele->gsfTrack()->dxy(thevtx.position())) > eleD0Max_ ) continue;
 
     //fill information for all electrons
@@ -261,9 +218,9 @@ void ElectronConversionRejectionValidator::analyze( const edm::Event& e, const e
 
 
     //find matching conversion if any
-    reco::ConversionRef convref = ConversionTools::matchedConversion(*iele,convHandle,thebs.position());
+    reco::Conversion const* conv = ConversionTools::matchedConversion(*iele,*convHandle,thebs.position());
     //fill information on passing electrons only if there is no matching conversion (electron passed the conversion rejection cut!)
-    if (convref.isNull()) {
+    if (conv == nullptr) {
       h_elePtPass_->Fill(iele->pt());
       h_eleEtaPass_->Fill(iele->eta());
       h_elePhiPass_->Fill(iele->phi());
@@ -280,19 +237,19 @@ void ElectronConversionRejectionValidator::analyze( const edm::Event& e, const e
       h_elePhiFail_->Fill(iele->phi());
 
       //fill conversion info
-      math::XYZVectorF convmom = convref->refittedPairMomentum();
+      math::XYZVectorF convmom = conv->refittedPairMomentum();
       h_convPt_->Fill(convmom.rho());
       h_convEta_->Fill(convmom.eta());
       h_convPhi_->Fill(convmom.phi());
-      h_convRho_->Fill(convref->conversionVertex().position().rho());
-      h_convZ_->Fill(convref->conversionVertex().position().z());
-      h_convProb_->Fill(ChiSquaredProbability(convref->conversionVertex().chi2(),convref->conversionVertex().ndof()));
+      h_convRho_->Fill(conv->conversionVertex().position().rho());
+      h_convZ_->Fill(conv->conversionVertex().position().z());
+      h_convProb_->Fill(ChiSquaredProbability(conv->conversionVertex().chi2(),conv->conversionVertex().ndof()));
 
       //fill information about conversion tracks
-      if (convref->tracks().size()<2) continue;
+      if (conv->tracks().size()<2) continue;
 
-      RefToBase<reco::Track> tk1 = convref->tracks().front();
-      RefToBase<reco::Track> tk2 = convref->tracks().back();
+      RefToBase<reco::Track> tk1 = conv->tracks().front();
+      RefToBase<reco::Track> tk2 = conv->tracks().back();
 
       RefToBase<reco::Track> tklead;
       RefToBase<reco::Track> tktrail;
@@ -314,24 +271,3 @@ void ElectronConversionRejectionValidator::analyze( const edm::Event& e, const e
   }
 
 }
-
-
-
-
-
-void ElectronConversionRejectionValidator::endJob() {
-
-
-  std::string outputFileName = parameters_.getParameter<std::string>("OutputFileName");
-  if ( ! isRunCentrally_ ) {
-    dbe_->save(outputFileName);
-  }
-
-  edm::LogInfo("ElectronConversionRejectionValidator") << "Analyzed " << nEvt_  << "\n";
-  // std::cout  << "::endJob Analyzed " << nEvt_ << " events " << " with total " << nPho_ << " Photons " << "\n";
-  //  std::cout  << "ElectronConversionRejectionValidator::endJob Analyzed " << nEvt_ << " events " << "\n";
-
-  return ;
-}
-
-

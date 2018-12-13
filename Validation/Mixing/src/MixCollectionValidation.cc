@@ -55,7 +55,7 @@ void MixCollectionValidation::bookHistograms(DQMStore::IBooker & iBooker, edm::R
       nrHepMCProductH_ = iBooker.bookProfile(name,title,nbin_,minbunch_,maxbunch_+1,40,0.,40.);
 
       HepMCProductTags_ = tags;
-      if (HepMCProductTags_.size()) {
+      if (!HepMCProductTags_.empty()) {
         crossingFrame_Hep_Token_ = consumes<CrossingFrame<HepMCProduct> >(
             edm::InputTag("mix", HepMCProductTags_[0].label()));
       }
@@ -67,7 +67,7 @@ void MixCollectionValidation::bookHistograms(DQMStore::IBooker & iBooker, edm::R
       nrSimTrackH_ = iBooker.bookProfile(name,title,nbin_,minbunch_,maxbunch_+1,40,0.,40.);
 
       SimTrackTags_ = tags;
-      if (SimTrackTags_.size()) {
+      if (!SimTrackTags_.empty()) {
         crossingFrame_SimTr_Token_ = consumes<CrossingFrame<SimTrack> >(
             edm::InputTag("mix", SimTrackTags_[0].label()));
       }
@@ -79,7 +79,7 @@ void MixCollectionValidation::bookHistograms(DQMStore::IBooker & iBooker, edm::R
       nrSimVertexH_ = iBooker.bookProfile(name,title,nbin_,minbunch_,maxbunch_+1,40,0.,40.);
 
       SimVertexTags_ = tags;
-      if (SimVertexTags_.size()) {
+      if (!SimVertexTags_.empty()) {
         crossingFrame_SimVtx_Token_ = consumes<CrossingFrame<SimVertex> >(
             edm::InputTag("mix", SimVertexTags_[0].label()));
       }
@@ -129,13 +129,13 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
 {
   using namespace edm;
 
-  if ( HepMCProductTags_.size() > 0 ) {
+  if ( !HepMCProductTags_.empty() ) {
     bool gotHepMCProduct;
     edm::Handle<CrossingFrame<HepMCProduct> > crossingFrame;
     gotHepMCProduct = iEvent.getByToken(crossingFrame_Hep_Token_, crossingFrame);
 
     if (gotHepMCProduct){
-      std::auto_ptr<MixCollection<HepMCProduct> >
+      std::unique_ptr<MixCollection<HepMCProduct> >
           hepMCProduct (new MixCollection<HepMCProduct>(crossingFrame.product ()));
       MixCollection<HepMCProduct>::MixItr hitItr;
 
@@ -143,13 +143,13 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
     }
   }
 
-  if ( SimTrackTags_.size() > 0 ) {
+  if ( !SimTrackTags_.empty() ) {
     bool gotSimTrack;
     edm::Handle<CrossingFrame<SimTrack> > crossingFrame;
     gotSimTrack = iEvent.getByToken(crossingFrame_SimTr_Token_,crossingFrame);
 
     if (gotSimTrack){
-      std::auto_ptr<MixCollection<SimTrack> >
+      std::unique_ptr<MixCollection<SimTrack> >
           simTracks (new MixCollection<SimTrack>(crossingFrame.product ()));
       MixCollection<SimTrack>::MixItr hitItr;
 
@@ -157,14 +157,14 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
     }
   }
 
-  if ( SimVertexTags_.size() > 0 ) {
+  if ( !SimVertexTags_.empty() ) {
     bool gotSimVertex;
     edm::Handle<CrossingFrame<SimVertex> > crossingFrame;
     std::string SimVertexLabel = SimVertexTags_[0].label();
     gotSimVertex = iEvent.getByToken(crossingFrame_SimVtx_Token_, crossingFrame);
 
     if (gotSimVertex){
-      std::auto_ptr<MixCollection<SimVertex> >
+      std::unique_ptr<MixCollection<SimVertex> >
           simVerteces (new MixCollection<SimVertex>(crossingFrame.product ()));
       MixCollection<SimVertex>::MixItr hitItr;
 
@@ -172,7 +172,7 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
     }
   }
 
-  if ( PSimHitTags_.size() > 0 ) {
+  if ( !PSimHitTags_.empty() ) {
 
     edm::Handle<CrossingFrame<PSimHit> > crossingFrame;
 
@@ -181,7 +181,7 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
       gotPSimHit = iEvent.getByToken(crossingFrame_PSimHit_Tokens_[i], crossingFrame);
 
       if (gotPSimHit){
-        std::auto_ptr<MixCollection<PSimHit> >
+        std::unique_ptr<MixCollection<PSimHit> >
             simHits (new MixCollection<PSimHit>(crossingFrame.product ()));
 
         MixCollection<PSimHit>::MixItr hitItr;
@@ -193,7 +193,7 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
     }
   }
 
-  if ( PCaloHitTags_.size() > 0 ) {
+  if ( !PCaloHitTags_.empty() ) {
 
     edm::Handle<CrossingFrame<PCaloHit> > crossingFrame;
 
@@ -203,7 +203,7 @@ void MixCollectionValidation::analyze(const edm::Event& iEvent, const edm::Event
       gotPCaloHit = iEvent.getByToken(crossingFrame_PCaloHit_Tokens_[i], crossingFrame);
 
       if (gotPCaloHit){
-        std::auto_ptr<MixCollection<PCaloHit> >
+        std::unique_ptr<MixCollection<PCaloHit> >
             caloHits (new MixCollection<PCaloHit>(crossingFrame.product ()));
 
         MixCollection<PCaloHit>::MixItr hitItr;

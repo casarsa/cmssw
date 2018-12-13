@@ -4,6 +4,7 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 
 #include "DataFormats/Math/interface/Point3D.h"
+#include "DataFormats/Math/interface/RectangularEtaPhiRegion.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHit.h"
 #include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "DataFormats/EcalDetId/interface/EBDetId.h"
@@ -14,8 +15,6 @@
 #include "RecoCaloTools/Navigation/interface/EcalEndcapNavigator.h"
 #include "Geometry/CaloTopology/interface/EcalBarrelHardcodedTopology.h"
 #include "RecoEcal/EgammaCoreTools/interface/PositionCalc.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalEtaPhiRegion.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalRecHitLess.h"
 
 // C/C++ headers
 #include <string>
@@ -34,8 +33,14 @@ class IslandClusterAlgo
   IslandClusterAlgo() {
   }
 
-  IslandClusterAlgo(double ebst, double ecst, const PositionCalc& posCalc, VerbosityLevel the_verbosity = pERROR) : 
-    ecalBarrelSeedThreshold(ebst), ecalEndcapSeedThreshold(ecst), verbosity(the_verbosity) {
+  IslandClusterAlgo(double ebst, double ecst, const PositionCalc& posCalc,
+                    const std::vector<int>& v_chstatusSeed_Barrel, const std::vector<int>& v_chstatusSeed_Endcap,
+                    const std::vector<int>& v_chstatus_Barrel, const std::vector<int>& v_chstatus_Endcap,
+                    VerbosityLevel the_verbosity = pERROR) :
+    ecalBarrelSeedThreshold(ebst), ecalEndcapSeedThreshold(ecst),
+    v_chstatusSeed_Barrel_(v_chstatusSeed_Barrel), v_chstatusSeed_Endcap_(v_chstatusSeed_Endcap),
+    v_chstatus_Barrel_(v_chstatus_Barrel), v_chstatus_Endcap_(v_chstatus_Endcap),
+    verbosity(the_verbosity) {
     posCalculator_ = posCalc;
   }
 
@@ -55,7 +60,7 @@ class IslandClusterAlgo
                                                const CaloSubdetectorGeometry *geometryES_p,
                                                EcalPart ecalPart,
 					       bool regional = false,
-					       const std::vector<EcalEtaPhiRegion>& regions = std::vector<EcalEtaPhiRegion>());
+					       const std::vector<RectangularEtaPhiRegion>& regions = std::vector<RectangularEtaPhiRegion>());
 
   /// point in the space
   typedef math::XYZPoint Point;
@@ -84,6 +89,17 @@ class IslandClusterAlgo
 
   // The vector of clusters
   std::vector<reco::BasicCluster> clusters_v;
+
+  // channels not to be used for seeding
+  std::vector<int> v_chstatusSeed_Barrel_;
+  std::vector<int> v_chstatusSeed_Endcap_;
+
+  // channels not to be used for clustering
+  std::vector<int> v_chstatus_Barrel_;
+  std::vector<int> v_chstatus_Endcap_;
+
+  std::vector<int> v_chstatusSeed_;
+  std::vector<int> v_chstatus_;
 
   // The verbosity level
   VerbosityLevel verbosity;

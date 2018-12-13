@@ -16,9 +16,8 @@
  *
  */
 
-#include <iosfwd>
-#include <DataFormats/DetId/interface/DetId.h>
-#include <DataFormats/MuonDetId/interface/MuonSubdetId.h>
+#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/MuonDetId/interface/MuonSubdetId.h"
 
 class CSCDetId;
 
@@ -32,8 +31,6 @@ public:
   /// Default constructor; fills the common part in the base
   /// and leaves 0 in all other fields
   CSCDetId() : DetId(DetId::Muon, MuonSubdetId::CSC){}
-
-#ifndef EDM_ML_DEBUG
 
   /// Construct from a packed id. It is required that the Detector part of
   /// id is Muon and the SubDet part is CSC, otherwise an exception is thrown.
@@ -50,16 +47,6 @@ public:
 	    int ilayer = 0 ) : DetId(DetId::Muon, MuonSubdetId::CSC) {
      id_ |= init(iendcap, istation, iring, ichamber, ilayer);
   }
-
-#else
-
-    CSCDetId(uint32_t id);
-    CSCDetId(DetId id);
-    CSCDetId( int iendcap, int istation, 
-	      int iring, int ichamber, 
-	      int ilayer = 0 );
-
-#endif
 
   /** Chamber CSCDetId from a Layer CSCDetId
    */
@@ -117,7 +104,7 @@ public:
    /**
     * Chamber type (integer 1-10)
     */
-   unsigned short iChamberType() {
+   unsigned short iChamberType() const {
      return iChamberType( station(), ring() );
    }
 
@@ -256,6 +243,13 @@ public:
    static int maxChamberId() { return MAX_CHAMBER; }
    static int minLayerId()   { return MIN_LAYER; }
    static int maxLayerId()   { return MAX_LAYER; }
+
+   /**
+    * Returns the chamber name in the format
+    * ME$sign$station/$ring/$chamber. Example: ME+1/1/9
+    */
+   static std::string chamberName(int endcap, int station, int ring, int chamber);
+   std::string chamberName() const;
 
 private:
  

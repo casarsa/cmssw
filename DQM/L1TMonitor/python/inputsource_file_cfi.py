@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # provide online L1 Trigger DQM input from file(s)
 #
@@ -9,8 +10,8 @@ import FWCore.ParameterSet.Config as cms
 
 # choose one sample identifier from the list of data samples 
 #
-#sampleIdentifier = '165633-CAFDQM'
-sampleIdentifier = '195378'
+sampleIdentifier = '165633-CAFDQM'
+#sampleIdentifier = '195378'
 
 maxNumberEvents = 5000
 
@@ -64,7 +65,7 @@ elif sampleIdentifier == '165633-CAFDQM' :
     dataType = 'RAW'
     useDAS = False
     readFiles.extend( [ 
-            'file:/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/DQMTest/MinimumBias__RAW__v1__165633__1CC420EE-B686-E011-A788-0030487CD6E8.root'                       
+            'file:/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/DQMTest/MinimumBias__RAW__v1__165633__1CC420EE-B686-E011-A788-0030487CD6E8.root'
             ]);    
                                                                                                            
 elif sampleIdentifier == 'FileStream_105760' :
@@ -77,7 +78,7 @@ elif sampleIdentifier == 'FileStream_105760' :
             ] );
                 
 else :
-    print 'Error: sample identifier ', sampleIdentifier, ' not defined.\n'
+    print('Error: sample identifier ', sampleIdentifier, ' not defined.\n')
     errorUserOptions = True 
     runNumber = '0'
     dataset = 'None'
@@ -89,9 +90,9 @@ else :
 # end of data samples 
 #            
 
-print "   Run number: ", runNumber
-print "   Dataset: ", dataset
-print "   Data type: ", dataType
+print("   Run number: ", runNumber)
+print("   Dataset: ", dataset)
+print("   Data type: ", dataType)
 
 if useDAS :
     import das_client
@@ -104,12 +105,12 @@ if useDAS :
     filePaths = data.readlines()
             
        
-    print '\n   das_client using the query'
-    print '      ', myQuery
-    print '   retrieved the following files\n'
+    print('\n   das_client using the query')
+    print('      ', myQuery)
+    print('   retrieved the following files\n')
         
     for line in filePaths :
-        print '      ', line
+        print('      ', line)
            
     readFiles.extend(filePaths);
         

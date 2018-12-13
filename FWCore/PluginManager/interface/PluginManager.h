@@ -63,8 +63,16 @@ class PluginManager
        const SearchPath& searchPath() const {
          return m_path;
        }
+       void allowNoCache() {
+         m_mustHaveCache = false;
+       }
+       
+       bool mustHaveCache() const {
+         return m_mustHaveCache;
+       }
        private:
        SearchPath m_path;
+       bool m_mustHaveCache = true;
      };
 
       ~PluginManager();
@@ -107,9 +115,9 @@ class PluginManager
       edm::signalslot::Signal<void(const std::string&,const std::string&)> askedToLoadCategoryWithPlugin_;
    private:
       PluginManager(const Config&);
-      PluginManager(const PluginManager&); // stop default
+      PluginManager(const PluginManager&) = delete; // stop default
 
-      const PluginManager& operator=(const PluginManager&); // stop default
+      const PluginManager& operator=(const PluginManager&) = delete; // stop default
 
       void newFactory(const PluginFactoryBase* );
       static std::string& loadingLibraryNamed_();

@@ -26,8 +26,8 @@ class SiPixelGenErrorDBObjectESProducer : public edm::ESProducer  {
 
 public:
 
-	SiPixelGenErrorDBObjectESProducer(const edm::ParameterSet& iConfig);
-  ~SiPixelGenErrorDBObjectESProducer();
-	boost::shared_ptr<SiPixelGenErrorDBObject> produce(const SiPixelGenErrorDBObjectESProducerRcd &);
- };
+  SiPixelGenErrorDBObjectESProducer(const edm::ParameterSet& iConfig);
+  ~SiPixelGenErrorDBObjectESProducer() override;
+  std::shared_ptr<const SiPixelGenErrorDBObject> produce(const SiPixelGenErrorDBObjectESProducerRcd &);
+};
 #endif

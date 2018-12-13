@@ -12,6 +12,7 @@
  *
  */
 #include <Rtypes.h>
+#include "DataFormats/Common/interface/RefToBase.h"
 #include "DataFormats/Math/interface/Vector3D.h"
 #include "DataFormats/Math/interface/Point3D.h"
 #include "DataFormats/Math/interface/Error.h"
@@ -49,15 +50,10 @@ public:
         innerOk_(false),
         innerDetId_(0),
         seedDir_(anyDirection),
-        seedRef_(),
-        trackResiduals_() {
-        index idx = 0;
-        for (index i = 0; i < dimension; ++ i) {
-            for (index j = 0; j <= i; ++ j) {
-                outerCovariance_[idx] = 0;
-                innerCovariance_[idx] = 0;
-                ++idx;
-            }
+        seedRef_() {
+        for (index i = 0; i < covarianceSize; ++i) {
+            outerCovariance_[i] = 0;
+            innerCovariance_[i] = 0;
         }
     }
 
@@ -159,7 +155,7 @@ public:
         return innerDetId_;
     }
     // direction how the hits were sorted in the original seed
-    PropagationDirection seedDirection() const {
+    const PropagationDirection& seedDirection() const {
         return seedDir_;
     }
 
@@ -168,10 +164,10 @@ public:
      *   Event, the reference may be invalid. Its validity should be tested,
      *   before the reference is actually used.
      */
-    edm::RefToBase<TrajectorySeed> seedRef() const {
+    const edm::RefToBase<TrajectorySeed>& seedRef() const {
         return seedRef_;
     }
-    void setSeedRef(edm::RefToBase<TrajectorySeed> &r) {
+    void setSeedRef(const edm::RefToBase<TrajectorySeed> &r) {
         seedRef_ = r;
     }
     /// set the residuals

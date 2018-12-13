@@ -36,11 +36,12 @@
 //---------------
 
 #include <iostream>
+#include <memory>
 
 //-------------------
 // Initializations --
 //-------------------
-cond::persistency::KeyList* DTKeyedConfigHandler::keyList = 0;
+cond::persistency::KeyList* DTKeyedConfigHandler::keyList = nullptr;
 
 //----------------
 // Constructors --
@@ -134,7 +135,7 @@ void DTKeyedConfigHandler::getNewObjects() {
   std::map<int,std::vector<DTConfigKey>*> rhcMap;
   coral::ITable& runHistoryTable =
     isession->nominalSchema().tableHandle( "RUNHISTORY" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     runHistoryQuery( runHistoryTable.newQuery() );
   runHistoryQuery->addToOutputList( "RUN" );
   runHistoryQuery->addToOutputList( "RHID" );
@@ -151,7 +152,7 @@ void DTKeyedConfigHandler::getNewObjects() {
     std::cout << "schedule config key copy for run "
               << runId << " ---> RHID " << rhcId << std::endl;
     // ----------- retrieve or create RH relation list for this run
-    std::vector<int>* rhlPtr = 0;
+    std::vector<int>* rhlPtr = nullptr;
     std::map<int,std::vector<int>*>::const_iterator runIter;
     if ( ( runIter = runMap.find( runId ) ) != runMap.end() )
          rhlPtr = runIter->second;
@@ -164,14 +165,14 @@ void DTKeyedConfigHandler::getNewObjects() {
          rhcMap.insert( std::pair<int,std::vector<DTConfigKey>*>( rhcId,
                         new std::vector<DTConfigKey> ) );
   }
-  if ( !runMap.size() ) std::cout << "no new run found" << std::endl;
+  if ( runMap.empty() ) std::cout << "no new run found" << std::endl;
 
   // =========== get ccb identifiers map
   std::cout << "retrieve CCB map" << std::endl;
   std::map<int,DTCCBId> ccbMap;
   coral::ITable& ccbMapTable =
     isession->nominalSchema().tableHandle( "CCBMAP" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     ccbMapQuery( ccbMapTable.newQuery() );
   ccbMapQuery->addToOutputList( "CCBID" );
   ccbMapQuery->addToOutputList( "WHEEL" );
@@ -195,7 +196,7 @@ void DTKeyedConfigHandler::getNewObjects() {
   std::cout << "retrieve brick types" << std::endl;
   std::map<int,int> bktMap;
   coral::AttributeList emptyBindVariableList;
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
          brickTypeQuery( isession->nominalSchema().newQuery() );
   brickTypeQuery->addToTableList( "CFGBRICKS" );
   brickTypeQuery->addToTableList( "BRKT2CSETT" );
@@ -220,7 +221,7 @@ void DTKeyedConfigHandler::getNewObjects() {
   std::map<int,int> cfgMap;
   coral::ITable& rhcRelTable =
     isession->nominalSchema().tableHandle( "RHRELATIONS" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     rhcRelQuery( rhcRelTable.newQuery() );
   rhcRelQuery->addToOutputList( "RHID" );
   rhcRelQuery->addToOutputList( "CONFKEY" );
@@ -253,7 +254,7 @@ void DTKeyedConfigHandler::getNewObjects() {
   std::map<int,int> cckMap;
   coral::ITable& ccbRelTable =
     isession->nominalSchema().tableHandle( "CCBRELATIONS" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     ccbRelQuery( ccbRelTable.newQuery() );
   ccbRelQuery->addToOutputList( "CONFKEY" );
   ccbRelQuery->addToOutputList( "CCBID" );
@@ -267,7 +268,7 @@ void DTKeyedConfigHandler::getNewObjects() {
     // ----------- check for used configurations, skip unused
     if ( cfgMap.find( cfg ) == cfgMap.end() ) continue;
     // ----------- retrieve or create ccb id-key map for this configuration
-    std::map<int,int>* mapPtr = 0;
+    std::map<int,int>* mapPtr = nullptr;
     std::map<int,std::map<int,int>*>::const_iterator keyIter;
     if ( ( keyIter = keyMap.find( cfg ) ) != keyMap.end() )
          mapPtr = keyIter->second;
@@ -294,7 +295,7 @@ void DTKeyedConfigHandler::getNewObjects() {
   std::map<int,std::vector<int>*> brkMap;
   coral::ITable& confBrickTable =
     isession->nominalSchema().tableHandle( "CFG2BRKREL" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     confBrickQuery( confBrickTable.newQuery() );
   confBrickQuery->addToOutputList( "CONFID" );
   confBrickQuery->addToOutputList( "BRKID"  );
@@ -310,7 +311,7 @@ void DTKeyedConfigHandler::getNewObjects() {
 //    std::map<int,std::vector<int>*>::const_iterator brkIend =
 //                                                    brkMap.end();
     // ----------- retrieve or create brick list for this ccb config
-    std::vector<int>* brkPtr = 0;
+    std::vector<int>* brkPtr = nullptr;
     std::map<int,std::vector<int>*>::const_iterator brkIter;
 //check for new ccb config key
     if ( ( brkIter = brkMap.find( key ) ) != brkMap.end() )
@@ -351,7 +352,7 @@ void DTKeyedConfigHandler::getNewObjects() {
       if ( ( rhcIter = rhcMap.find( rhc ) ) == rhcMap.end() ) continue;
       std::vector<DTConfigKey>* listPtr = rhcIter->second;
       // ----------- redundant check
-      if ( listPtr == 0 ) continue;
+      if ( listPtr == nullptr ) continue;
       std::vector<DTConfigKey>::const_iterator bkiIter = listPtr->begin();
       std::vector<DTConfigKey>::const_iterator bkiIend = listPtr->end();
       while ( bkiIter != bkiIend ) cfl.push_back( *bkiIter++ );
@@ -375,13 +376,13 @@ void DTKeyedConfigHandler::getNewObjects() {
 //                                                     keyMap.find( cfg );
 //    std::map<int,std::map<int,int>*>::const_iterator keyIend =
 //                                                     keyMap.end();
-      std::map<int,int>* mapPtr = 0;
+      std::map<int,int>* mapPtr = nullptr;
       std::map<int,std::map<int,int>*>::const_iterator keyIter;
       // ----------- redundant check
 //      if ( keyIter != keyIend )
       if ( ( keyIter = keyMap.find( cfg ) ) != keyMap.end() )
            mapPtr = keyIter->second;
-      if ( mapPtr == 0 ) continue;
+      if ( mapPtr == nullptr ) continue;
       std::map<int,int>::const_iterator ccmIter = mapPtr->begin();
       std::map<int,int>::const_iterator ccmIend = mapPtr->end();
       while ( ccmIter != ccmIend ) {
@@ -407,7 +408,7 @@ void DTKeyedConfigHandler::getNewObjects() {
         if ( ( brkIter = brkMap.find( key ) ) == brkMap.end() ) continue;
         std::vector<int>* brkPtr = brkIter->second;
         // ----------- redundant check
-        if ( brkPtr == 0 ) continue;
+        if ( brkPtr == nullptr ) continue;
         // ----------- set brick id lists in payload
         std::vector<int> bkList;
         bkList.reserve( 20 );
@@ -452,7 +453,7 @@ void DTKeyedConfigHandler::chkConfigList() {
   std::map<int,bool> activeConfigMap;
   coral::ITable& fullConfigTable =
     isession->nominalSchema().tableHandle( "CONFIGSETS" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     fullConfigQuery( fullConfigTable.newQuery() );
   fullConfigQuery->addToOutputList( "CONFKEY" );
   fullConfigQuery->addToOutputList( "NAME" );
@@ -473,7 +474,7 @@ void DTKeyedConfigHandler::chkConfigList() {
   std::map<int,bool> activeCCBCfgMap;
   coral::ITable& fullCCBCfgTable =
     isession->nominalSchema().tableHandle( "CCBRELATIONS" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     fullCCBCfgQuery( fullCCBCfgTable.newQuery() );
   fullCCBCfgQuery->addToOutputList( "CONFKEY" );
   fullCCBCfgQuery->addToOutputList( "CONFCCBKEY" );
@@ -497,7 +498,7 @@ void DTKeyedConfigHandler::chkConfigList() {
   std::map<int,bool> activeCfgBrkMap;
   coral::ITable& ccbConfBrkTable =
     isession->nominalSchema().tableHandle( "CFG2BRKREL" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     ccbConfBrickQuery( ccbConfBrkTable.newQuery() );
   ccbConfBrickQuery->addToOutputList( "CONFID" );
   ccbConfBrickQuery->addToOutputList( "BRKID" );
@@ -521,12 +522,12 @@ void DTKeyedConfigHandler::chkConfigList() {
 
   coral::ITable& brickConfigTable =
     isession->nominalSchema().tableHandle( "CFGBRICKS" );
-  std::auto_ptr<coral::IQuery>
+  std::unique_ptr<coral::IQuery>
     brickConfigQuery( brickConfigTable.newQuery() );
   brickConfigQuery->addToOutputList( "BRKID" );
   brickConfigQuery->addToOutputList( "BRKNAME" );
   coral::ICursor& brickConfigCursor = brickConfigQuery->execute();
-  DTKeyedConfig* brickData = 0;
+  DTKeyedConfig* brickData = nullptr;
   std::vector<int> missingList;
   std::vector<unsigned long long> checkedKeys;
   while( brickConfigCursor.next() ) {
@@ -547,11 +548,11 @@ void DTKeyedConfigHandler::chkConfigList() {
     bool brickFound = false;
     try {
       keyList->load( checkedKeys );
-      boost::shared_ptr<DTKeyedConfig> brickCheck = keyList->get<DTKeyedConfig>( 0 );
+      std::shared_ptr<DTKeyedConfig> brickCheck = keyList->get<DTKeyedConfig>( 0 );
       if ( brickCheck.get() ) brickFound =
                              ( brickCheck->getId() == brickConfigId );
     }
-    catch ( std::exception e ) {
+    catch ( std::exception const& ) {
     }
     if ( !brickFound ) {
       std::cout << "brick " << brickConfigId << " missing, copy request"
@@ -570,7 +571,7 @@ void DTKeyedConfigHandler::chkConfigList() {
     coral::AttributeList bindVariableList;
     bindVariableList.extend( "brickId", typeid(int) );
     bindVariableList["brickId"].data<int>() = brickConfigId;
-    std::auto_ptr<coral::IQuery>
+    std::unique_ptr<coral::IQuery>
            brickDataQuery( isession->nominalSchema().newQuery() );
     brickDataQuery->addToTableList( "CFGRELATIONS" );
     brickDataQuery->addToTableList( "CONFIGCMDS" );

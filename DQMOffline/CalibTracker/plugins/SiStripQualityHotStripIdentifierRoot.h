@@ -20,25 +20,14 @@
 #include "CalibFormats/SiStripObjects/interface/SiStripQuality.h"
 
 #include <vector>
+#include <memory>
 #include <iostream>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include <sstream>
-#include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>
-#include <sstream>
 #include "TFile.h"
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TKey.h"
-#include "TObject.h"
-#include "TDirectory.h"
-#include "TMath.h"
-#include "TCanvas.h"
-#include "TStyle.h"
-#include "TClass.h"
 
 class SiStripHotStripAlgorithmFromClusterOccupancy;
 class SiStripBadAPVAlgorithmFromClusterOccupancy;
@@ -50,22 +39,22 @@ class SiStripQualityHotStripIdentifierRoot : public ConditionDBWriter<SiStripBad
 public:
 
   explicit SiStripQualityHotStripIdentifierRoot(const edm::ParameterSet&);
-  ~SiStripQualityHotStripIdentifierRoot();
+  ~SiStripQualityHotStripIdentifierRoot() override;
 
 private:
 
   //Will be called at the beginning of each run in the job
-  void algoBeginRun(const edm::Run &, const edm::EventSetup &);
+  void algoBeginRun(const edm::Run &, const edm::EventSetup &) override;
   //Will be called at the beginning of each luminosity block in the run
-  void algoBeginLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &){  }
+  void algoBeginLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) override{  }
   //Will be called at the end of the job
-  void algoEndJob();
+  void algoEndJob() override;
 
 
   //Will be called at every event
-  void algoAnalyze(const edm::Event&, const edm::EventSetup&){};
+  void algoAnalyze(const edm::Event&, const edm::EventSetup&) override{};
 
-  SiStripBadStrip* getNewObject();
+  std::unique_ptr<SiStripBadStrip> getNewObject() override;
 
   void bookHistos();
 
@@ -75,11 +64,9 @@ private:
   edm::ESHandle<SiStripQuality> SiStripQuality_;
   bool UseInputDB_;
   const edm::ParameterSet conf_;
-  edm::FileInPath fp_;
-  SiStripDetInfoFileReader* reader;
 
   edm::ESHandle<TrackerGeometry> theTrackerGeom;
-  const TrackerGeometry* _tracker;
+  const TrackerGeometry* tracker_;
   const TrackerTopology* tTopo;
 
   DQMStore* dqmStore_;
@@ -88,6 +75,7 @@ private:
   std::string filename, dirpath;
   unsigned short MinClusterWidth_, MaxClusterWidth_;
   double TotNumberOfEvents;
+  double MeanNumberOfCluster;
   uint32_t calibrationthreshold;
 
   SiStrip::QualityHistosMap ClusterPositionHistoMap;

@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 import os, sys
 try: import simplejson as json
 except ImportError: import json
@@ -11,7 +12,7 @@ def get_yaxis_range(list):
     about an IB, this function returns a tuple (low, high) with the lowest
     and the highest value of y-axis, respectively. 
     """
-    low, high = sys.maxint, -1
+    low, high = sys.maxsize, -1
     for node in list:
         low = min((node['average'] - node['error']), low)
         high = max((node['average'] + node['error']), high)
@@ -84,7 +85,7 @@ def operate(timelog, memlog, json_f, num):
         if re.search(regex, IB) is None:
             raise RuntimeError('Not a valid IB. Valid IB: ' +\
                                '[CMSSW_X_X_X_YYYY-MM-DD-HHMM]')
-    except Exception, err:
+    except Exception as err:
         sys.stderr.write(script_name + ': Error: ' + str(err) + '\n')
         return 2
     
@@ -105,15 +106,15 @@ def operate(timelog, memlog, json_f, num):
                                        "Only the strip charts will be created.\n")
     else:
         dict["strips"].append(data)
-        print 'Storing entry to \"' + json_f +\
+        print('Storing entry to \"' + json_f +\
               '\" file with attribute values:\n' +\
               'IB=' + IB + '\naverage=' + average +\
-              '\nUncertainty of average=' + error +'\nmax_rss=' + max_rss
+              '\nUncertainty of average=' + error +'\nmax_rss=' + max_rss)
         # Store the data in json file.
         json_db = open(json_f, "w+")
         json.dump(dict, json_db, indent=2)
         json_db.close()
-        print 'File "' + json_f + '" was updated successfully!'
+        print('File "' + json_f + '" was updated successfully!')
 
     # Change to datetime type (helpful for sorting).
     for record in dict["strips"]:

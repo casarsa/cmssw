@@ -30,6 +30,10 @@ public:
     return principal_;
   }
 
+  edm::ModuleCallingContext const *moduleCallingContext() const {
+    return mcc_;
+  }
+
   int bunchCrossing() const {
     return bunchCrossing_;
   }
@@ -38,9 +42,7 @@ public:
   template<typename T>
   bool
   getByLabel(edm::InputTag const& tag, edm::Handle<T>& result) const {
-    typedef typename T::value_type ItemType;
-    typedef typename T::iterator iterator;
-    edm::BasicHandle bh = principal_.getByLabel(edm::PRODUCT_TYPE, edm::TypeID(typeid(T)), tag, nullptr, mcc_);
+    edm::BasicHandle bh = principal_.getByLabel(edm::PRODUCT_TYPE, edm::TypeID(typeid(T)), tag, nullptr, nullptr, mcc_);
     convert_handle(std::move(bh), result);
     return result.isValid();
   }

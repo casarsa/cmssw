@@ -10,9 +10,9 @@ namespace edm
 {
   TriggerResultInserter::TriggerResultInserter(const ParameterSet& pset, unsigned int iNStreams) :
   resultsPerStream_(iNStreams),
-  pset_id_(pset.id())
+  pset_id_(pset.id()),
+  token_{produces<TriggerResults>()}
   {
-    produces<TriggerResults>();
   }
 
   void
@@ -22,9 +22,6 @@ namespace edm
 
   void TriggerResultInserter::produce(StreamID id, edm::Event& e, edm::EventSetup const&) const
   {
-    std::unique_ptr<TriggerResults>
-      results(new TriggerResults(*resultsPerStream_[id.value()], pset_id_));
-
-    e.put(std::move(results));
+    e.emplace(token_,*resultsPerStream_[id.value()], pset_id_);
   }
 }

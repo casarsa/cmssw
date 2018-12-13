@@ -9,7 +9,6 @@
 #include "DataFormats/SiStripDigi/interface/SiStripDigi.h"
 #include "CondFormats/DataRecord/interface/SiStripNoisesRcd.h"
 #include "CondFormats/SiStripObjects/interface/SiStripNoises.h"
-#include "boost/foreach.hpp"
 
 ShallowDigisProducer::ShallowDigisProducer(const edm::ParameterSet& conf)
   : inputTags(conf.getParameter<std::vector<edm::InputTag> >("DigiProducersList")) 
@@ -23,20 +22,20 @@ ShallowDigisProducer::ShallowDigisProducer(const edm::ParameterSet& conf)
 
 void ShallowDigisProducer::
 insert(products& p, edm::Event& e) {
-  e.put(p.id,     "id");
-  e.put(p.subdet, "subdet");
-  e.put(p.strip,  "strip");
-  e.put(p.adc,    "adc");
-  e.put(p.noise,  "noise");
+  e.put(std::move(p.id),     "id");
+  e.put(std::move(p.subdet), "subdet");
+  e.put(std::move(p.strip),  "strip");
+  e.put(std::move(p.adc),    "adc");
+  e.put(std::move(p.noise),  "noise");
 }
 
 template<class T>
 inline
 void ShallowDigisProducer::
 recordDigis(const T& digiCollection, products& p) {
-  BOOST_FOREACH(const typename T::value_type set, digiCollection) {
+  for(auto const& set : digiCollection) {
     SiStripNoises::Range detNoiseRange = noiseHandle->getRange(set.detId());
-    BOOST_FOREACH(const SiStripDigi digi, set) {
+    for(auto const& digi : set) {
       p.id->push_back(set.detId());
       p.subdet->push_back((set.detId()>>25)&0x7);
       p.strip->push_back(digi.strip());
@@ -62,7 +61,7 @@ template<class T>
 inline
 bool ShallowDigisProducer::
 findInput(edm::Handle<T>& handle, const edm::Event& e) {
-  BOOST_FOREACH( const edm::InputTag inputTag, inputTags) {
+  for(auto const& inputTag : inputTags) {
     e.getByLabel(inputTag, handle);
     if( handle.isValid() && !handle->empty() ) {
       LogDebug("Input") << inputTag;

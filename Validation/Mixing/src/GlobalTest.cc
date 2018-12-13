@@ -39,13 +39,14 @@ using namespace edm;
 
 GlobalTest::GlobalTest(const edm::ParameterSet& iConfig):
     filename_(iConfig.getParameter<std::string>("fileName")),
-    minbunch_(iConfig.getParameter<int>("minBunch")),maxbunch_(iConfig.getParameter<int>("maxBunch")), dbe_(0),
+    minbunch_(iConfig.getParameter<int>("minBunch")),
+    maxbunch_(iConfig.getParameter<int>("maxBunch")),
     cfTrackToken_(consumes<CrossingFrame<SimTrack> > (
         iConfig.getParameter<edm::InputTag>("cfTrackTag"))),
     cfVertexToken_(consumes<CrossingFrame<SimTrack> >(
         iConfig.getParameter<edm::InputTag>("cfVertexTag")))
 {
-  std::string ecalsubdetb();
+  std::string ecalsubdetb("");
   std::string ecalsubdete("g4SimHitsEcalHitsEE");
   g4SimHits_EB_Token_ = consumes<CrossingFrame<PCaloHit> > (
       edm::InputTag("mix", "g4SimHitsEcalHitsEB"));
@@ -61,18 +62,14 @@ GlobalTest::GlobalTest(const edm::ParameterSet& iConfig):
 
 GlobalTest::~GlobalTest()
 {
-
-  // do anything here that needs to be done at desctruction time
-  // (e.g. close files, deallocate resources etc.)
+  for (int i = 0; i < 6; i++) delete[] labels[i];
 }
 
-void GlobalTest::beginJob() {
+void GlobalTest::bookHistograms(DQMStore::IBooker & ibooker,
+  edm::Run const &, edm::EventSetup const & ){
   using namespace std;
 
-  // get hold of back-end interface
-  dbe_ = Service<DQMStore>().operator->();
-  dbe_->showDirStructure();
-  dbe_->setCurrentFolder("MixingV/Mixing");
+  ibooker.setCurrentFolder("MixingV/Mixing");
   //book histos
   std::string NrPileupEvts = "NrPileupEvts";
   size_t NrPileupEvtsSize = NrPileupEvts.size() + 1;
@@ -105,26 +102,20 @@ void GlobalTest::beginJob() {
     int ii=i-minbunch_;
     char label[50];
     sprintf(label,"%s_%d",labels[0],i);
-    nrPileupsH_[ii]    = dbe_->book1D(label,label,100,0,100);
+    nrPileupsH_[ii]    = ibooker.book1D(label,label,100,0,100);
     sprintf(label,"%s_%d",labels[1],i);
-    nrVerticesH_[ii]   = dbe_->book1D(label,label,100,0,5000);
+    nrVerticesH_[ii]   = ibooker.book1D(label,label,100,0,5000);
     sprintf(label,"%s_%d",labels[2],i);
-    nrTracksH_[ii]     = dbe_->book1D(label,label,100,0,10000);
+    nrTracksH_[ii]     = ibooker.book1D(label,label,100,0,10000);
     sprintf(label,"%s_%d",labels[3],i);
-    trackPartIdH_[ii]  =  dbe_->book1D(label,label,100,0,100);
+    trackPartIdH_[ii]  =  ibooker.book1D(label,label,100,0,100);
     sprintf(label,"%s_%d",labels[4],i);
-    caloEnergyEBH_ [ii]  = dbe_->book1D(label,label,100,0.,1000.);
+    caloEnergyEBH_ [ii]  = ibooker.book1D(label,label,100,0.,1000.);
     sprintf(label,"%s_%d",labels[5],i);
-    caloEnergyEEH_ [ii]  = dbe_->book1D(label,label,100,0.,1000.);
+    caloEnergyEEH_ [ii]  = ibooker.book1D(label,label,100,0.,1000.);
   }
 }
 
-
-void GlobalTest::endJob() {
-  if (filename_.size() != 0 && dbe_ ) dbe_->save(filename_);
-
-  for (int i = 0; i < 6; i++) delete[] labels[i];
-}
 
 //
 // member functions
@@ -162,7 +153,7 @@ GlobalTest::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   }
 
   // part id for each track
-  std::auto_ptr<MixCollection<SimTrack> > coltr(new MixCollection<SimTrack>(cf_track.product()));
+  std::unique_ptr<MixCollection<SimTrack> > coltr(new MixCollection<SimTrack>(cf_track.product()));
   MixCollection<SimTrack>::iterator cfitr;
   for (cfitr=coltr->begin(); cfitr!=coltr->end();cfitr++) {
     trackPartIdH_[cfitr.bunch()-minbunch_]->Fill(cfitr->type());
@@ -170,7 +161,7 @@ GlobalTest::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   // energy sum
   double sumE[10]={0.,0.,0.,0.,0.,0.,0.,0.,0.,0.};
-  std::auto_ptr<MixCollection<PCaloHit> > colecalb(new MixCollection<PCaloHit>(cf_calohitB.product()));
+  std::unique_ptr<MixCollection<PCaloHit> > colecalb(new MixCollection<PCaloHit>(cf_calohitB.product()));
   MixCollection<PCaloHit>::iterator cfiecalb;
   for (cfiecalb=colecalb->begin(); cfiecalb!=colecalb->end();cfiecalb++) {
     sumE[cfiecalb.bunch()-minbunch_]+=cfiecalb->energy();
@@ -181,7 +172,7 @@ GlobalTest::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     caloEnergyEBH_[i-minbunch_]->Fill(sumE[i-minbunch_]);
   }
   double sumEE[10]={0.,0.,0.,0.,0.,0.,0.,0.,0.,0.};
-  std::auto_ptr<MixCollection<PCaloHit> > colecale(new MixCollection<PCaloHit>(cf_calohitE.product()));
+  std::unique_ptr<MixCollection<PCaloHit> > colecale(new MixCollection<PCaloHit>(cf_calohitE.product()));
   MixCollection<PCaloHit>::iterator cfiecale;
   for (cfiecale=colecale->begin(); cfiecale!=colecale->end();cfiecale++) {
     sumEE[cfiecale.bunch()-minbunch_]+=cfiecale->energy();

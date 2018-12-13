@@ -18,7 +18,6 @@
 
 // system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ESProducer.h"
@@ -36,9 +35,9 @@ class CaloTopologyBuilder : public edm::ESProducer
 {
    public:
       CaloTopologyBuilder( const edm::ParameterSet& iP );
-      ~CaloTopologyBuilder() ;
+      ~CaloTopologyBuilder() override ;
 
-      typedef boost::shared_ptr< CaloTopology > ReturnType;
+      using ReturnType = std::unique_ptr<CaloTopology>;
 
       ReturnType produceCalo(  const CaloTopologyRecord&  );
 

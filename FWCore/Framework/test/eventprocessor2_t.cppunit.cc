@@ -7,19 +7,19 @@ Test of the EventProcessor class.
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/EventProcessor.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "cppunit/extensions/HelperMacros.h"
 #include "FWCore/PluginManager/interface/PluginManager.h"
 #include "FWCore/PluginManager/interface/standard.h"
-#include "FWCore/RootAutoLibraryLoader/interface/RootAutoLibraryLoader.h"
+#include "FWCore/ParameterSetReader/interface/ParameterSetReader.h"
 
 // to be called also by the other cppunit...
 void doInit() {
    static bool firstTime=true;
    if(firstTime) {
       //std::cout << "common init" << std::endl;
-      edm::RootAutoLibraryLoader::enable();
       if(not edmplugin::PluginManager::isAvailable()) {
         edmplugin::PluginManager::configure(edmplugin::standard::config());
      }
@@ -63,7 +63,8 @@ void work()
       "process.out = cms.OutputModule('AsciiOutputModule')\n"
       "process.p1 = cms.Path(process.m1*process.m2)\n"
       "process.ep1 = cms.EndPath(process.out)");
-  edm::EventProcessor proc(configuration, true);
+  std::unique_ptr<edm::ParameterSet> pset = edm::getPSetFromConfig(configuration);
+  edm::EventProcessor proc(std::move(pset));
   proc.beginJob();
   proc.run();
   proc.endJob();

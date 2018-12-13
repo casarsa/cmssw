@@ -26,7 +26,6 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <boost/shared_ptr.hpp>
 #include "Rtypes.h"
 
 
@@ -61,12 +60,12 @@ class CmsShowMain : public CmsShowMainBase
 {
 public:
    CmsShowMain(int argc, char *argv[]);
-   virtual ~CmsShowMain();
+   ~CmsShowMain() override;
    void resetInitialization();
    void openData();
    void appendData();
    void openDataViaURL();
-   virtual void quit();
+   void quit() override;
    void doExit();
 
    //  void writeConfigurationFile(const std::string& iFileName) const;
@@ -83,7 +82,7 @@ public:
    void fileChangedSlot(const TFile *file);
 
 protected:
-   virtual void eventChangedImp();
+   void eventChangedImp() override;
 
 private:
    CmsShowMain(const CmsShowMain&); // stop default
@@ -93,10 +92,12 @@ private:
    void setupDataHandling();
    void setupSocket(unsigned int);
    void connectSocket();
+   void setLoadedAnyInputFileAfterStartup();
 
-   virtual void autoLoadNewEvent();
-   virtual void checkPosition();
-   virtual void stopPlaying();
+   void autoLoadNewEvent() override;
+   void checkPosition() override;
+   void stopPlaying() override;
+    void checkKeyBindingsOnPLayEventsStateChanged() override;
 
    void reachedEnd();
    void reachedBeginning();
@@ -111,25 +112,25 @@ private:
    void checkLiveMode();
 
    // ---------- member data --------------------------------
-   std::auto_ptr<CmsShowNavigator>           m_navigator;
-   std::auto_ptr<FWLiteJobMetadataManager>   m_metadataManager;
-   std::auto_ptr<fireworks::Context>         m_context;
+   std::unique_ptr<CmsShowNavigator>           m_navigator;
+   std::unique_ptr<FWLiteJobMetadataManager>   m_metadataManager;
+   std::unique_ptr<fireworks::Context>         m_context;
 
    std::vector<std::string> m_inputFiles;
    bool                     m_loadedAnyInputFile;
    const TFile             *m_openFile;
 
-   std::auto_ptr<CmsShowSearchFiles>  m_searchFiles;
+   std::unique_ptr<CmsShowSearchFiles>  m_searchFiles;
 
    // live options
    bool                         m_live;
-   std::auto_ptr<SignalTimer>   m_liveTimer;
+   std::unique_ptr<SignalTimer>   m_liveTimer;
    int                          m_liveTimeout;
    UInt_t                       m_lastXEventSerial;
 
    bool                         m_noVersionCheck;
 
-   std::auto_ptr<TMonitor> m_monitor;
+   std::unique_ptr<TMonitor> m_monitor;
 };
 
 #endif

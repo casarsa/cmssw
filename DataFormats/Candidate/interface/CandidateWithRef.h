@@ -9,6 +9,8 @@
  *
  */
 #include "DataFormats/CaloRecHit/interface/CaloRecHit.h"
+#include "DataFormats/Candidate/interface/Candidate.h"
+#include "DataFormats/Candidate/interface/LeafCandidate.h"
 #include "DataFormats/Common/interface/RefToBase.h"
 
 namespace reco {
@@ -23,19 +25,19 @@ namespace reco {
     CandidateWithRef( const LorentzVector & p4, Charge q = 0, const Point & vtx = Point( 0, 0, 0 ) ) :
       LeafCandidate( q, p4, vtx ) { }
     /// destructor
-    virtual ~CandidateWithRef();
+    ~CandidateWithRef() override;
     /// returns a clone of the candidate
-    virtual CandidateWithRef * clone() const;
+    CandidateWithRef * clone() const override;
     /// set reference
     void setRef( const Ref & r ) { ref_ = r; }
     /// reference 
     reference ref() const { return ref_; }
 
-    CMS_CLASS_VERSION(10)
+    CMS_CLASS_VERSION(13)
 
   private:
     /// check overlap with another candidate
-    virtual bool overlap( const Candidate & ) const;
+    bool overlap( const Candidate & ) const override;
     /// reference to a CaloRecHit
     reference ref_;
   };

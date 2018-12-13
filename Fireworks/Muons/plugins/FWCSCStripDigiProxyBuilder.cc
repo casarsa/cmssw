@@ -24,21 +24,21 @@ class FWCSCStripDigiProxyBuilder : public FWProxyBuilderBase
 {
 public:
   FWCSCStripDigiProxyBuilder() {}
-  virtual ~FWCSCStripDigiProxyBuilder() {}
+  ~FWCSCStripDigiProxyBuilder() override {}
 
   REGISTER_PROXYBUILDER_METHODS();
 
 private:
   using FWProxyBuilderBase::build;
-  virtual void build(const FWEventItem* iItem, TEveElementList* product, const FWViewContext*) override;
-  FWCSCStripDigiProxyBuilder(const FWCSCStripDigiProxyBuilder&);    
-  const FWCSCStripDigiProxyBuilder& operator=(const FWCSCStripDigiProxyBuilder&);
+  void build(const FWEventItem* iItem, TEveElementList* product, const FWViewContext*) override;
+  FWCSCStripDigiProxyBuilder(const FWCSCStripDigiProxyBuilder&) = delete;    
+  const FWCSCStripDigiProxyBuilder& operator=(const FWCSCStripDigiProxyBuilder&) = delete;
 };
 
 void
 FWCSCStripDigiProxyBuilder::build(const FWEventItem* iItem, TEveElementList* product, const FWViewContext*)
 {
-   const CSCStripDigiCollection* digis = 0;
+   const CSCStripDigiCollection* digis = nullptr;
   
    iItem->get(digis);
 
@@ -90,7 +90,7 @@ FWCSCStripDigiProxyBuilder::build(const FWEventItem* iItem, TEveElementList* pro
          TEveStraightLineSet* stripDigiSet = new TEveStraightLineSet();
          setupAddElement(stripDigiSet, product);
              
-         if( std::find_if( adcCounts.begin(), adcCounts.end(), bind2nd( std::greater<int>(), signalThreshold )) != adcCounts.end()) 
+         if( std::find_if( adcCounts.begin(), adcCounts.end(), [&](auto c) { return c >signalThreshold; }) != adcCounts.end()) 
          {
             stripDigiSet->SetLineWidth(3);
             int stripId = (*dit).getStrip();  

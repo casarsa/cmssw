@@ -19,7 +19,7 @@
 #include "DataFormats/METReco/interface/MET.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 
-#include "RecoMET/METPUSubtraction/interface/mvaMEtUtilities.h"
+#include "RecoMET/METPUSubtraction/interface/MvaMEtUtilities.h"
 
 //#include <TMatrixD.h>
 #include <Math/SMatrix.h>
@@ -40,9 +40,9 @@ class PFMETAlgorithmMVA
 
   void setHasPhotons(bool hasPhotons) { hasPhotons_ = hasPhotons; }
 
-  void setInput(const std::vector<mvaMEtUtilities::leptonInfo>&,
-		const std::vector<mvaMEtUtilities::JetInfo>&,
-		const std::vector<mvaMEtUtilities::pfCandInfo>&,
+  void setInput(const std::vector<reco::PUSubMETCandInfo>&,
+		const std::vector<reco::PUSubMETCandInfo>&,
+		const std::vector<reco::PUSubMETCandInfo>&,
 		const std::vector<reco::Vertex::Point>&);
 
   void evaluateMVA();
@@ -57,24 +57,17 @@ class PFMETAlgorithmMVA
   
   void print(std::ostream&) const;
 
- protected:
+ private:
+  const std::string updateVariableNames(std::string input);
+  const GBRForest* loadMVAfromFile(const edm::FileInPath& inputFileName, const std::string& mvaName);
+  const GBRForest* loadMVAfromDB(const edm::EventSetup& es, const std::string& mvaName);
 
-  void setInput(double, double, double,
-		double, double, double,
-		double, double, double,
-		double, double, double,
-		double, double, double,
-		double, double, double,
-		double, double, double,
-		double, double, 
-		double);
+  const float evaluateU();
+  const float evaluateDPhi();
+  const float evaluateCovU1();
+  const float evaluateCovU2();
 
-  void evaluateU();
-  void evaluateDPhi();
-  void evaluateCovU1();
-  void evaluateCovU2();
-
-  mvaMEtUtilities utils_;
+  MvaMEtUtilities utils_;
     
   std::string mvaNameU_;
   std::string mvaNameDPhi_;
@@ -82,45 +75,30 @@ class PFMETAlgorithmMVA
   std::string mvaNameCovU2_;
 
   int    mvaType_;
-  bool   is42_;
-  bool   isOld42_;
   bool   hasPhotons_;
+
   double dZcut_;
+  std::unique_ptr<float[]> createFloatVector(std::vector<std::string> variableNames);
+  const float GetResponse(const GBRForest *Reader, std::vector<std::string> &variableNames);
+  void computeMET();
+  std::map<std::string, float> var_;
 
-  Float_t pfSumEt_;
-  Float_t pfU_;
-  Float_t pfPhi_;
-  Float_t tkSumEt_;
-  Float_t tkU_;
-  Float_t tkPhi_;
-  Float_t npuSumEt_;
-  Float_t npuU_;
-  Float_t npuPhi_;
-  Float_t puSumEt_;
-  Float_t puMEt_;
-  Float_t puPhi_;
-  Float_t pucSumEt_;
-  Float_t pucU_;
-  Float_t pucPhi_;
-  Float_t jet1Pt_;
-  Float_t jet1Eta_;
-  Float_t jet1Phi_;
-  Float_t jet2Pt_;
-  Float_t jet2Eta_;
-  Float_t jet2Phi_;
-  Float_t numJetsPtGt30_;
-  Float_t numJets_;
-  Float_t numVertices_;
 
-  Float_t* mvaInputU_;
-  Float_t* mvaInputDPhi_;
-  Float_t* mvaInputCovU1_;
-  Float_t* mvaInputCovU2_;
+  float* mvaInputU_;
+  float* mvaInputDPhi_;
+  float* mvaInputCovU1_;
+  float* mvaInputCovU2_;
   
-  Float_t mvaOutputU_;
-  Float_t mvaOutputDPhi_;
-  Float_t mvaOutputCovU1_;
-  Float_t mvaOutputCovU2_;
+  float mvaOutputU_;
+  float mvaOutputDPhi_;
+  float mvaOutputCovU1_;
+  float mvaOutputCovU2_;
+
+  std::vector<std::string> varForU_;
+  std::vector<std::string> varForDPhi_;
+  std::vector<std::string> varForCovU1_;
+  std::vector<std::string> varForCovU2_;
+
 
   double sumLeptonPx_;
   double sumLeptonPy_;

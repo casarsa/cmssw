@@ -4,21 +4,22 @@
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "TrackingTools/DetLayers/interface/MeasurementEstimator.h"
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
-#include "TrackingTools/DetLayers/interface/PhiLess.h"
 #include "TrackingTools/DetLayers/interface/rangesIntersect.h"
-
-#pragma GCC visibility push(hidden)
+#include "DataFormats/GeometryVector/interface/VectorUtil.h"
 
 class GeomDet;
 class Plane;
 class TrajectoryStateOnSurface;
+
+#pragma GCC visibility push(hidden)
 
 namespace tkDetUtil {
 
   inline
   bool overlapInPhi( float phi, const GeomDet & det, float phiWindow) {
     std::pair<float,float> phiRange(phi-phiWindow, phi+phiWindow);
-    return rangesIntersect( phiRange, det.surface().phiSpan(), PhiLess());
+    return rangesIntersect( phiRange, det.surface().phiSpan(),
+            [](auto x, auto y){ return Geom::phiLess(x,y); });
   }
 
 

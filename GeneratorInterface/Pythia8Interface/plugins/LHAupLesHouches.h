@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 #include <memory>
-#include <assert.h>
+#include <cassert>
 
 #include "boost/shared_ptr.hpp"
 
@@ -21,7 +21,7 @@
 
 class LHAupLesHouches : public Pythia8::LHAup {
   public:
-    LHAupLesHouches() {;}
+    LHAupLesHouches() : setScalesFromLHEF_(false),fEvAttributes(nullptr) {;}
 
     //void loadRunInfo(const boost::shared_ptr<lhef::LHERunInfo> &runInfo)
     void loadRunInfo(lhef::LHERunInfo* runInfo)
@@ -30,14 +30,23 @@ class LHAupLesHouches : public Pythia8::LHAup {
     //void loadEvent(const boost::shared_ptr<lhef::LHEEvent> &event)
     void loadEvent(lhef::LHEEvent* event)
       { this->event = event; }
+      
+    void setScalesFromLHEF(bool b) { setScalesFromLHEF_ = b; }
+
+    ~LHAupLesHouches() override {if(fEvAttributes) delete fEvAttributes;}
 
   private:
 
-    bool setInit();
-    bool setEvent(int idProcIn, double mRecalculate = -1.);
+    bool setInit() override;
+    bool setEvent(int idProcIn) override;
 
     //boost::shared_ptr<lhef::LHERunInfo> runInfo;
     lhef::LHERunInfo* runInfo;
     //boost::shared_ptr<lhef::LHEEvent>	event;
     lhef::LHEEvent* event;
+    
+    // Flag to set particle production scales or not.
+    bool setScalesFromLHEF_;
+
+    std::map<std::string, std::string> * fEvAttributes;
 };

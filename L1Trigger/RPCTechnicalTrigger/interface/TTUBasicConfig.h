@@ -13,19 +13,16 @@
  *  @date   2008-10-29
  */
 class TTUBasicConfig : public TTUConfiguration {
-public: 
-  /// Standard constructor
-  TTUBasicConfig( ) { };
-
+public:
   TTUBasicConfig( const char * );
   
   TTUBasicConfig( const TTUBoardSpecs * );
   
-  virtual ~TTUBasicConfig( ); ///< Destructor
+  ~TTUBasicConfig( ) override; ///< Destructor
 
-  bool initialise( int , int );
+  bool initialise( int , int ) override;
 
-  void preprocess( TTUInput & );
+  void preprocess( TTUInput & ) override;
   
 protected:
   

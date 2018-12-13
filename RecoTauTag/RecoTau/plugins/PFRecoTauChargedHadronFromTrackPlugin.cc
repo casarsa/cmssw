@@ -39,7 +39,7 @@
 #include <TMath.h>
 
 #include <memory>
-#include <math.h>
+#include <cmath>
 
 namespace reco { namespace tau {
 
@@ -47,11 +47,11 @@ class PFRecoTauChargedHadronFromTrackPlugin : public PFRecoTauChargedHadronBuild
 {
  public:
   explicit PFRecoTauChargedHadronFromTrackPlugin(const edm::ParameterSet&, edm::ConsumesCollector && iC);
-  virtual ~PFRecoTauChargedHadronFromTrackPlugin();
+  ~PFRecoTauChargedHadronFromTrackPlugin() override;
   // Return type is auto_ptr<ChargedHadronVector>
-  return_type operator()(const reco::PFJet&) const;
+  return_type operator()(const reco::PFJet&) const override;
   // Hook to update PV information
-  virtual void beginEvent();
+  void beginEvent() override;
   
  private:
   typedef std::vector<reco::PFCandidatePtr> PFCandPtrs;
@@ -79,7 +79,7 @@ class PFRecoTauChargedHadronFromTrackPlugin : public PFRecoTauChargedHadronBuild
   PFRecoTauChargedHadronFromTrackPlugin::PFRecoTauChargedHadronFromTrackPlugin(const edm::ParameterSet& pset, edm::ConsumesCollector && iC)
     : PFRecoTauChargedHadronBuilderPlugin(pset,std::move(iC)),
       vertexAssociator_(pset.getParameter<edm::ParameterSet>("qualityCuts"),std::move(iC)),
-    qcuts_(0)
+    qcuts_(nullptr)
 {
   edm::ParameterSet qcuts_pset = pset.getParameterSet("qualityCuts").getParameterSet("signalQualityCuts");
   qcuts_ = new RecoTauQualityCuts(qcuts_pset);
@@ -143,13 +143,14 @@ PFRecoTauChargedHadronFromTrackPlugin::return_type PFRecoTauChargedHadronFromTra
   evt.getByToken(Tracks_token, tracks);
 
   qcuts_->setPV(vertexAssociator_.associatedVertex(jet));
-
+  float jEta=jet.eta();
+  float jPhi=jet.phi();
   size_t numTracks = tracks->size();
   for ( size_t iTrack = 0; iTrack < numTracks; ++iTrack ) {
     reco::TrackRef track(tracks, iTrack);
 
     // consider tracks in vicinity of tau-jet candidate only
-    double dR = deltaR(track->eta(), track->phi(), jet.eta(), jet.phi());
+    double dR = deltaR(track->eta(), track->phi(), jEta,jPhi);
     double dRmatch = dRcone_;
     if ( dRconeLimitedToJetArea_ ) {
       double jetArea = jet.jetArea();
@@ -157,7 +158,7 @@ PFRecoTauChargedHadronFromTrackPlugin::return_type PFRecoTauChargedHadronFromTra
 	dRmatch = TMath::Min(dRmatch, TMath::Sqrt(jetArea/TMath::Pi()));
       } else {
 	if ( numWarnings_ < maxWarnings_ ) {
-	  edm::LogWarning("PFRecoTauChargedHadronFromTrackPlugin::operator()") 
+	  edm::LogInfo("PFRecoTauChargedHadronFromTrackPlugin::operator()") 
 	    << "Jet: Pt = " << jet.pt() << ", eta = " << jet.eta() << ", phi = " << jet.phi() << " has area = " << jetArea << " !!" << std::endl;
 	  ++numWarnings_;
 	}
@@ -201,7 +202,7 @@ PFRecoTauChargedHadronFromTrackPlugin::return_type PFRecoTauChargedHadronFromTra
     if ( trackPropagator.getSuccess() != 0 ) { 
       chargedHadron->positionAtECALEntrance_ = trackPropagator.vertex();
     } else {
-      if ( chargedPionP4.pt() > 2. ) {
+      if ( chargedPionP4.pt() > 2. and std::abs(chargedPionP4.eta()) < 3. ) {
 	edm::LogWarning("PFRecoTauChargedHadronFromTrackPlugin::operator()") 
 	  << "Failed to propagate track: Pt = " << track->pt() << ", eta = " << track->eta() << ", phi = " << track->phi() << " to ECAL entrance !!" << std::endl;
       }

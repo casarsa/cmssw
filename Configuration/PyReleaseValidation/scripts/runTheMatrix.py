@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import print_function
 import sys
 
 from Configuration.PyReleaseValidation.MatrixReader import MatrixReader
@@ -24,15 +24,15 @@ def runSelected(opt):
 
     ret = 0
     if opt.show:
-        mrd.show(opt.testList,opt.extended)
-        if opt.testList : print 'testListected items:', opt.testList
+        mrd.show(opt.testList, opt.extended, opt.cafVeto)
+        if opt.testList : print('testListected items:', opt.testList)
     else:
-        mRunnerHi = MatrixRunner(mrd.workFlows, opt.nThreads)
+        mRunnerHi = MatrixRunner(mrd.workFlows, opt.nProcs, opt.nThreads)
         ret = mRunnerHi.runTests(opt)
 
     if opt.wmcontrol:
         if ret!=0:
-            print 'Cannot go on with wmagent injection with failing workflows'
+            print('Cannot go on with wmagent injection with failing workflows')
         else:
             wfInjector = MatrixInjector(opt,mode=opt.wmcontrol,options=opt.wmoptions)
             ret= wfInjector.prepare(mrd,
@@ -49,14 +49,38 @@ if __name__ == '__main__':
     #this can get out of here
     predefinedSet={
         'limited' : [5.1, #FastSim ttbar
+                     7.3, #CosmicsSPLoose_UP17
                      8, #BH/Cosmic MC
                      25, #MC ttbar
                      4.22, #cosmic data
-                     4.291, #hlt data
+                     4.53, #run1 data + miniAOD
+                     9.0, #Higgs200 charged taus
                      1000, #data+prompt
                      1001, #data+express
-                     4.53, #HI data
-                     40, #HI MC
+                     101.0, #SingleElectron120E120EHCAL
+                     136.731, #2016B Photon data
+                     136.7611, #2016E JetHT reMINIAOD from 80X legacy
+                     136.8311, #2017F JetHT reMINIAOD from 94X reprocessing
+                     136.788, #2017B Photon data
+                     136.85, #2018A Egamma data
+                     140.53, #2011 HI data
+                     140.56, #2018 HI data
+                     150.0, #2018 HI MC
+                     158.0, #2018 HI MC with pp-like reco
+                     1306.0, #SingleMu Pt1 UP15
+                     1325.7, #test NanoAOD from existing MINI
+                     1330, #Run2 MC Zmm
+                     135.4, #Run 2 Zee ttbar
+                     10042.0, #2017 ZMM
+                     10024.0, #2017 ttbar
+                     10224.0, #2017 ttbar PU
+                     10824.0, #2018 ttbar
+                     11624.0, #2019 ttbar
+                     20034.0, #2023D17 ttbar (TDR baseline Muon/Barrel)
+                     21234.0, #2023D21 ttbar (Inner Tracker with lower radii than in TDR)
+                     27434.0, #2023D35 to exercise new HGCal + new MTD
+                     25202.0, #2016 ttbar UP15 PU
+                     250202.181, #2018 ttbar stage1 + stage2 premix
                      ],
         'jetmc': [5.1, 13, 15, 25, 38, 39], #MC
         'metmc' : [5.1, 15, 25, 37, 38, 39], #MC
@@ -69,11 +93,33 @@ if __name__ == '__main__':
 
     parser = optparse.OptionParser(usage)
 
+    parser.add_option('-b','--batchName',
+                      help='relval batch: suffix to be appended to Campaign name',
+                      dest='batchName',
+                      default=''
+                     )
+
+    parser.add_option('-m','--memoryOffset',
+                      help='memory of the wf for single core',
+                      dest='memoryOffset',
+                      default=3000
+                     )
+    parser.add_option('--addMemPerCore',
+                      help='increase of memory per each n > 1 core:  memory(n_core) = memoryOffset + (n_core-1) * memPerCore',
+                      dest='memPerCore',
+                      default=1500
+                     )
     parser.add_option('-j','--nproc',
-                      help='number of threads. 0 Will use 4 threads, not execute anything but create the wfs',
-                      dest='nThreads',
+                      help='number of processes. 0 Will use 4 processes, not execute anything but create the wfs',
+                      dest='nProcs',
                       default=4
                      )
+    parser.add_option('-t','--nThreads',
+                      help='number of threads per process to use in cmsRun.',
+                      dest='nThreads',
+                      default=1
+                     )
+
     parser.add_option('-n','--showMatrix',
                       help='Only show the worflows. Use --ext to show more',
                       dest='show',
@@ -115,6 +161,12 @@ if __name__ == '__main__':
                       help='Used with --raw. Limit the production to step1',
                       dest='step1Only',
                       default=False
+                      )
+    parser.add_option('--maxSteps',
+                      help='Only run maximum on maxSteps. Used when we are only interested in first n steps.',
+                      dest='maxSteps',
+                      default=9999,
+                      type="int"
                       )
     parser.add_option('--fromScratch',
                       help='Coma separated list of wf to be run without recycling. all is not supported as default.',
@@ -169,6 +221,12 @@ if __name__ == '__main__':
                       dest='dryRun',
                       default=False
                       )
+    parser.add_option('--testbed',
+                      help='workflow injection to cmswebtest (you need dedicated rqmgr account)',
+                      dest='testbed',
+                      default=False,
+                      action='store_true'
+                      )
     parser.add_option('--noCafVeto',
                       help='Run from any source, ignoring the CAF label',
                       dest='cafVeto',
@@ -187,7 +245,7 @@ if __name__ == '__main__':
                       action='store_true')
 
     parser.add_option('--das-options',
-                      help='Options to be passed to das_client.py.',
+                      help='Options to be passed to dasgoclient.',
                       dest='dasOptions',
                       default="--limit 0",
                       action='store')
@@ -198,9 +256,37 @@ if __name__ == '__main__':
                       default=False,
                       action='store_true')
     
+    parser.add_option('--ibeos',
+                      help='Use IB EOS site configuration',
+                      dest='IBEos',
+                      default=False,
+                      action='store_true')
+
     opt,args = parser.parse_args()
+    if opt.IBEos:
+      import os
+      from commands import getstatusoutput as run_cmd
+      ibeos_cache = os.path.join(os.getenv("LOCALRT"), "ibeos_cache.txt")
+      if not os.path.exists(ibeos_cache):
+        err, out = run_cmd("curl -L -s -o %s https://raw.githubusercontent.com/cms-sw/cms-sw.github.io/master/das_queries/ibeos.txt" % ibeos_cache)
+        if err:
+          run_cmd("rm -f %s" % ibeos_cache)
+          print("Error: Unable to download ibeos cache information")
+          print(out)
+          sys.exit(err)
+
+      for cmssw_env in [ "CMSSW_BASE", "CMSSW_RELEASE_BASE" ]:
+        cmssw_base = os.getenv(cmssw_env,None)
+        if not cmssw_base: continue
+        cmssw_base = os.path.join(cmssw_base,"src/Utilities/General/ibeos")
+        if os.path.exists(cmssw_base):
+          os.environ["PATH"]=cmssw_base+":"+os.getenv("PATH")
+          os.environ["CMS_PATH"]="/cvmfs/cms-ib.cern.ch"
+          os.environ["CMSSW_USE_IBEOS"]="true"
+          print(">> WARNING: You are using SITECONF from /cvmfs/cms-ib.cern.ch")
+          break
     if opt.restricted:
-        print 'Deprecated, please use -l limited'
+        print('Deprecated, please use -l limited')
         if opt.testList:            opt.testList+=',limited'
         else:            opt.testList='limited'
 
@@ -230,14 +316,17 @@ if __name__ == '__main__':
                 try:
                     testList.append(float(entry))
                 except:
-                    print entry,'is not a possible selected entry'
+                    print(entry,'is not a possible selected entry')
             
         opt.testList = list(set(testList))
 
 
     if opt.useInput: opt.useInput = opt.useInput.split(',')
     if opt.fromScratch: opt.fromScratch = opt.fromScratch.split(',')
+    if opt.nProcs: opt.nProcs=int(opt.nProcs)
     if opt.nThreads: opt.nThreads=int(opt.nThreads)
+    if (opt.memoryOffset): opt.memoryOffset=int(opt.memoryOffset)
+    if (opt.memPerCore): opt.memPerCore=int(opt.memPerCore)
 
     if opt.wmcontrol:
         performInjectionOptionTest(opt)

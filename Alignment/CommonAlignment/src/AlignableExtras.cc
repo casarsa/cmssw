@@ -7,18 +7,14 @@
  *  (last update by $Author: mussgill $)
  */
 
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"
-
-// Geometry
-#include "Geometry/CommonDetUnit/interface/GeomDet.h"
-#include "Geometry/CommonDetUnit/interface/GeomDetUnit.h"
 
 // Alignment
 #include "Alignment/CommonAlignment/interface/AlignableBeamSpot.h"
 
 #include "CondFormats/Alignment/interface/Alignments.h"
-#include "CondFormats/Alignment/interface/AlignmentErrors.h"
-#include "CondFormats/Alignment/interface/AlignmentSorter.h"
+#include "CondFormats/Alignment/interface/AlignmentErrorsExtended.h"
 
 #include "Alignment/CommonAlignment/interface/AlignableExtras.h"
 
@@ -40,7 +36,7 @@ void AlignableExtras::dump( void ) const
     << " AlignableExtras knows " << comp.size() << " alignable(s)" << std::endl;
 
   // Dump components
-  for ( Alignables::iterator i=comp.begin(); i!=comp.end(); i++ )
+  for ( Alignables::iterator i=comp.begin(); i!=comp.end(); ++i )
     (*i)->dump();
 }
 
@@ -50,7 +46,7 @@ Alignments* AlignableExtras::alignments( void ) const
   align::Alignables comp = this->components();
   Alignments* m_alignments = new Alignments();
   // Add components recursively
-  for ( align::Alignables::iterator i=comp.begin(); i!=comp.end(); i++ )
+  for ( align::Alignables::iterator i=comp.begin(); i!=comp.end(); ++i )
     {
       Alignments* tmpAlignments = (*i)->alignments();
       std::copy( tmpAlignments->m_align.begin(), tmpAlignments->m_align.end(), 
@@ -58,33 +54,34 @@ Alignments* AlignableExtras::alignments( void ) const
 	  delete tmpAlignments;
     }
 
-  std::sort( m_alignments->m_align.begin(), m_alignments->m_align.end(), 
-	     lessAlignmentDetId<AlignTransform>() );
+  // sort by rawId
+  std::sort( m_alignments->m_align.begin(), m_alignments->m_align.end());
 
   return m_alignments;
 }
 
 //__________________________________________________________________________________________________
-AlignmentErrors* AlignableExtras::alignmentErrors( void ) const
+AlignmentErrorsExtended* AlignableExtras::alignmentErrors( void ) const
 {
   align::Alignables comp = this->components();
-  AlignmentErrors* m_alignmentErrors = new AlignmentErrors();
+  AlignmentErrorsExtended* m_alignmentErrors = new AlignmentErrorsExtended();
 
   // Add components recursively
-  for ( align::Alignables::iterator i=comp.begin(); i!=comp.end(); i++ )
+  for ( align::Alignables::iterator i=comp.begin(); i!=comp.end(); ++i )
     {
-	  AlignmentErrors* tmpAlignmentErrors = (*i)->alignmentErrors();
-      std::copy( tmpAlignmentErrors->m_alignError.begin(), tmpAlignmentErrors->m_alignError.end(), 
+	  AlignmentErrorsExtended* tmpAlignmentErrorsExtended = (*i)->alignmentErrors();
+      std::copy( tmpAlignmentErrorsExtended->m_alignError.begin(), tmpAlignmentErrorsExtended->m_alignError.end(), 
 		 std::back_inserter(m_alignmentErrors->m_alignError) );
-	  delete tmpAlignmentErrors;
+	  delete tmpAlignmentErrorsExtended;
     }
   
-  std::sort( m_alignmentErrors->m_alignError.begin(), m_alignmentErrors->m_alignError.end(), 
-	     lessAlignmentDetId<AlignTransformError>() );
+  // sort by rawId
+  std::sort( m_alignmentErrors->m_alignError.begin(), m_alignmentErrors->m_alignError.end());
 
   return m_alignmentErrors;
 }
 
+//______________________________________________________________________________
 void AlignableExtras::initializeBeamSpot(double x, double y, double z,
 					 double dxdz, double dydz)
 {
@@ -95,5 +92,19 @@ void AlignableExtras::initializeBeamSpot(double x, double y, double z,
   } else {
     edm::LogError("AlignableExtras") 
       << " AlignableBeamSpot not available. Cannot initialize!" << std::endl;
+  }
+}
+
+//______________________________________________________________________________
+void AlignableExtras::resetBeamSpot()
+{
+  align::Alignables& alis = beamSpot();
+  AlignableBeamSpot * aliBS = dynamic_cast<AlignableBeamSpot*>(alis.back());
+  if (aliBS) {
+    aliBS->reset();
+  } else {
+    edm::LogWarning("AlignableExtras")
+      << "@SUB=AlignableExtras::resetBeamSpot"
+      << "AlignableBeamSpot not available. Cannot reset!" << std::endl;
   }
 }

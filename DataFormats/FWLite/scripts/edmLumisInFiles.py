@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 from FWCore.PythonUtilities.LumiList   import LumiList
 import optparse
 
@@ -17,7 +18,7 @@ if __name__ == '__main__':
     # grab command line arguments even when it shouldn't.
     from DataFormats.FWLite import Lumis, Handle
     if not args:
-        raise RuntimeError, "Must provide at least one input file"
+        raise RuntimeError("Must provide at least one input file")
 
     # do we want to get the luminosity summary?
     if options.intLumi:
@@ -44,10 +45,10 @@ if __name__ == '__main__':
     if options.output:
         jsonList.writeJSON (options.output)
     else:
-        print jsonList
+        print(jsonList)
 
     # print out integrated luminosity numbers if requested
     if options.intLumi:
-        print "\nNote: These numbers should be considered approximate.  For official numbers, please use lumiCalc.py"
-        print "delivered %.1f mb,  recorded %.1f mb" % \
-              (delivered, recorded)
+        print("\nNote: These numbers should be considered approximate.  For official numbers, please use lumiCalc.py")
+        print("delivered %.1f mb,  recorded %.1f mb" % \
+              (delivered, recorded))

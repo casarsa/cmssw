@@ -13,7 +13,7 @@ process.MessageLogger = cms.Service("MessageLogger",
 #-------------------------------------------------
 # Geometry
 #-------------------------------------------------
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 #-------------------------------------------------
 # Calibration
@@ -61,10 +61,11 @@ process.SiStripMonitorCluster.TH1ClusterWidth.moduleswitchon = cms.bool(False)
 #--------------------------
 
 
-process.stat = cms.EDAnalyzer("SiStripQualityStatistics",
-                              dataLabel = cms.untracked.string(""),
-                              TkMapFileName = cms.untracked.string("TkMapBadComponents.pdf")  #available filetypes: .pdf .png .jpg .svg
-                              )
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.stat = DQMEDAnalyzer("SiStripQualityStatistics",
+                             dataLabel = cms.untracked.string(""),
+                             TkMapFileName = cms.untracked.string("TkMapBadComponents.pdf")  #available filetypes: .pdf .png .jpg .svg
+                             )
 
 
 process.p = cms.Path(process.siStripDigis*process.siStripZeroSuppression*process.siStripClusters*process.SiStripMonitorCluster*process.dqmSaver*process.stat)

@@ -2,23 +2,25 @@
 #include "FastSimulation/CaloGeometryTools/interface/CaloGeometryHelper.h"
 #include "FastSimulation/CalorimeterProperties/interface/CalorimeterProperties.h"
 #include "FastSimulation/CalorimeterProperties/interface/PreshowerProperties.h"
+#include "FastSimulation/CalorimeterProperties/interface/PreshowerLayer1Properties.h"
+#include "FastSimulation/CalorimeterProperties/interface/ECALProperties.h"
 #include "FastSimulation/CalorimeterProperties/interface/HCALProperties.h"
 #include "DataFormats/EcalDetId/interface/EcalSubdetector.h"
 
 typedef ROOT::Math::Plane3D::Point Point;
 
 CaloHitMaker::CaloHitMaker(const CaloGeometryHelper * theCalo,DetId::Detector basedet,int subdetn,int cal,unsigned sht)
-  :myCalorimeter(theCalo),theCaloProperties(NULL),base_(basedet),subdetn_(subdetn),onCal_(cal),showerType_(sht)
+  :myCalorimeter(theCalo),theCaloProperties(nullptr),base_(basedet),subdetn_(subdetn),onCal_(cal),showerType_(sht)
 {
   //  std::cout << " FamosCalorimeter " << basedet << " " << cal << std::endl;
   EMSHOWER=(sht==0);
   HADSHOWER=(sht==1);
   MIP=(sht==2);
   if(base_==DetId::Ecal&&(subdetn_==EcalBarrel||subdetn==EcalEndcap)&&onCal_)
-    theCaloProperties = (CalorimeterProperties*)myCalorimeter->ecalProperties(onCal_);
+    theCaloProperties = myCalorimeter->ecalProperties(onCal_);
   // is it really necessary to cast here ? 
   if(base_==DetId::Ecal&&subdetn_==EcalPreshower&&onCal_)
-    theCaloProperties = (PreshowerProperties*)myCalorimeter->layer1Properties(onCal_);
+    theCaloProperties = myCalorimeter->layer1Properties(onCal_);
   if(base_==DetId::Hcal&&cal) theCaloProperties = myCalorimeter->hcalProperties(onCal_);
 
   if(theCaloProperties)

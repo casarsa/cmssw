@@ -8,13 +8,13 @@
 #include "L1Trigger/RPCTechnicalTrigger/interface/RPCData.h"
 #include "L1Trigger/RPCTechnicalTrigger/interface/ProcessInputSignal.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <ios>
 #include <cmath>
 #include <vector>
-
+#include <memory>
 
 /** @class ProcessTestSignal ProcessTestSignal.h
  *  
@@ -27,14 +27,11 @@
  */
 class ProcessTestSignal : public ProcessInputSignal {
 public: 
-  /// Standard constructor
-  ProcessTestSignal( ) { }; 
+  explicit ProcessTestSignal( const char * );
   
-  ProcessTestSignal( const char * );
+  ~ProcessTestSignal( ) override; ///< Destructor
   
-  virtual ~ProcessTestSignal( ); ///< Destructor
-  
-  int  next();
+  int  next() override;
   
   void rewind();
   
@@ -42,8 +39,8 @@ public:
   
   void reset();
   
-  RPCInputSignal * retrievedata() {
-    return  m_lbin;
+  RPCInputSignal * retrievedata() override {
+    return  m_lbin.get();
   };
   
   void mask() {};
@@ -55,15 +52,11 @@ private:
   
   void builddata();
   
-  std::ifstream * m_in;
+  std::ifstream  m_in;
   
-  RPCData  * m_block;
+  std::unique_ptr<RPCInputSignal> m_lbin;
   
-  RBCInput * m_rbcinput;
-  
-  RPCInputSignal * m_lbin;
-  
-  std::vector<RPCData*> m_vecdata;
+  std::vector<std::unique_ptr<RPCData>> m_vecdata;
   
   std::map<int,RBCInput*> m_data;
   

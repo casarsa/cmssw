@@ -1,57 +1,29 @@
-#include "RecoPixelVertexing/PixelLowPtUtilities/interface/ClusterShapeTrackFilter.h"
-
-#include "RecoPixelVertexing/PixelTrackFitting/src/CircleFromThreePoints.h"
-#include "RecoPixelVertexing/PixelLowPtUtilities/interface/HitInfo.h"
-#include "RecoPixelVertexing/PixelLowPtUtilities/interface/ClusterShapeHitFilter.h"
-
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "FWCore/Framework/interface/ConsumesCollector.h"
-#include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
-
+#include "DataFormats/SiPixelCluster/interface/SiPixelClusterShapeCache.h"
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHit.h"
 #include "DataFormats/TrackingRecHit/interface/TrackingRecHit.h"
-#include "DataFormats/TrackReco/interface/Track.h"
-
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "Geometry/CommonDetUnit/interface/GeomDet.h"
-
+#include "RecoPixelVertexing/PixelLowPtUtilities/interface/ClusterShapeHitFilter.h"
+#include "RecoPixelVertexing/PixelLowPtUtilities/interface/ClusterShapeTrackFilter.h"
+#include "RecoPixelVertexing/PixelLowPtUtilities/interface/HitInfo.h"
+#include "RecoPixelVertexing/PixelTrackFitting/interface/CircleFromThreePoints.h"
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
-#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-
-#include "FWCore/Framework/interface/Event.h"
-#include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/SiPixelCluster/interface/SiPixelClusterShapeCache.h"
 
 inline float sqr(float x) { return x*x; }
 
 using namespace std;
 
 /*****************************************************************************/
-ClusterShapeTrackFilter::ClusterShapeTrackFilter(const edm::ParameterSet& ps, edm::ConsumesCollector& iC):
-  theClusterShapeCacheToken(iC.consumes<SiPixelClusterShapeCache>(ps.getParameter<edm::InputTag>("clusterShapeCacheSrc"))),
-  theTracker(nullptr),
-  theFilter(nullptr),
-  theClusterShapeCache(nullptr)
+ClusterShapeTrackFilter::ClusterShapeTrackFilter(const SiPixelClusterShapeCache *cache, double ptmin, double ptmax, const edm::EventSetup& es):
+  theClusterShapeCache(cache),
+  ptMin(ptmin), ptMax(ptmax)
 {
-  // Get ptMin if available
-  ptMin = (ps.exists("ptMin") ? ps.getParameter<double>("ptMin") : 0.);
-  ptMax = (ps.exists("ptMax") ? ps.getParameter<double>("ptMax") : 999999.);
-}
-
-/*****************************************************************************/
-ClusterShapeTrackFilter::~ClusterShapeTrackFilter()
-{
-}
-
-/*****************************************************************************/
-void ClusterShapeTrackFilter::update(const edm::Event& ev, const edm::EventSetup& es) {
-  edm::Handle<SiPixelClusterShapeCache> cache;
-  ev.getByToken(theClusterShapeCacheToken, cache);
-  theClusterShapeCache = cache.product();
-
   // Get tracker geometry
   edm::ESHandle<TrackerGeometry> tracker;
   es.get<TrackerDigiGeometryRecord>().get(tracker);
@@ -61,6 +33,15 @@ void ClusterShapeTrackFilter::update(const edm::Event& ev, const edm::EventSetup
   edm::ESHandle<ClusterShapeHitFilter> shape;
   es.get<CkfComponentsRecord>().get("ClusterShapeHitFilter",shape);
   theFilter = shape.product();
+
+  edm::ESHandle<TrackerTopology> tTopoHand;
+  es.get<TrackerTopologyRcd>().get(tTopoHand);
+  tTopo = tTopoHand.product();
+}
+
+/*****************************************************************************/
+ClusterShapeTrackFilter::~ClusterShapeTrackFilter()
+{
 }
 
 /*****************************************************************************/
@@ -144,8 +125,7 @@ vector<GlobalPoint> ClusterShapeTrackFilter::getGlobalPoss
 /*****************************************************************************/
 bool ClusterShapeTrackFilter::operator()
   (const reco::Track* track,
-   const vector<const TrackingRecHit *> & recHits,
-   const TrackerTopology *tTopo ) const
+   const vector<const TrackingRecHit *> & recHits) const
 {
   // Do not even look at pairs
   if(recHits.size() <= 2) return true;
@@ -165,6 +145,7 @@ bool ClusterShapeTrackFilter::operator()
 
   // Get global directions
   vector<GlobalVector> globalDirs = getGlobalDirs(globalPoss);
+  if ( globalDirs.empty() ) return false;
 
   bool ok = true;
 

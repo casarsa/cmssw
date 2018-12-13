@@ -1,18 +1,20 @@
 #include "DetectorDescription/Core/interface/DDMap.h"
 
-DDMap::DDMap() : DDBase<DDName,dd_map_type*>() { }
+#include <utility>
 
+DDMap::DDMap()
+  : DDBase< DDName, std::unique_ptr<dd_map_type>>() { }
 
-DDMap::DDMap(const DDName & name) : DDBase<DDName,dd_map_type*>() 
+DDMap::DDMap( const DDName & name )
+  : DDBase< DDName, std::unique_ptr<dd_map_type>>() 
 {
-  prep_ = StoreT::instance().create(name);
+  create( name );
 }
 
-DDMap::DDMap(const DDName & name,dd_map_type* vals)
+DDMap::DDMap( const DDName & name, std::unique_ptr<dd_map_type> vals )
 {
-  prep_ = StoreT::instance().create(name,vals);
-}  
-
+  create( name, std::move( vals ));
+}
 
 std::ostream & operator<<(std::ostream & os, const DDMap & cons)
 {
@@ -20,9 +22,8 @@ std::ostream & operator<<(std::ostream & os, const DDMap & cons)
   
   if(cons.isDefined().second) {
     os << " size=" << cons.size() << " vals=( ";
-    DDMap::value_type::const_iterator it(cons.values().begin()), ed(cons.values().end());
-    for(; it != ed; ++it) {
-      os << it->first << '=' << it->second << ' ';
+    for( const auto& it : cons.values()) {
+      os << it.first << '=' << it.second << ' ';
     }
     os << ')';
   }
@@ -31,5 +32,3 @@ std::ostream & operator<<(std::ostream & os, const DDMap & cons)
   }  
   return os;
 }
-
-

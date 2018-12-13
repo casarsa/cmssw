@@ -9,7 +9,6 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -39,9 +38,9 @@ MuonLinksProducerForHLT::~MuonLinksProducerForHLT()
 {
 }
 
-void MuonLinksProducerForHLT::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
+void MuonLinksProducerForHLT::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const
 {
-   std::auto_ptr<reco::MuonTrackLinksCollection> output(new reco::MuonTrackLinksCollection());
+   auto output = std::make_unique<reco::MuonTrackLinksCollection>();
 
    edm::Handle<reco::MuonTrackLinksCollection> links; 
    iEvent.getByToken(linkToken_, links);
@@ -89,5 +88,5 @@ void MuonLinksProducerForHLT::produce(edm::Event& iEvent, const edm::EventSetup&
 					      link->standAloneTrack(), 
 					      link->globalTrack() ) );
    }  
-   iEvent.put( output );
+   iEvent.put(std::move(output));
 }

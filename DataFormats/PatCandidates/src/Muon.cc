@@ -26,14 +26,17 @@ Muon::Muon() :
     embeddedPFCandidate_(false),
     pfCandidateRef_(),
     cachedNormChi2_(false),
-    cachedDB_(false),
-    cachedNumberOfValidHits_(0),
     normChi2_(0.0),
-    dB_(0.0),
-    edB_(0.0),
-    numberOfValidHits_(0)
+    cachedNumberOfValidHits_(false),
+    numberOfValidHits_(0),
+    pfEcalEnergy_(0),
+    jetPtRatio_(0),
+    jetPtRel_(0),
+    mvaValue_(0),
+    softMvaValue_(0)
 {
   initImpactParameters();
+  initSimInfo();
 }
 
 /// constructor from reco::Muon
@@ -52,14 +55,17 @@ Muon::Muon(const reco::Muon & aMuon) :
     embeddedPFCandidate_(false),
     pfCandidateRef_(),
     cachedNormChi2_(false),
-    cachedDB_(false),
-    cachedNumberOfValidHits_(0),
     normChi2_(0.0),
-    dB_(0.0),
-    edB_(0.0),
-    numberOfValidHits_(0)
+    cachedNumberOfValidHits_(false),
+    numberOfValidHits_(0),
+    pfEcalEnergy_(0),
+    jetPtRatio_(0),
+    jetPtRel_(0),
+    mvaValue_(0),
+    softMvaValue_(0)
 {
   initImpactParameters();
+  initSimInfo();
 }
 
 /// constructor from ref to reco::Muon
@@ -78,14 +84,17 @@ Muon::Muon(const edm::RefToBase<reco::Muon> & aMuonRef) :
     embeddedPFCandidate_(false),
     pfCandidateRef_(),
     cachedNormChi2_(false),
-    cachedDB_(false),
-    cachedNumberOfValidHits_(0),
     normChi2_(0.0),
-    dB_(0.0),
-    edB_(0.0),
-    numberOfValidHits_(0)
+    cachedNumberOfValidHits_(false),
+    numberOfValidHits_(0),
+    pfEcalEnergy_(0),
+    jetPtRatio_(0),
+    jetPtRel_(0),
+    mvaValue_(0),
+    softMvaValue_(0)
 {
   initImpactParameters();
+  initSimInfo();
 }
 
 /// constructor from ref to reco::Muon
@@ -104,14 +113,17 @@ Muon::Muon(const edm::Ptr<reco::Muon> & aMuonRef) :
     embeddedPFCandidate_(false),
     pfCandidateRef_(),
     cachedNormChi2_(false),
-    cachedDB_(false),
-    cachedNumberOfValidHits_(0),
     normChi2_(0.0),
-    dB_(0.0),
-    edB_(0.0),
-    numberOfValidHits_(0)
+    cachedNumberOfValidHits_(false),
+    numberOfValidHits_(0),
+    pfEcalEnergy_(0),
+    jetPtRatio_(0),
+    jetPtRel_(0),
+    mvaValue_(0),
+    softMvaValue_(0)
 {
   initImpactParameters();
+  initSimInfo();
 }
 
 /// destructor
@@ -137,11 +149,25 @@ reco::operator<<(std::ostream& out, const pat::Muon& obj)
 
 // initialize impact parameter container vars
 void Muon::initImpactParameters() {
-  for (int i_ = 0; i_<5; ++i_){
-    ip_.push_back(0.0);
-    eip_.push_back(0.0);
-    cachedIP_.push_back(false);
-  }
+  std::fill(ip_, ip_+IpTypeSize, 0.0f);
+  std::fill(eip_, eip_+IpTypeSize, 0.0f);
+  cachedIP_ = 0;
+}
+
+// initialize impact parameter container vars
+void Muon::initSimInfo() {
+  simType_ = reco::MuonSimType::Unknown;
+  simExtType_ = reco::ExtendedMuonSimType::ExtUnknown;
+  simFlavour_ = 0;
+  simHeaviestMotherFlavour_ = 0;
+  simPdgId_ = 0;
+  simMotherPdgId_ = 0;
+  simBX_ = 999;
+  simProdRho_ = 0.0;
+  simProdZ_ = 0.0;
+  simPt_ = 0.0;
+  simEta_ = 0.0;
+  simPhi_ = 0.0;
 }
 
 
@@ -245,7 +271,7 @@ reco::CandidatePtr Muon::sourceCandidatePtr( size_type i ) const {
 void Muon::embedMuonBestTrack(bool force) {
   muonBestTrack_.clear();
   embeddedMuonBestTrack_ = false;
-  bool alreadyEmbedded = force;
+  bool alreadyEmbedded = false;
   if (!force) {
       switch (muonBestTrackType()) {
         case None: alreadyEmbedded = true; break;
@@ -257,7 +283,7 @@ void Muon::embedMuonBestTrack(bool force) {
         case DYT: if (embeddedDytMuon_) alreadyEmbedded = true; break;
       }
   }
-  if (!alreadyEmbedded) {
+  if (force || !alreadyEmbedded) {
       muonBestTrack_.push_back(*reco::Muon::muonBestTrack());
       embeddedMuonBestTrack_ = true;
   }
@@ -266,10 +292,10 @@ void Muon::embedMuonBestTrack(bool force) {
 /// embed the Track selected to be the best measurement of the muon parameters
 void Muon::embedTunePMuonBestTrack(bool force) {
   tunePMuonBestTrack_.clear();
-  bool alreadyEmbedded = force;
+  bool alreadyEmbedded = false;
   embeddedTunePMuonBestTrack_ = false;
   if (!force) {
-      switch (muonBestTrackType()) {
+      switch (tunePMuonBestTrackType()) {
           case None: alreadyEmbedded = true; break;
           case InnerTrack: if (embeddedTrack_) alreadyEmbedded = true; break;
           case OuterTrack: if (embeddedStandAloneMuon_) alreadyEmbedded = true; break;
@@ -282,7 +308,7 @@ void Muon::embedTunePMuonBestTrack(bool force) {
           if (embeddedMuonBestTrack_) alreadyEmbedded = true;
       }
   }
-  if (!alreadyEmbedded) {
+  if (force || !alreadyEmbedded) {
       tunePMuonBestTrack_.push_back(*reco::Muon::tunePMuonBestTrack());
       embeddedTunePMuonBestTrack_ = true;
   }
@@ -405,22 +431,9 @@ unsigned int Muon::numberOfValidHits() const {
 
 // embed various impact parameters with errors
 // IpType defines the type of the impact parameter
-// None is default and reverts to old behavior controlled by 
-// patMuons.usePV = True/False
 double Muon::dB(IpType type_) const {
-  
-  // preserve old functionality exactly
-  if (type_ == None){
-    if ( cachedDB_ ) {
-      return dB_;
-    }
-    else {
-      return std::numeric_limits<double>::max();
-    }
-  }
-  
   // more IP types (new)
-  else if ( cachedIP_[type_] ) {
+  if ( cachedIP_ & (1 << int(type_))) {
     return ip_[type_];
   } else {
     return std::numeric_limits<double>::max();
@@ -430,22 +443,9 @@ double Muon::dB(IpType type_) const {
 
 // embed various impact parameters with errors
 // IpType defines the type of the impact parameter
-// None is default and reverts to old behavior controlled by 
-// patMuons.usePV = True/False
 double Muon::edB(IpType type_) const {
-
-  // preserve old functionality exactly
-  if (type_ == None){
-    if ( cachedDB_ ) {
-      return edB_;
-    }
-    else {
-      return std::numeric_limits<double>::max();
-    }
-  }
-
   // more IP types (new)
-  else if ( cachedIP_[type_] ) {
+  if ( cachedIP_ & (1 << int(type_))) {
     return eip_[type_];
   } else {
     return std::numeric_limits<double>::max();
@@ -464,6 +464,11 @@ bool Muon::isTightMuon(const reco::Vertex&vtx) const {
 
 bool Muon::isLooseMuon() const {
   return muon::isLooseMuon(*this);
+
+}
+
+bool Muon::isMediumMuon() const {
+  return muon::isMediumMuon(*this);
 
 }
 

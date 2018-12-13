@@ -7,7 +7,6 @@
 #include "TrackingTools/DetLayers/interface/MeasurementEstimator.h"
 #include "TrackingTools/GeomPropagators/interface/HelixForwardPlaneCrossing.h"
 #include "TrackingTools/DetLayers/interface/rangesIntersect.h"
-#include "TrackingTools/DetLayers/interface/PhiLess.h"
 #include "TrackingTools/DetLayers/interface/ForwardRingDiskBuilderFromDet.h"
 
 #include "LayerCrossingSide.h"
@@ -181,7 +180,7 @@ void TIDRing::searchNeighbors( const TrajectoryStateOnSurface& tsos,
 				     vector<DetGroup>& result,
 				     bool checkClosest) const
 {
-  GlobalPoint gCrossingPos = crossing.position();
+  const GlobalPoint& gCrossingPos = crossing.position();
 
   const vector<const GeomDet*>& sLayer( subLayer( crossing.subLayerIndex()));
  

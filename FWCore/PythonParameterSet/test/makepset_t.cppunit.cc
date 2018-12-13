@@ -9,6 +9,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/PythonParameterSet/interface/PythonProcessDesc.h"
 #include "FWCore/Utilities/interface/EDMException.h"
+#include "FWCore/Utilities/interface/resolveSymbolicLinks.h"
 
 #include "cppunit/extensions/HelperMacros.h"
 
@@ -20,6 +21,7 @@
 #include <stdlib.h> // for setenv; <cstdlib> is likely to fail
 #include <string>
 #include <unistd.h>
+#include <boost/filesystem.hpp>
 
 class testmakepset: public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(testmakepset);
@@ -78,7 +80,7 @@ void testmakepset::secsourceAux() {
   "    fileName = cms.string('file:CumHits.root')\n"
   ")\n"
   "process.mix = cms.EDFilter('MixingModule',\n"
-  "    input = cms.SecSource('PoolSource',\n"
+  "    input = cms.SecSource('EmbeddedRootSource',\n"
   "        fileNames = cms.untracked.vstring('file:pileup.root')\n"
   "    ),\n"
   "    max_bunch = cms.int32(3),\n"
@@ -95,12 +97,12 @@ void testmakepset::secsourceAux() {
   PythonProcessDesc builder(config);
   std::shared_ptr<edm::ParameterSet> ps = builder.parameterSet();
 
-  CPPUNIT_ASSERT(0 != ps.get());
+  CPPUNIT_ASSERT(nullptr != ps.get());
 
   // Make sure this ParameterSet object has the right contents
   edm::ParameterSet const& mixingModuleParams = ps->getParameterSet("mix");
   edm::ParameterSet const& secondarySourceParams = mixingModuleParams.getParameterSet("input");
-  CPPUNIT_ASSERT(secondarySourceParams.getParameter<std::string>("@module_type") == "PoolSource");
+  CPPUNIT_ASSERT(secondarySourceParams.getParameter<std::string>("@module_type") == "EmbeddedRootSource");
   CPPUNIT_ASSERT(secondarySourceParams.getParameter<std::string>("@module_label") == "input");
   CPPUNIT_ASSERT(secondarySourceParams.getUntrackedParameter<std::vector<std::string> >("fileNames")[0] == "file:pileup.root");
 }
@@ -142,14 +144,14 @@ void testmakepset::usingBlockAux() {
   "    j = cms.int32(3),\n"
   "    u = cms.uint64(1011),\n"
   "    l = cms.int64(101010)\n"
-  ")\n";
+  ")\n"
+  "process.p = cms.Path(process.m1+process.m2)\n";
 
   std::string config(kTest);
   // Create the ParameterSet object from this configuration string.
   PythonProcessDesc builder(config);
   std::shared_ptr<edm::ParameterSet> ps = builder.parameterSet();
-
-  CPPUNIT_ASSERT(0 != ps.get());
+  CPPUNIT_ASSERT(nullptr != ps.get());
 
   // Make sure this ParameterSet object has the right contents
   edm::ParameterSet const& m1Params = ps->getParameterSet("m1");
@@ -186,8 +188,8 @@ void testmakepset::fileinpathAux() {
   "process = cms.Process('PROD')\n"
   "process.main = cms.PSet(\n"
   "    topo = cms.FileInPath('Geometry/TrackerSimData/data/trackersens.xml'),\n"
-  "    fip = cms.FileInPath('FWCore/ParameterSet/python/Config.py'),\n"
-  "    ufip = cms.untracked.FileInPath('FWCore/ParameterSet/python/Types.py'),\n"
+  "    fip = cms.FileInPath('FWCore/PythonParameterSet/test/fip.txt'),\n"
+  "    ufip = cms.untracked.FileInPath('FWCore/PythonParameterSet/test/ufip.txt'),\n"
   "    extraneous = cms.int32(12)\n"
   ")\n"
   "process.source = cms.Source('EmptySource')\n";
@@ -197,7 +199,7 @@ void testmakepset::fileinpathAux() {
   // Create the ParameterSet object from this configuration string.
   PythonProcessDesc builder(config);
   std::shared_ptr<edm::ParameterSet> ps = builder.parameterSet();
-  CPPUNIT_ASSERT(0 != ps.get());
+  CPPUNIT_ASSERT(nullptr != ps.get());
 
   edm::ParameterSet const& innerps = ps->getParameterSet("main");
   edm::FileInPath fip  = innerps.getParameter<edm::FileInPath>("fip");
@@ -205,22 +207,42 @@ void testmakepset::fileinpathAux() {
   CPPUNIT_ASSERT(innerps.existsAs<int>("extraneous"));
   CPPUNIT_ASSERT(!innerps.existsAs<int>("absent"));
   char *releaseBase = getenv("CMSSW_RELEASE_BASE");
-  bool localArea = (releaseBase != 0 && strlen(releaseBase) != 0);
+  char *localBase = getenv("CMSSW_BASE");
+  bool localArea = (releaseBase != nullptr && strlen(releaseBase) != 0 && strcmp(releaseBase, localBase));
+  if(localArea) {
+    // Need to account for possible symbolic links
+    std::string const src("/src");
+    std::string release = releaseBase + src;
+    std::string local = localBase + src;
+    edm::resolveSymbolicLinks(release);
+    edm::resolveSymbolicLinks(local);
+    localArea = (local != release);
+  }
+
   if(localArea) {
     CPPUNIT_ASSERT(fip.location() == edm::FileInPath::Local);
   }
-  CPPUNIT_ASSERT(fip.relativePath()  == "FWCore/ParameterSet/python/Config.py");
-  CPPUNIT_ASSERT(ufip.relativePath() == "FWCore/ParameterSet/python/Types.py");
+  CPPUNIT_ASSERT(fip.relativePath()  == "FWCore/PythonParameterSet/test/fip.txt");
+  CPPUNIT_ASSERT(ufip.relativePath() == "FWCore/PythonParameterSet/test/ufip.txt");
   std::string fullpath = fip.fullPath();
   std::cerr << "fullPath is: " << fip.fullPath() << std::endl;
   std::cerr << "copy of fullPath is: " << fullpath << std::endl;
 
   CPPUNIT_ASSERT(!fullpath.empty());
 
-  std::string tmpout = fullpath.substr(0, fullpath.find("FWCore/ParameterSet/python/Config.py")) + "tmp.py";
+  std::string tmpout = fullpath.substr(0, fullpath.find("FWCore/PythonParameterSet/test/fip.txt")) + "tmp.py";
 
   edm::FileInPath topo = innerps.getParameter<edm::FileInPath>("topo");
-  CPPUNIT_ASSERT(topo.location() != edm::FileInPath::Local);
+  // if the file is local, then just disable this check as then it is expected to fail
+  {
+    std::string const src("/src");
+    std::string local = localBase + src;
+    std::string localFile = local + "/Geometry/TrackerSimData/data/trackersens.xml";
+    if (!boost::filesystem::exists(localFile) )
+      CPPUNIT_ASSERT(topo.location() != edm::FileInPath::Local);
+    else
+      std::cerr << "Disabling test against local path for trackersens.xml as package is checked out in this test" << std::endl;
+  }
   CPPUNIT_ASSERT(topo.relativePath() == "Geometry/TrackerSimData/data/trackersens.xml");
   fullpath = topo.fullPath();
   CPPUNIT_ASSERT(!fullpath.empty());
@@ -256,7 +278,7 @@ void testmakepset::fileinpathAux() {
   unlink(tmpout.c_str());
   std::shared_ptr<edm::ParameterSet> ps2 = builder2.parameterSet();
 
-  CPPUNIT_ASSERT(0 != ps2.get());
+  CPPUNIT_ASSERT(nullptr != ps2.get());
 
   edm::ParameterSet const& innerps2 = ps2->getParameterSet("main");
   edm::FileInPath fip2 = innerps2.getParameter<edm::FileInPath>("fip2");

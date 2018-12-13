@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Misc functions to manipulate Ecal records
 # author: Stefano Argiro
@@ -22,7 +23,7 @@ def listTags(db):
         tags = db.allTags()
         db.commitTransaction()
         for tag in tags.split():
-            print tag
+            print(tag)
     except:
         return ""
 
@@ -32,12 +33,12 @@ def listIovs(db,tag):
     try :
        iov = inspect.Iov(db,tag)
        iovlist = iov.list()
-       print "Available iovs for tag: ",tag
+       print("Available iovs for tag: ",tag)
        for p in iovlist:
-           print "  Since " , p[1], " Till " , p[2]
+           print("  Since " , p[1], " Till " , p[2])
      
-    except Exception,er :
-        print " listIovs exception ",er 
+    except Exception as er :
+        print(" listIovs exception ",er) 
 
 def dumpXML(db,tag,since,filename='dump.xml'):
     '''Dump record in XML format for a given tag '''
@@ -56,10 +57,10 @@ def dumpXML(db,tag,since,filename='dump.xml'):
        db.commitTransaction()
        payload = inspect.PayLoad(db, tag, elem)
        out = open(filename,'w')
-       print >> out, payload
+       print(payload, file=out)
       
-    except Exception,er :
-        print " dumpXML exception ",er
+    except Exception as er :
+        print(" dumpXML exception ",er)
 
 def plot (db, tag,since,filename='plot.root'):
     '''Invoke the plot function from the wrapper and save to the specified \
@@ -81,15 +82,15 @@ def plot (db, tag,since,filename='plot.root'):
        payload = inspect.PayLoad(db, tag, elem)
        payload.plot(filename,"",[],[])
             
-    except Exception,er :
-        print " plot exception ",er
+    except Exception as er :
+        print(" plot exception ",er)
         
 
 def compare(tag1,db1,since1,
             tag2,db2,since2,filename='compare.root'):
   '''Produce comparison plots for two records. Save plots to file \
      according to format. tag can be an xml file'''
-  print "EcalCondTools.py compare tag1 ", tag1, "since1 : ", since1, " tag2 ", tag2," s2 ", since2
+  print("EcalCondTools.py compare tag1 ", tag1, "since1 : ", since1, " tag2 ", tag2," s2 ", since2)
 
   coeff_1_b=[]
   coeff_2_b=[]
@@ -112,7 +113,7 @@ def compare(tag1,db1,since1,
         exe = Plug.Extractor(w)
 #        p = getObject(db1,tag1,since1,ex)
 #        p.extract(ex)
-        print " before loop"
+        print(" before loop")
         for elem in db1.iov(tag1).elements :       
           if str(elem.since())==str(since1):
             found=1
@@ -123,10 +124,10 @@ def compare(tag1,db1,since1,
             coeff_1_e = [i for i in exe.values()]
         db1.commitTransaction()
 
-      except Exception,er :
-        print " compare first set exception ",er
+      except Exception as er :
+        print(" compare first set exception ",er)
       if not found :
-        print "Could not retrieve payload for tag: " , tag1, " since: ", since1
+        print("Could not retrieve payload for tag: " , tag1, " since: ", since1)
         sys.exit(0)
 
   else:
@@ -155,10 +156,10 @@ def compare(tag1,db1,since1,
             coeff_2_e = [i for i in exe.values()]
         db2.commitTransaction()
      
-      except Exception, er :
-          print " compare second set exception ",er
+      except Exception as er :
+          print(" compare second set exception ",er)
       if not found :
-        print "Could not retrieve payload for tag: " , tag2, " since: ", since2
+        print("Could not retrieve payload for tag: " , tag2, " since: ", since2)
         sys.exit(0)
 
   else:
@@ -262,10 +263,10 @@ def histo (db, tag,since,filename='histo.root'):
             coeff_endc = [i for i in exe.values()]
         db.commitTransaction()
 
-      except Exception, er :
-          print " histo exception ",er
+      except Exception as er :
+          print(" histo exception ",er)
       if not found :
-        print "Could not retrieve payload for tag: " , tag, " since: ", since
+        print("Could not retrieve payload for tag: " , tag, " since: ", since)
         sys.exit(0)
 
     else :
@@ -338,11 +339,11 @@ def getToken(db,tag,since):
            tmpsince=p[1]
            if str(tmpsince)==str(since) :
                return p[0]
-       print "Could not retrieve token for tag: " , tag, " since: ", since
+       print("Could not retrieve token for tag: " , tag, " since: ", since)
        sys.exit(0)
        
-    except Exception, er :
-       print er
+    except Exception as er :
+       print(er)
 
 
 def getObject(db,tag,since):
@@ -352,23 +353,23 @@ def getObject(db,tag,since):
 #       exec('import '+db.moduleName(tag)+' as Plug')  
        db.startReadOnlyTransaction()
        Plug = __import__(str(db.payloadModules(tag)[0]))
-       print " getObject Plug"
+       print(" getObject Plug")
        payload = Plug.Object(db)
        db.commitTransaction()
        listOfIovElem= [iovElem for iovElem in db.iov(tag).elements]
-       print " getObject before loop"
+       print(" getObject before loop")
        for elem in db.iov(tag).elements :       
            if str(elem.since())==str(since):
                found=1
-               print " getObject found ", elem.since()
+               print(" getObject found ", elem.since())
 #               return Plug.Object(elem)
                return elem
            
-    except Exception, er :
-        print " getObject exception ",er
+    except Exception as er :
+        print(" getObject exception ",er)
 
     if not found :
-        print "Could not retrieve payload for tag: " , tag, " since: ", since
+        print("Could not retrieve payload for tag: " , tag, " since: ", since)
         sys.exit(0)
 
 

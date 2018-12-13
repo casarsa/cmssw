@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "DetectorDescription/Base/interface/DDutils.h"
 #include "DetectorDescription/Core/interface/DDCurrentNamespace.h"
 #include "DetectorDescription/Core/interface/DDSplit.h"
 #include "Geometry/TrackerCommonData/plugins/DDTIDModulePosAlgo.h"
@@ -131,7 +130,6 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
   LogDebug("TIDGeom") << "==>> Constructing DDTIDModulePosAlgo...";
 
   DDName parentName  = parent().name(); 
-  DDName name;
 
   double botfr;                                       // width of side frame at the the bottom of the modules 
   double topfr;                                       // width of side frame at the the top of the modules 
@@ -176,7 +174,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
   double xpos=0; double ypos=0; double zpos=0;
 
   // Cool Inserts
-  name = DDName(DDSplit(coolName).first, DDSplit(coolName).second);
+  DDName name = DDName(DDSplit(coolName).first, DDSplit(coolName).second);
   ypos = coolZ;
 
   double zCool;
@@ -213,7 +211,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
 
   if ( doSpacers ) {
   // Bottom Spacers (Alumina)
-    name = DDName(DDSplit(botSpacersName).first, DDSplit(botSpacersName).second);
+    DDName name = DDName(DDSplit(botSpacersName).first, DDSplit(botSpacersName).second);
     ypos = botSpacersZ;
 
     double zBotSpacers;
@@ -224,7 +222,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
     }
     zpos = zBotSpacers - zCenter; 
     rot = DDRotation();
-   cpv.position(name, parentName, 1,  DDTranslation(0.0,ypos,zpos), rot );
+    cpv.position(name, parentName, 1,  DDTranslation(0.0,ypos,zpos), rot );
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< 1 << " positioned in " << parentName << " at "
 			<< DDTranslation(0.0,ypos,zpos) << " with no rotation";       	
@@ -260,12 +258,12 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
       thetax = 90.*CLHEP::deg+thetaz;
       double thetadeg = thetax/CLHEP::deg;
       if (thetadeg != 0) {
-	std::string arotstr = DDSplit(sidSpacersName).first+dbl_to_string(thetadeg*10.);
+	std::string arotstr = DDSplit(sidSpacersName).first + std::to_string(thetadeg*10.);
 	rot = DDrot(DDName(arotstr,  DDSplit(sidSpacersName).second), thetax, 
 		    phix, thetay, phiy, thetaz, phiz);
       }
 
-     cpv.position(name, parentName, copy,  DDTranslation(xpos,ypos,zpos), rot);
+      cpv.position(name, parentName, copy,  DDTranslation(xpos,ypos,zpos), rot);
       LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			  << copy << " positioned in " << parentName << " at "
 			  << DDTranslation(xpos,ypos,zpos) << " with " << rot;
@@ -279,7 +277,6 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
     // Wafer
     name = DDName(DDSplit(waferName[k]).first, DDSplit(waferName[k]).second);
     xpos=0; 
-    zpos=0; 
     ypos = waferZ[k];
     double zWafer;
     if (dlHybrid > dlTop) {
@@ -295,7 +292,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
       rotns = DDSplit(waferRot[k]).second;
       rot   = DDRotation(DDName(rotstr, rotns));
     }
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;
@@ -323,7 +320,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
       rot     = DDRotation();
     }
     tran = DDTranslation(xpos,ypos,zpos);
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;
@@ -340,7 +337,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
     zpos = zHybrid - zCenter;
     tran = DDTranslation(0,ypos,zpos);
     rot  = DDRotation();
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;
@@ -358,7 +355,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
     zpos = zBoxFrame - zCenter;
     tran = DDTranslation(0,ypos,zpos);
     rot  = DDRotation();
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;
@@ -382,7 +379,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
       rot     = DDRotation();
     }  
     tran = DDTranslation(0,ypos,zpos);
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;
@@ -411,7 +408,7 @@ void DDTIDModulePosAlgo::execute(DDCompactView& cpv) {
       rot     = DDRotation();
     }  
     tran = DDTranslation(0,ypos,zpos);
-   cpv.position(name, parentName, k+1, tran, rot);
+    cpv.position(name, parentName, k+1, tran, rot);
     LogDebug("TIDGeom") << "DDTIDModulePosAlgo test: " << name <<" number "
 			<< k+1 << " positioned in " << parentName << " at "
 			<< tran << " with " << rot;

@@ -3,7 +3,7 @@
 #include <memory>
 
 FWJobMetadataManager::FWJobMetadataManager(void)
-   : m_typeAndReps(0)
+   : m_typeAndReps(nullptr)
 {}
 
 FWJobMetadataManager::~FWJobMetadataManager()
@@ -22,7 +22,7 @@ FWJobMetadataManager::~FWJobMetadataManager()
 void
 FWJobMetadataManager::update(FWJobMetadataUpdateRequest *request)
 {
-   std::auto_ptr<FWJobMetadataUpdateRequest> ptr(request);
+   std::unique_ptr<FWJobMetadataUpdateRequest> ptr(request);
    if (doUpdate(request))
       metadataChanged_();
 }

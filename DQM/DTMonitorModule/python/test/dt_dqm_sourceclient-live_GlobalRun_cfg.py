@@ -1,3 +1,4 @@
+from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("DTDQM")
@@ -41,7 +42,7 @@ process.dqmSaver.saveAtJobEnd = True
 
 
 # DT reco and DQM sequences
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 # ideal geometry for LUT task
 process.load("Geometry.DTGeometryBuilder.idealForDigiDtGeometry_cff")
 process.load("DQM.DTMonitorModule.dt_dqm_sourceclient_common_cff")
@@ -69,4 +70,4 @@ process.dtDQMPathPhys = cms.Path(process.unpackers + process.dqmmodules + proces
 
 process.dtDQMPathCalib = cms.Path(process.unpackers + process.dqmmodules + process.calibrationEventsFilter * process.dtDQMCalib)
 
-print process.source.sourceURL
+print(process.source.sourceURL)

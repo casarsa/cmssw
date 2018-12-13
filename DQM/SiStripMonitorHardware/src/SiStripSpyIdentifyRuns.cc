@@ -40,13 +40,13 @@ namespace sistrip {
   public:
 
     explicit SpyIdentifyRunsModule(const edm::ParameterSet&);
-    ~SpyIdentifyRunsModule();
+    ~SpyIdentifyRunsModule() override;
 
   private:
 
-    virtual void beginJob() override;
-    virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-    virtual void endJob() override;
+    void beginJob() override;
+    void analyze(const edm::Event&, const edm::EventSetup&) override;
+    void endJob() override;
 
     void writeRunInFile(const unsigned int aRunNumber);
  
@@ -121,7 +121,7 @@ namespace sistrip {
 	if ( !input.data() ||!input.size() ) continue;
           
 	//construct FEDBuffer
-	std::auto_ptr<sistrip::FEDSpyBuffer> buffer;
+	std::unique_ptr<sistrip::FEDSpyBuffer> buffer;
 	try {
 	  buffer.reset(new sistrip::FEDSpyBuffer(input.data(),input.size()));
 	} catch (const cms::Exception& e) { 

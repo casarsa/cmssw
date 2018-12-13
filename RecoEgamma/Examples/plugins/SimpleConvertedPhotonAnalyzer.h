@@ -2,9 +2,8 @@
 #define SimpleConvertedPhotonAnalyzer_H
 #include "RecoEgamma/EgammaMCTools/interface/PhotonMCTruthFinder.h"
 
-#include "SimTracker/TrackAssociation/interface/TrackAssociatorBase.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 
 #include <map>
 #include <vector>
@@ -20,19 +19,19 @@ class SimVertex;
 class SimTrack;
 
 
-class SimpleConvertedPhotonAnalyzer : public edm::EDAnalyzer
+class SimpleConvertedPhotonAnalyzer : public edm::one::EDAnalyzer<>
 {
 
    public:
    
       //
       explicit SimpleConvertedPhotonAnalyzer( const edm::ParameterSet& ) ;
-      virtual ~SimpleConvertedPhotonAnalyzer();
+      ~SimpleConvertedPhotonAnalyzer() override;
                                    
       
-      virtual void analyze( const edm::Event&, const edm::EventSetup& ) ;
-      virtual void beginJob() ;
-      virtual void endJob() ;
+      void analyze( const edm::Event&, const edm::EventSetup& ) override ;
+      void beginJob() override ;
+      void endJob() override ;
 
    private:
 

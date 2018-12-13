@@ -52,7 +52,7 @@ GenericMVAComputer const* GenericMVAComputerCache::getComputer(int index) const
       << "Calibration record " << errorUpdatingLabel
       << " not found in MVAComputerContainer." << std::endl;
   }
-  return index >= 0 ? computers[index].computer.get() : 0;
+  return index >= 0 ? computers[index].computer.get() : nullptr;
 }
 
 bool GenericMVAComputerCache::isEmpty() const {
@@ -107,7 +107,7 @@ bool GenericMVAComputerCache::update(const MVAComputerContainer *calib)
 			continue;
 
 		// instantiate new MVAComputer with uptodate calibration
-		iter->computer = std::auto_ptr<GenericMVAComputer>(
+		iter->computer = std::unique_ptr<GenericMVAComputer>(
 					new GenericMVAComputer(computerCalib));
 
 		iter->cacheId = computerCalib->getCacheId();

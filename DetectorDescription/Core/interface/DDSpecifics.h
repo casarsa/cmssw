@@ -1,27 +1,29 @@
-#ifndef DDSpecifics_h
-#define DDSpecifics_h
+#ifndef DETECTOR_DESCRIPTION_CORE_DDSPECIFICS_H
+#define DETECTOR_DESCRIPTION_CORE_DDSPECIFICS_H
 
-
+#include <iosfwd>
 #include <map>
+#include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "DetectorDescription/Core/interface/DDName.h"
 #include "DetectorDescription/Core/interface/DDBase.h"
-#include "DetectorDescription/Core/interface/DDsvalues.h"
 #include "DetectorDescription/Core/interface/DDExpandedView.h"
+#include "DetectorDescription/Core/interface/DDName.h"
+#include "DetectorDescription/Core/interface/DDsvalues.h"
 
-//#include "DetectorDescription/Core/interface/DDExpandedView.h"
-
-class DDSpecifics;
-class DDPartSelection;
+class DDExpandedView;
 class DDNodes;
-namespace DDI { class Specific; }
+class DDPartSelection;
+class DDSpecifics;
 
-typedef std::vector<std::string> selectors_type;
+namespace DDI {
+  class Specific;
+}
 
-std::ostream & operator<<(std::ostream &, const std::vector<std::string> &);
-std::ostream & operator<<(std::ostream &, const DDSpecifics &);
+std::ostream & operator<<( std::ostream &, const std::vector<std::string> & );
+std::ostream & operator<<( std::ostream &, const DDSpecifics & );
 
 /**
   used to attach specific (user defined) data to nodes in the expanded view.
@@ -37,7 +39,7 @@ std::ostream & operator<<(std::ostream &, const DDSpecifics &);
     DDSpecifics are lightweighted reference-objects. For further information concerning
     reference-objects refere to the documentation of DDLogicalPart. 
 */
-class DDSpecifics : public DDBase<DDName,DDI::Specific*>
+class DDSpecifics : public DDBase< DDName, std::unique_ptr<DDI::Specific> >
 {
   friend std::ostream & operator<<( std::ostream  &, const DDSpecifics &);
 
@@ -64,11 +66,9 @@ public:
       bla, bla, bla
   */
   DDSpecifics(const DDName & name,
-              const selectors_type & partSelections,
-	       const DDsvalues_type & svalues,
-	       bool doRegex=true);
-  
-  ~DDSpecifics();
+              const std::vector<std::string> & partSelections,
+	      const DDsvalues_type & svalues,
+	      bool doRegex=true);
   
   //! Gives a reference to the collection of part-selections
   const std::vector<DDPartSelection> & selection() const;
@@ -76,13 +76,8 @@ public:
   //! Reference to the user-data attached to all nodes selected by the selections-strings given through selection
   const DDsvalues_type & specifics() const;
   
-  //! Calculates all expanded-nodes which are selected by the selection-strings
-  bool nodes(DDNodes & nds) const;
-  
   //! Calculates the geometrical history of a fully specified PartSelector
   std::pair<bool,DDExpandedView> node() const;
-  
-/*   static void clear(); */
 };
 
 #endif

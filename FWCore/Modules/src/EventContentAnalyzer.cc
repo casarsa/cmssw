@@ -32,6 +32,7 @@
 #include "FWCore/Utilities/interface/ObjectWithDict.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
 #include "FWCore/Utilities/interface/TypeToGet.h"
+#include "FWCore/ParameterSet/interface/Registry.h"
 
 // system include files
 #include <algorithm>
@@ -118,15 +119,15 @@ namespace edm {
                      ObjectWithDict const& iObject,
                      std::string const& iIndent,
                      std::string const& iIndentDelta) {
-       std::string printName = iName;
-       ObjectWithDict objectToPrint = iObject;
+       const std::string& printName = iName;
+       const ObjectWithDict& objectToPrint = iObject;
        std::string indent(iIndent);
        if(iObject.typeOf().isPointer()) {
          LogAbsolute("EventContent") << iIndent << iName << kNameValueSep << formatClassName(iObject.typeOf().name()) << std::hex << iObject.address() << std::dec;// << "\n";
           TypeWithDict pointedType = iObject.typeOf().toType(); // for Pointers, I get the real type this way
           if(TypeWithDict::byName("void") == pointedType ||
              pointedType.isPointer() ||
-             iObject.address() == 0) {
+             iObject.address() == nullptr) {
              return;
           }
           return;
@@ -176,11 +177,11 @@ namespace edm {
        ObjectWithDict sizeObj;
        try {
           size_t temp; //used to hold the memory for the return value
+          FunctionWithDict sizeFunc = iObject.typeOf().functionMemberByName("size");
+          assert(sizeFunc.finalReturnType() == typeid(size_t));
           sizeObj = ObjectWithDict(TypeWithDict(typeid(size_t)), &temp);
-          iObject.typeOf().functionMemberByName("size").invoke(iObject, &sizeObj);
-          assert(iObject.typeOf().functionMemberByName("size").returnType().typeInfo() == typeid(size_t));
+          sizeFunc.invoke(iObject, &sizeObj);
           //std::cout << "size of type '" << sizeObj.name() << "' " << sizeObj.typeName() << std::endl;
-          assert(sizeObj.typeOf().typeInfo() == typeid(size_t));
           size_t size = *reinterpret_cast<size_t*>(sizeObj.address());
           FunctionWithDict atMember;
           try {
@@ -192,7 +193,7 @@ namespace edm {
           LogAbsolute("EventContent") << iIndent << iName << kNameValueSep << "[size=" << size << "]";//"\n";
           ObjectWithDict contained;
           std::string indexIndent = iIndent + iIndentDelta;
-          TypeWithDict atReturnType(atMember.returnType());
+          TypeWithDict atReturnType(atMember.finalReturnType());
           //std::cout << "return type " << atReturnType.name() << " size of " << atReturnType.SizeOf()
           // << " pointer? " << atReturnType.isPointer() << " ref? " << atReturnType.isReference() << std::endl;
 
@@ -200,7 +201,7 @@ namespace edm {
           // memory for a ref (which should just be a pointer to the object and not the object itself)
           //So we will create memory on the stack which can be used to hold a reference
           bool const isRef = atReturnType.isReference();
-          void* refMemoryBuffer = 0;
+          void* refMemoryBuffer = nullptr;
           size_t index = 0;
           //The argument to the 'at' function is the index. Since the argument list holds pointers to the arguments
           // we only need to create it once and then when the value of index changes the pointer already
@@ -228,7 +229,7 @@ namespace edm {
                       << iEx.what() << ")>\n";
              }
              if(!isRef) {
-                atReturnType.destruct(contained.address(), true);
+                contained.destruct(true);
              }
           }
           return true;
@@ -262,10 +263,10 @@ namespace edm {
   class EventContentAnalyzer : public EDAnalyzer {
   public:
      explicit EventContentAnalyzer(ParameterSet const&);
-     ~EventContentAnalyzer();
+     ~EventContentAnalyzer() override;
 
-     virtual void analyze(Event const&, EventSetup const&) override;
-     virtual void endJob() override;
+     void analyze(Event const&, EventSetup const&) override;
+     void endJob() override;
 
      static void fillDescriptions(ConfigurationDescriptions& descriptions);
 
@@ -281,6 +282,7 @@ namespace edm {
      int         evno_;
      std::map<std::string, int> cumulates_;
      bool        listContent_;
+     bool        listProvenance_;
   };
 
   //
@@ -290,11 +292,12 @@ namespace edm {
     indentation_(iConfig.getUntrackedParameter("indentation", std::string("++"))),
     verboseIndentation_(iConfig.getUntrackedParameter("verboseIndentation", std::string("  "))),
     moduleLabels_(iConfig.getUntrackedParameter("verboseForModuleLabels", std::vector<std::string>())),
-    verbose_(iConfig.getUntrackedParameter("verbose", false) || moduleLabels_.size()>0),
+    verbose_(iConfig.getUntrackedParameter("verbose", false) || !moduleLabels_.empty()),
     getModuleLabels_(iConfig.getUntrackedParameter("getDataForModuleLabels", std::vector<std::string>())),
-    getData_(iConfig.getUntrackedParameter("getData", false) || getModuleLabels_.size()>0),
+    getData_(iConfig.getUntrackedParameter("getData", false) || !getModuleLabels_.empty()),
     evno_(1),
-    listContent_(iConfig.getUntrackedParameter("listContent", true))
+    listContent_(iConfig.getUntrackedParameter("listContent", true)),
+    listProvenance_(iConfig.getUntrackedParameter("listProvenance", false))
   {
      //now do what ever initialization is needed
      sort_all(moduleLabels_);
@@ -302,8 +305,12 @@ namespace edm {
      if(getData_) {
         callWhenNewProductsRegistered([this](edm::BranchDescription const& iBranch) {
            if(getModuleLabels_.empty()) {
-              this->consumes(edm::TypeToGet{iBranch.unwrappedTypeID(),PRODUCT_TYPE},
-                             edm::InputTag{iBranch.moduleLabel(),iBranch.productInstanceName(),iBranch.processName()});
+              const std::string kPathStatus("edm::PathStatus");
+              const std::string kEndPathStatus("edm::EndPathStatus");
+              if(iBranch.className() != kPathStatus && iBranch.className() != kEndPathStatus) {
+                 this->consumes(edm::TypeToGet{iBranch.unwrappedTypeID(),PRODUCT_TYPE},
+                                edm::InputTag{iBranch.moduleLabel(),iBranch.productInstanceName(),iBranch.processName()});
+              }
            } else {
               for (auto const& mod : this->getModuleLabels_) {
                  if (iBranch.moduleLabel() == mod) {
@@ -333,10 +340,10 @@ namespace edm {
   // ------------ method called to produce the data  ------------
   void
   EventContentAnalyzer::analyze(Event const& iEvent, EventSetup const&) {
-     typedef std::vector<Provenance const*> Provenances;
+     typedef std::vector<StableProvenance const*> Provenances;
      Provenances provenances;
 
-     iEvent.getAllProvenance(provenances);
+     iEvent.getAllStableProvenance(provenances);
 
      if(listContent_) {
        LogAbsolute("EventContent") << "\n" << indentation_ << "Event " << std::setw(5) << evno_ << " contains "
@@ -346,21 +353,23 @@ namespace edm {
      }
 
      std::string startIndent = indentation_+verboseIndentation_;
-     for(Provenances::iterator itProv = provenances.begin(), itProvEnd = provenances.end();
-                               itProv != itProvEnd;
-                             ++itProv) {
-         std::string const& className = (*itProv)->className();
-
-         std::string const& friendlyName = (*itProv)->friendlyClassName();
+     for(auto const& provenance : provenances) {
+         std::string const& className = provenance->className();
+         const std::string kPathStatus("edm::PathStatus");
+         const std::string kEndPathStatus("edm::EndPathStatus");
+         if(className == kPathStatus || className == kEndPathStatus) {
+           continue;
+         }
+         std::string const& friendlyName = provenance->friendlyClassName();
          //if(friendlyName.empty())  friendlyName = std::string("||");
 
-         std::string const& modLabel = (*itProv)->moduleLabel();
+         std::string const& modLabel = provenance->moduleLabel();
          //if(modLabel.empty()) modLabel = std::string("||");
 
-         std::string const& instanceName = (*itProv)->productInstanceName();
+         std::string const& instanceName = provenance->productInstanceName();
          //if(instanceName.empty()) instanceName = std::string("||");
 
-         std::string const& processName = (*itProv)->processName();
+         std::string const& processName = provenance->processName();
 
          bool doVerbose = verbose_ && (moduleLabels_.empty() ||
                                        binary_search_all(moduleLabels_, modLabel));
@@ -370,10 +379,44 @@ namespace edm {
                                        << " \"" << modLabel
                                        << "\" \"" << instanceName << "\" \""
                                        << processName << "\""
-                                       << " (productId = " << (*itProv)->productID() << ")"
+                                       << " (productId = " << provenance->productID() << ")"
                                        << std::endl;
-         }
 
+           if(listProvenance_) {
+             auto const& prov = iEvent.getProvenance(provenance->branchID());
+             auto const *productProvenance = prov.productProvenance();
+             if(productProvenance) {
+               const bool isAlias = productProvenance->branchID() != provenance->branchID();
+               std::string aliasForModLabel;
+               LogAbsolute("EventContent") << prov;
+               if(isAlias) {
+                 aliasForModLabel = iEvent.getProvenance(productProvenance->branchID()).moduleLabel();
+                 LogAbsolute("EventContent") << "Is an alias for " << aliasForModLabel;
+               }
+               ProcessHistory const *processHistory = prov.processHistoryPtr();
+               if(processHistory) {
+                 for(ProcessConfiguration const& pc: *processHistory) {
+                   if(pc.processName() == prov.processName()) {
+                     ParameterSetID const& psetID = pc.parameterSetID();
+                     pset::Registry const* psetRegistry = pset::Registry::instance();
+                     ParameterSet const* processPset = psetRegistry->getMapped(psetID);
+                     if (processPset) {
+                       if(processPset->existsAs<ParameterSet>(modLabel)) {
+                         if(isAlias) {
+                           LogAbsolute("EventContent") << "Alias PSet";
+                         }
+                         LogAbsolute("EventContent") << processPset->getParameterSet(modLabel);
+                       }
+                       if(isAlias and processPset->existsAs<ParameterSet>(aliasForModLabel)) {
+                         LogAbsolute("EventContent") << processPset->getParameterSet(aliasForModLabel);
+                       }
+                     }
+                   }
+                 }
+               }
+             }
+           }
+         }
          std::string key = friendlyName
            + std::string(" + \"") + modLabel
            + std::string("\" + \"") + instanceName + "\" \"" + processName + "\"";
@@ -466,6 +509,8 @@ namespace edm {
      np = desc.addOptionalUntracked<bool>("listContent", true);
      np->setComment("If true then print a list of all the event content.");
 
+     np = desc.addOptionalUntracked<bool>("listProvenance", false);
+     np->setComment("If true, and if listContent or verbose is true, print provenance information for each product");
 
      descriptions.add("printContent", desc);
   }

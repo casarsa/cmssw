@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import optparse
 from FWCore.PythonUtilities.LumiList import LumiList
@@ -13,13 +14,13 @@ if __name__ == '__main__':
     # required parameters
     (options, args) = parser.parse_args()
     if len (args) != 1:
-        raise RuntimeError, "Must provide exactly one input file"
+        raise RuntimeError("Must provide exactly one input file")
 
     alphaList = LumiList (filename = args[0])  # Read in first  JSON file
     if options.range:
         keys = alphaList.compactList.keys()
         minRun = min (keys)
         maxRun = max (keys)
-        print "runs %s - %s" % (minRun, maxRun)
+        print("runs %s - %s" % (minRun, maxRun))
         sys.exit()
-    print alphaList
+    print(alphaList)

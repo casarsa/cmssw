@@ -78,8 +78,6 @@ namespace edm {
   static pset::TypeTrans const sTypeTranslations;
   typedef std::map<std::string, char> Type2Code;
 
-  Entry::~Entry() {}
-
 // ----------------------------------------------------------------------
 // consistency-checker
 // ----------------------------------------------------------------------
@@ -240,7 +238,7 @@ namespace edm {
       }
       default:  {
         // We should never get here.
-        assert ("Invalid type code" == 0);
+        assert ("Invalid type code" == nullptr);
         //throw EntryError(std::string("invalid type code ") + type);
         break;
       }
@@ -976,7 +974,7 @@ namespace edm {
            os <<  start<< *i;
            start = between;
          }
-         if (whole.size()) {
+         if (!whole.empty()) {
            os << std::endl;
          }
          os << "}";

@@ -60,9 +60,9 @@ private:
   
   /** Cached input file stream
    */
-  std::auto_ptr<edm::StreamerInputFile> streamerInputFile_;
+  std::unique_ptr<edm::StreamerInputFile> streamerInputFile_;
 
-  static std::string fileName_;
+  std::string fileName_;
 
   std::string tokenFile_;
 
@@ -73,6 +73,10 @@ private:
   bool end_;
   
   int verbosity_;
+
+  std::string fileListCmd_;
+
+  std::string curDir_;
 
 };
 

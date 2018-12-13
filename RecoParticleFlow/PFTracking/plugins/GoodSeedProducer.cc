@@ -26,6 +26,7 @@
 #include "FastSimulation/BaseParticlePropagator/interface/BaseParticlePropagator.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+#include "CommonTools/MVAUtils/interface/GBRForestTools.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -38,7 +39,7 @@ using namespace edm;
 using namespace std;
 using namespace reco;
 
-GoodSeedProducer::GoodSeedProducer(const ParameterSet& iConfig):
+GoodSeedProducer::GoodSeedProducer(const ParameterSet& iConfig, const goodseedhelpers::HeavyObjectCache*):
   pfTransformer_(nullptr),
   conf_(iConfig),
   resMapEtaECAL_(nullptr),
@@ -123,6 +124,9 @@ GoodSeedProducer::GoodSeedProducer(const ParameterSet& iConfig):
   useTmva_= iConfig.getUntrackedParameter<bool>("UseTMVA",false);
 
   Min_dr_ = iConfig.getParameter<double>("Min_dr");
+
+  trackerRecHitBuilderName_ = iConfig.getParameter<std::string>("TTRHBuilder");
+
 }
 
 
@@ -138,10 +142,10 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
   LogDebug("GoodSeedProducer")<<"START event: "<<iEvent.id().event()
 			      <<" in run "<<iEvent.id().run();
   //Create empty output collections
-  auto_ptr<ElectronSeedCollection> output_preid(new ElectronSeedCollection);
-  auto_ptr<TrajectorySeedCollection> output_nopre(new TrajectorySeedCollection);
-  auto_ptr<PreIdCollection> output_preidinfo(new PreIdCollection);
-  auto_ptr<edm::ValueMap<reco::PreIdRef> > preIdMap_p(new edm::ValueMap<reco::PreIdRef>);
+  auto output_preid = std::make_unique<ElectronSeedCollection>();
+  auto output_nopre = std::make_unique<TrajectorySeedCollection>();
+  auto output_preidinfo = std::make_unique<PreIdCollection>();
+  auto preIdMap_p = std::make_unique<edm::ValueMap<reco::PreIdRef>>();
   edm::ValueMap<reco::PreIdRef>::Filler mapFiller(*preIdMap_p);
 
   //Tracking Tools
@@ -153,17 +157,8 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
       iSetup.get<TrajectoryFitter::Record>().get(smootherName_, aSmoother);
       smoother_.reset(aSmoother->clone());
       fitter_ = aFitter->clone();
-     /// FIXME FIXME CLONE
       edm::ESHandle<TransientTrackingRecHitBuilder> theTrackerRecHitBuilder;
-      try {
-        std::string theTrackerRecHitBuilderName("WithAngleAndTemplate");  // FIXME FIXME
-        iSetup.get<TransientRecHitRecord>().get(theTrackerRecHitBuilderName,theTrackerRecHitBuilder);
-        theTrackerRecHitBuilder.product();
-      } catch(...) {
-        std::string theTrackerRecHitBuilderName("hltESPTTRHBWithTrackAngle");  // FIXME FIXME
-        iSetup.get<TransientRecHitRecord>().get(theTrackerRecHitBuilderName,theTrackerRecHitBuilder);
-        theTrackerRecHitBuilder.product();
-      }
+      iSetup.get<TransientRecHitRecord>().get(trackerRecHitBuilderName_,theTrackerRecHitBuilder);
       hitCloner = static_cast<TkTransientTrackingRecHitBuilder const *>(theTrackerRecHitBuilder.product())->cloner();
       fitter_->setHitCloner(&hitCloner);
       smoother_->setHitCloner(&hitCloner);
@@ -171,6 +166,10 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 
   // clear temporary maps
   refMap_.clear();
+
+  //Magnetic Field
+  ESHandle<MagneticField> magneticField;
+  iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
 
   //Handle input collections
   //ECAL clusters	      
@@ -199,14 +198,9 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
     iEvent.getByToken(tracksContainers_[istr], tkRefCollection);
     const TrackCollection&  Tk=*(tkRefCollection.product());
     
-    //Trajectory collection
-    Handle<vector<Trajectory> > tjCollection;
-    iEvent.getByToken(trajContainers_[istr], tjCollection);
-    auto const & Tj=*(tjCollection.product());
-    
     LogDebug("GoodSeedProducer")<<"Number of tracks in collection "
-                                <<tracksContainers_[istr] <<" to be analyzed "
-                                <<Tj.size();
+                                <<"tracksContainers_[" << istr << "] to be analyzed "
+                                <<Tk.size();
 
     //loop over the track collection
     for(unsigned int i=0;i<Tk.size();++i){		
@@ -217,7 +211,6 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
       bool GoodPreId=false;
 
       TrackRef trackRef(tkRefCollection, i);
-      // TrajectorySeed Seed=Tj[i].seed();
       math::XYZVectorF tkmom(Tk[i].momentum());
       auto tketa= tkmom.eta();
       auto tkpt = std::sqrt(tkmom.perp2());
@@ -227,11 +220,11 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	  int ipteta=getBin(Tk[i].eta(),Tk[i].pt());
 	  int ibin=ipteta*9;
 	  
-	  float oPTOB=1.f/Tj[i].lastMeasurement().updatedState().globalMomentum().mag();
+	  float oPTOB=1.f/std::sqrt(Tk[i].innerMomentum().mag2()); // FIXME the original code was buggy should be outerMomentum...
 	  //  float chikfred=Tk[i].normalizedChi2();
 	  float nchi=Tk[i].normalizedChi2();
 
-	  int nhitpi=Tj[i].foundHits();
+	  int nhitpi=Tk[i].found();
 	  float EP=0;
       
 	  // set track info
@@ -377,9 +370,16 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	    trk_ecalDphi = trk_ecalDphi_;
       
 	    Trajectory::ConstRecHitContainer tmp;
-	    Trajectory::ConstRecHitContainer && hits=Tj[i].recHits();
-	    for (int ih=hits.size()-1; ih>=0; ih--)  tmp.push_back(hits[ih]);
-	    Trajectory  && FitTjs= fitter_->fitOne(Seed,tmp,Tj[i].lastMeasurement().updatedState());
+            auto hb = Tk[i].recHitsBegin();
+            for(unsigned int h=0;h<Tk[i].recHitsSize();h++){
+              auto recHit = *(hb+h); tmp.push_back(recHit->cloneSH());
+            }
+            auto const & theTrack = Tk[i]; 
+            GlobalVector gv(theTrack.innerMomentum().x(),theTrack.innerMomentum().y(),theTrack.innerMomentum().z());
+            GlobalPoint  gp(theTrack.innerPosition().x(),theTrack.innerPosition().y(),theTrack.innerPosition().z());
+            GlobalTrajectoryParameters gtps(gp,gv,theTrack.charge(),&*magneticField);
+            TrajectoryStateOnSurface tsos(gtps,theTrack.innerStateCovariance(),*tmp[0]->surface());
+	    Trajectory  && FitTjs= fitter_->fitOne(Seed,tmp,tsos);
 	
 	      if(FitTjs.isValid()){
 		Trajectory && SmooTjs= smoother_->trajectory(FitTjs);
@@ -393,7 +393,7 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 		      updatedState().globalMomentum().perp();
 		    dpt=(pt_in>0) ? fabs(pt_out-pt_in)/pt_in : 0.;
 		    // the following is simply the number of degrees of freedom
-		    chiRatio=SmooTjs.chiSquared()/Tj[i].chiSquared();
+		    chiRatio=SmooTjs.chiSquared()/Tk[i].chi2();
 		    chired=chiRatio*chikfred;
 
 		  }
@@ -406,8 +406,9 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	      eta=tketa;
 	      pt=tkpt;
 	      eP=EP;
-	  
-	      float Ytmva=reader[ipteta]->EvaluateMVA( method_ );
+              float vars[10] = { nhit, chikfred, dpt, eP, chiRatio, chired, trk_ecalDeta, trk_ecalDphi, pt, eta};
+              
+	      float Ytmva = globalCache()->gbr[ipteta]->GetClassifier( vars );
 	      
 	      float BDTcut=thr[ibin+5]; 
 	      if ( Ytmva>BDTcut) GoodTkId=true;
@@ -427,7 +428,8 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	  GoodPreId= GoodTkId | GoodMatching; 
 
 	  myPreId.setFinalDecision(GoodPreId);
-      
+
+#ifdef EDM_ML_DEBUG      
 	  if(GoodPreId)
 	    LogDebug("GoodSeedProducer")<<"Track (pt= "<<Tk[i].pt()<<
 	      "GeV/c, eta= "<<Tk[i].eta() <<
@@ -436,8 +438,10 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	    LogDebug("GoodSeedProducer")<<"Track (pt= "<<Tk[i].pt()<<
 	      "GeV/c, eta= "<<Tk[i].eta() <<
 	      ") preidentified only for track properties";
-	
+#endif
+
 	} // end of !disablePreId_
+
       
       if (GoodPreId){
 	//NEW SEED with n hits	
@@ -459,12 +463,12 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
   } //end loop on the vector of track collections
   
   // no disablePreId_ switch, it is simpler to have an empty collection rather than no collection
-  iEvent.put(output_preid,preidgsf_);
+  iEvent.put(std::move(output_preid),preidgsf_);
   if (produceCkfseed_)
-    iEvent.put(output_nopre,preidckf_);
+    iEvent.put(std::move(output_nopre),preidckf_);
   if(producePreId_)
     {
-      const edm::OrphanHandle<reco::PreIdCollection> preIdRefProd = iEvent.put(output_preidinfo,preidname_);
+      const edm::OrphanHandle<reco::PreIdCollection> preIdRefProd = iEvent.put(std::move(output_preidinfo),preidname_);
       // now make the Value Map, but only if one input collection
       if(tracksContainers_.size()==1)
 	{
@@ -472,12 +476,37 @@ GoodSeedProducer::produce(Event& iEvent, const EventSetup& iSetup)
 	  iEvent.getByToken(tracksContainers_[0],tkRefCollection);
 	  fillPreIdRefValueMap(tkRefCollection,preIdRefProd,mapFiller);
 	  mapFiller.fill();
-	  iEvent.put(preIdMap_p,preidname_);
+	  iEvent.put(std::move(preIdMap_p),preidname_);
 	}
     }
   // clear temporary maps
   refMap_.clear();
 }
+
+// intialize the cross-thread cache to hold gbr trees and resolution maps
+namespace goodseedhelpers {
+  HeavyObjectCache::HeavyObjectCache( const edm::ParameterSet& conf) {    
+    // mvas
+    const bool useTmva = conf.getUntrackedParameter<bool>("UseTMVA",false);
+    
+    if( useTmva ) {
+      std::array<edm::FileInPath,kMaxWeights> weights = {{ edm::FileInPath(conf.getParameter<string>("Weights1")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights2")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights3")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights4")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights5")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights6")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights7")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights8")),
+                                                           edm::FileInPath(conf.getParameter<string>("Weights9")) }};
+            
+      for(UInt_t j = 0; j < gbr.size(); ++j){
+        gbr[j] = createGBRForest( weights[j] );
+      }    
+    }
+  }
+}
+
 // ------------ method called once each job just before starting event loop  ------------
 void 
 GoodSeedProducer::beginRun(const edm::Run & run,
@@ -492,48 +521,11 @@ GoodSeedProducer::beginRun(const edm::Run & run,
   pfTransformer_->OnlyProp();
   
   //Resolution maps
-  FileInPath ecalEtaMap(conf_.getParameter<string>("EtaMap"));
-  FileInPath ecalPhiMap(conf_.getParameter<string>("PhiMap"));
-  resMapEtaECAL_.reset( new PFResolutionMap("ECAL_eta",ecalEtaMap.fullPath().c_str()) );
-  resMapPhiECAL_.reset( new PFResolutionMap("ECAL_phi",ecalPhiMap.fullPath().c_str()) );
+    FileInPath ecalEtaMap(conf_.getParameter<string>("EtaMap"));
+    FileInPath ecalPhiMap(conf_.getParameter<string>("PhiMap"));
+    resMapEtaECAL_.reset( new PFResolutionMap("ECAL_eta",ecalEtaMap.fullPath().c_str()) );
+    resMapPhiECAL_.reset( new PFResolutionMap("ECAL_phi",ecalPhiMap.fullPath().c_str()) );
 
-  if(useTmva_){
-    method_ = conf_.getParameter<string>("TMVAMethod");
-    FileInPath Weigths1(conf_.getParameter<string>("Weights1"));
-    FileInPath Weigths2(conf_.getParameter<string>("Weights2"));
-    FileInPath Weigths3(conf_.getParameter<string>("Weights3"));
-    FileInPath Weigths4(conf_.getParameter<string>("Weights4"));
-    FileInPath Weigths5(conf_.getParameter<string>("Weights5"));
-    FileInPath Weigths6(conf_.getParameter<string>("Weights6"));
-    FileInPath Weigths7(conf_.getParameter<string>("Weights7"));
-    FileInPath Weigths8(conf_.getParameter<string>("Weights8"));
-    FileInPath Weigths9(conf_.getParameter<string>("Weights9"));
-
-    for(UInt_t j = 0; j < 9; ++j){
-      reader[j].reset( new TMVA::Reader("!Color:Silent"));
-      
-      reader[j]->AddVariable("NHits", &nhit);
-      reader[j]->AddVariable("NormChi", &chikfred);
-      reader[j]->AddVariable("dPtGSF", &dpt);
-      reader[j]->AddVariable("EoP", &eP);
-      reader[j]->AddVariable("ChiRatio", &chiRatio);
-      reader[j]->AddVariable("RedChi", &chired);
-      reader[j]->AddVariable("EcalDEta", &trk_ecalDeta);
-      reader[j]->AddVariable("EcalDPhi", &trk_ecalDphi);
-      reader[j]->AddVariable("pt", &pt);
-      reader[j]->AddVariable("eta", &eta);
-      
-      if(j==0) reader[j]->BookMVA(method_, Weigths1.fullPath().c_str());
-      if(j==1) reader[j]->BookMVA(method_, Weigths2.fullPath().c_str());
-      if(j==2) reader[j]->BookMVA(method_, Weigths3.fullPath().c_str());
-      if(j==3) reader[j]->BookMVA(method_, Weigths4.fullPath().c_str());
-      if(j==4) reader[j]->BookMVA(method_, Weigths5.fullPath().c_str());
-      if(j==5) reader[j]->BookMVA(method_, Weigths6.fullPath().c_str());
-      if(j==6) reader[j]->BookMVA(method_, Weigths7.fullPath().c_str());
-      if(j==7) reader[j]->BookMVA(method_, Weigths8.fullPath().c_str());
-      if(j==8) reader[j]->BookMVA(method_, Weigths9.fullPath().c_str());
-    }    
-  }
   //read threshold
   FileInPath parFile(conf_.getParameter<string>("ThresholdFile"));
   ifstream ifs(parFile.fullPath().c_str());

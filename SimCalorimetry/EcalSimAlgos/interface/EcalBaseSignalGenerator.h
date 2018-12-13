@@ -10,9 +10,7 @@ class EcalBaseSignalGenerator : public CaloVNoiseSignalGenerator
 public:
   EcalBaseSignalGenerator() {}
     
-  virtual ~EcalBaseSignalGenerator() {}
-
-  //  void setParameterMap(EcalSimParameterMap * map) {theParameterMap = map;}
+  ~EcalBaseSignalGenerator() override {}
 
   
 protected:
@@ -24,8 +22,6 @@ protected:
   //  samples *= factor;
   // }
 
-  //EcalSimParameterMap * theParameterMap;
-  //EcalElectronicsSim * theElectronicsSim;
 };
 
 #endif

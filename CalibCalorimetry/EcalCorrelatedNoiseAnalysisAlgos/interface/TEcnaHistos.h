@@ -7,7 +7,7 @@
 //#include <Riostream.h>
 #include <iostream>
 #include "TSystem.h"
-#include <time.h>
+#include <ctime>
 #include "TString.h"
 
 #include "TROOT.h"
@@ -348,11 +348,9 @@ class TEcnaHistos : public TObject {
 
   //..... Attributes
 
-  //  static  const  Int_t        fgMaxCar    = 512;   <== DANGEROUS !
-
-  Int_t fgMaxCar;                    // Max nb of caracters for char*
-  Int_t fZerv;                       // = 0 , for ViewHisto non used arguments
-  Int_t fUnev;                       // = 1 , for ViewHisto non used arguments
+  constexpr static int charArrLen = 512;  // Max nb of caracters for char*
+  Int_t fZerv;                            // = 0 , for ViewHisto non used arguments
+  Int_t fUnev;                            // = 1 , for ViewHisto non used arguments
 
 
   Int_t fCnaCommand, fCnaError;
@@ -991,7 +989,7 @@ class TEcnaHistos : public TObject {
 //	      const TEcnaNumbering*,
 //	      const TEcnaWrite*);
   
-  virtual  ~TEcnaHistos();
+   ~TEcnaHistos() override;
   
   void Init();
   void SetEcalSubDetector(const TString&);
@@ -1340,7 +1338,7 @@ class TEcnaHistos : public TObject {
   Bool_t StatusFileFound();
   Bool_t StatusDataExist();
 
-ClassDef(TEcnaHistos,1)// methods for plots from ECNA (Ecal Correlated Noises Analysis)
+ClassDefOverride(TEcnaHistos,1)// methods for plots from ECNA (Ecal Correlated Noises Analysis)
 
 };
 

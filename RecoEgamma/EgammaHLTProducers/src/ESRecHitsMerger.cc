@@ -64,7 +64,7 @@ void ESRecHitsMerger::beginJob(){
 void ESRecHitsMerger::endJob(){
 }
 
-void ESRecHitsMerger::produce(edm::Event & e, const edm::EventSetup& iSetup){
+void ESRecHitsMerger::produce(edm::StreamID, edm::Event & e, const edm::EventSetup& iSetup) const {
 
  if (debug_) std::cout << " ESRecHitMerger : Run " << e.id().run() << " Event " << e.id().event() << std::endl;
 
@@ -72,7 +72,7 @@ void ESRecHitsMerger::produce(edm::Event & e, const edm::EventSetup& iSetup){
  std::vector< edm::Handle<ESRecHitCollection> > EcalRecHits_done;
  e.getManyByType(EcalRecHits_done);
  
- std::auto_ptr<EcalRecHitCollection> ESMergedRecHits(new EcalRecHitCollection);
+ auto ESMergedRecHits = std::make_unique<EcalRecHitCollection>();
  
  
  unsigned int nColl = EcalRecHits_done.size();
@@ -131,7 +131,7 @@ void ESRecHitsMerger::produce(edm::Event & e, const edm::EventSetup& iSetup){
  
  
  // std::cout << " avant le put " << std::endl;
- e.put(ESMergedRecHits,OutputLabelES_);
+ e.put(std::move(ESMergedRecHits),OutputLabelES_);
  // std::cout << " apres le put " << std::endl;
 
 }

@@ -36,11 +36,11 @@
 class MuScleFitFilter : public edm::EDFilter {
  public:
   explicit MuScleFitFilter(const edm::ParameterSet&);
-  ~MuScleFitFilter();
+  ~MuScleFitFilter() override;
 
  private:
-  virtual bool filter(edm::Event&, const edm::EventSetup&) override;
-  virtual void endJob() override {};
+  bool filter(edm::Event&, const edm::EventSetup&) override;
+  void endJob() override {};
 
   // Member data
   // -----------
@@ -122,7 +122,7 @@ bool MuScleFitFilter::filter(edm::Event& event, const edm::EventSetup& iSetup) {
 
   // Get the RecTrack and the RecMuon collection from the event
   // ----------------------------------------------------------
-  std::auto_ptr<reco::MuonCollection> muons(new reco::MuonCollection());
+  std::unique_ptr<reco::MuonCollection> muons(new reco::MuonCollection());
 
   if (debug) std::cout << "Looking for muons of the right kind" << std::endl;
 

@@ -36,21 +36,24 @@
 //
 // class decleration
 //
+namespace edm {
+  class HepMCProduct;
+}
 
 class ZgammaMassFilter : public edm::EDFilter {
    public:
       explicit ZgammaMassFilter(const edm::ParameterSet&);
-      ~ZgammaMassFilter();
+      ~ZgammaMassFilter() override;
 
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
    private:
       // ----------memeber function----------------------
        int charge(const int& Id);
 
       // ----------member data ---------------------------
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
 
        double minPhotonPt;
        double minLeptonPt;

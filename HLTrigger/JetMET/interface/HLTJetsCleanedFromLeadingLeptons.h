@@ -1,14 +1,16 @@
 #ifndef HLTJetsCleanedFromLeadingLeptons_h
 #define HLTJetsCleanedFromLeadingLeptons_h
 
+#include <vector>
+
 #include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 
 #include "DataFormats/HLTReco/interface/TriggerFilterObjectWithRefs.h"
+#include "HLTrigger/HLTcore/interface/defaultModuleLabel.h"
 
-#include <vector>
 
 
 /**
@@ -25,7 +27,7 @@
  * HLTJetCollectionsFilter plugin.
  */
 template <typename JetType>
-class HLTJetsCleanedFromLeadingLeptons: public edm::EDProducer
+class HLTJetsCleanedFromLeadingLeptons: public edm::stream::EDProducer<>
 {
 public:
     typedef std::vector<JetType> JetCollection;
@@ -79,7 +81,7 @@ public:
     static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
     
     /// Produces jets cleaned against leptons
-    virtual void produce(edm::Event &iEvent, edm::EventSetup const &iSetup);
+    void produce(edm::Event &iEvent, edm::EventSetup const &iSetup) override;
     
 private:
     /// Token to identify a collection of leptons that pass an HLT filter
@@ -178,8 +180,7 @@ void HLTJetsCleanedFromLeadingLeptons<JetType>::fillDescriptions(
     desc.add<unsigned>("numLeptons", 1)->
      setComment("Number of leading leptons against which the jets are cleaned");
     
-    descriptions.add(std::string("hlt") +
-     std::string(typeid(HLTJetsCleanedFromLeadingLeptons<JetType>).name()), desc);
+    descriptions.add(defaultModuleLabel<HLTJetsCleanedFromLeadingLeptons<JetType>>(), desc);
 }
 
 
@@ -265,10 +266,10 @@ void HLTJetsCleanedFromLeadingLeptons<JetType>::produce(edm::Event &iEvent,
     
     
     // Store the collection in the event
-    std::auto_ptr<JetCollectionVector> product(new JetCollectionVector);
-    //^ Have to use the depricated auto_ptr here because this is what edm::Event::put expects
+    std::unique_ptr<JetCollectionVector> product(new JetCollectionVector);
+    //^ Have to use the depricated unique_ptr here because this is what edm::Event::put expects
     product->emplace_back(cleanedJetRefs);
-    iEvent.put(product);
+    iEvent.put(std::move(product));
 }
 
 #endif  // HLTJetsCleanedFromLeadingLeptons_h

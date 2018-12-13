@@ -7,6 +7,7 @@ in input file it creates a Run X named folder for each run.
 Thanks for Marco Rovere for giving example script/class needed to browse DQM I/O 
 formatted input.
 """
+from __future__ import print_function
 
 import ROOT as R
 import sys
@@ -28,15 +29,18 @@ class DQMIO:
         self._filename = input_filename
         self._canvas = None
         self.f = R.TFile(output_filename, "RECREATE")
+        self.already_defined = {"TProfiles" : False, "TProfile2Ds" : False,
+                "TH2Fs" : False, "TH2Ds" : False}
+
         if os.path.exists(self._filename): #we try to open input file if fail
             self._root_file = R.TFile.Open(self._filename) #-> close script
             if args.debug:
-                print "## DEBUG ##:"
-                print "    Input: %s\n    Output: %s" % (input_filename, 
-                    output_filename)
+                print("## DEBUG ##:")
+                print("    Input: %s\n    Output: %s" % (input_filename, 
+                    output_filename))
 
         else:
-            print "File %s does not exists" % self._filename
+            print("File %s does not exists" % self._filename)
             sys.exit(1)
     
     def print_index(self):
@@ -45,13 +49,13 @@ class DQMIO:
         """
         indices = self._root_file.Get("Indices")
         if args.debug:
-            print "## DEBUG ##:"
-            print "Run,\tLumi,\tType,\t\tFirstIndex,\tLastIndex"
+            print("## DEBUG ##:")
+            print("Run,\tLumi,\tType,\t\tFirstIndex,\tLastIndex")
             for i in xrange(indices.GetEntries()):
                 indices.GetEntry(i)
-                print '{0:4d}\t{1:4d}\t{2:4d}({3:s})\t\t{4:4d}\t{5:4d}'.format(
+                print('{0:4d}\t{1:4d}\t{2:4d}({3:s})\t\t{4:4d}\t{5:4d}'.format(
                     indices.Run, indices.Lumi, indices.Type, 
-                    DQMIO.types[indices.Type], indices.FirstIndex, indices.LastIndex)
+                    DQMIO.types[indices.Type], indices.FirstIndex, indices.LastIndex))
 
         for i in xrange(indices.GetEntries()):
             indices.GetEntry(i)
@@ -60,7 +64,7 @@ class DQMIO:
                     [indices.FirstIndex,indices.LastIndex], str(indices.Run))
 
             else:
-                print "Unknown histogram type. Type numer: %s" % (indices.Type)
+                print("Unknown histogram type. Type numer: %s" % (indices.Type))
         self.f.Close()
 
     def write_to_file(self, hist_type, index_range, run):
@@ -68,34 +72,41 @@ class DQMIO:
         Method looping over entries for specified histogram type and 
         writing to FullName path to output ROOT File
         """
-        print "Working on: %s indexes: %s..%s" % (hist_type ,index_range[0],
-            index_range[1])
+        print("Working on: %s indexes: %s..%s" % (hist_type ,index_range[0],
+            index_range[1]))
         t_tree = self._root_file.Get(hist_type)
         __run_dir = "Run %s" % (run)
         ###we set Branch for the needed type
         if hist_type == "TProfiles":
-            R.gROOT.ProcessLine("TProfile* _tprof;")
+            if not self.already_defined["TProfiles"]:
+                R.gROOT.ProcessLine("TProfile* _tprof;")
+                self.already_defined["TProfiles"] = True
             t_tree.SetBranchAddress("Value", R._tprof)
-            t_tree.GetEntry(0)
+            t_tree.GetEntry(index_range[0])
         elif hist_type == "TProfile2Ds":
-            R.gROOT.ProcessLine("TProfile2D* _tprof2d;")
+            if not self.already_defined["TProfile2Ds"]:
+                R.gROOT.ProcessLine("TProfile2D* _tprof2d;")
+                self.already_defined["TProfile2Ds"] = True
             t_tree.SetBranchAddress("Value", R._tprof2d)
-            t_tree.GetEntry(0)
+            t_tree.GetEntry(index_range[0])
         elif hist_type == "TH2Fs":
-            R.gROOT.ProcessLine("TH2F* _th2f;")
+            if not self.already_defined["TH2Fs"]:
+                R.gROOT.ProcessLine("TH2F* _th2f;")
+                self.already_defined["TH2Fs"] = True
             t_tree.SetBranchAddress("Value", R._th2f)
-            t_tree.GetEntry(0)
+            t_tree.GetEntry(index_range[0])
         elif hist_type == "TH2Ds":
-            R.gROOT.ProcessLine("TH2D* _th2d;")
+            if not self.already_defined["TH2Ds"]:
+                R.gROOT.ProcessLine("TH2D* _th2d;")
+                self.already_defined["TH2Ds"] = True
             t_tree.SetBranchAddress("Value", R._th2d)
-            t_tree.GetEntry(0)
+            t_tree.GetEntry(index_range[0])
 
         for i in range(0,t_tree.GetEntries()+1): ##iterate on entries for specified type
-            t_tree.GetEntry(i)
-            name = str(t_tree.FullName)
-            #if args.debug:
-            #    print "    %s" % (name)
             if i >= index_range[0] and i <= index_range[1]: ##if entries as in range:
+                t_tree.GetEntry(i)
+                name = str(t_tree.FullName)
+               # print "  %s:  %s" % (i, name)
                 file_path = name.split("/")[:-1]            ##  same run/lumi histograms
                 __directory = "%s/%s" % (os.path.join("DQMData", __run_dir),
                     "/".join(file_path))
@@ -128,9 +139,9 @@ class DQMIO:
                             R._th2f.Write()
                         elif hist_type == "TH2Ds":
                             R._th2d.Write()
-                    else: #else we wirte ne Leafs Value which is a histogram
+                    else: #else we wirte Leafs Value which is a histogram
                         t_tree.Value.Write()
-      
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-in", "--input", help = "Input DQMIO ROOT file")

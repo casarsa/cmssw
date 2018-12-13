@@ -35,7 +35,7 @@ using namespace reco;
 		     // constructor 
 		     explicit CosmicTrackSelector( const edm::ParameterSet & cfg ) ;
 		     // destructor
-		     virtual ~CosmicTrackSelector() ;
+		     ~CosmicTrackSelector() override ;
 		     
 		   private:
 		     typedef math::XYZPoint Point;
@@ -79,12 +79,12 @@ using namespace reco;
 		     uint32_t max_lostLayers_;
 		     
 		     // storage
-		     std::auto_ptr<reco::TrackCollection> selTracks_;
-		     std::auto_ptr<reco::TrackExtraCollection> selTrackExtras_;
-		     std::auto_ptr< TrackingRecHitCollection>  selHits_;
-		     std::auto_ptr< std::vector<Trajectory> > selTrajs_;
-		     std::auto_ptr< std::vector<const Trajectory *> > selTrajPtrs_;
-		     std::auto_ptr< TrajTrackAssociationCollection >  selTTAss_;
+		     std::unique_ptr<reco::TrackCollection> selTracks_;
+		     std::unique_ptr<reco::TrackExtraCollection> selTrackExtras_;
+		     std::unique_ptr<TrackingRecHitCollection>  selHits_;
+		     std::unique_ptr<std::vector<Trajectory> > selTrajs_;
+		     std::unique_ptr<std::vector<const Trajectory *> > selTrajPtrs_;
+		     std::unique_ptr<TrajTrackAssociationCollection >  selTTAss_;
 		     reco::TrackRefProd rTracks_;
 		     reco::TrackExtraRefProd rTrackExtras_;
 		     TrackingRecHitRefProd rHits_;
@@ -172,11 +172,11 @@ void CosmicTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
   // Get tracks 
   evt.getByToken( src_, hSrcTrack );
   
-  selTracks_ = auto_ptr<TrackCollection>(new TrackCollection());
+  selTracks_ = std::make_unique<TrackCollection>();
   rTracks_ = evt.getRefBeforePut<TrackCollection>();      
   if (copyExtras_) {
-    selTrackExtras_ = auto_ptr<TrackExtraCollection>(new TrackExtraCollection());
-    selHits_ = auto_ptr<TrackingRecHitCollection>(new TrackingRecHitCollection());
+    selTrackExtras_ = std::make_unique<TrackExtraCollection>();
+    selHits_ = std::make_unique<TrackingRecHitCollection>();
     rHits_ = evt.getRefBeforePut<TrackingRecHitCollection>();
     rTrackExtras_ = evt.getRefBeforePut<TrackExtraCollection>();
   }
@@ -206,10 +206,12 @@ void CosmicTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
       TrackExtra & tx = selTrackExtras_->back();
       tx.setResiduals(trk.residuals());
       // TrackingRecHits
+      auto const firstHitIndex = selHits_->size();
       for( trackingRecHit_iterator hit = trk.recHitsBegin(); hit != trk.recHitsEnd(); ++ hit ) {
 	selHits_->push_back( (*hit)->clone() );
-	tx.add( TrackingRecHitRef( rHits_, selHits_->size() - 1) );
       }
+      tx.setHits( rHits_, firstHitIndex, selHits_->size() - firstHitIndex );
+      tx.setTrajParams(trk.extra()->trajParams(),trk.extra()->chi2sX5());
     }
     if (copyTrajectories_) {
       trackRefs_[current] = TrackRef(rTracks_, selTracks_->size() - 1);
@@ -220,9 +222,9 @@ void CosmicTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
     Handle< TrajTrackAssociationCollection > hTTAss;
     evt.getByToken(srcTass_, hTTAss);
     evt.getByToken(srcTraj_, hTraj);
-    selTrajs_ = auto_ptr< vector<Trajectory> >(new vector<Trajectory>()); 
+    selTrajs_ = std::make_unique<std::vector<Trajectory>>(); 
     rTrajectories_ = evt.getRefBeforePut< vector<Trajectory> >();
-    selTTAss_ = auto_ptr< TrajTrackAssociationCollection >(new TrajTrackAssociationCollection());
+    selTTAss_ = std::make_unique<TrajTrackAssociationCollection>(&evt.productGetter());
     for (size_t i = 0, n = hTraj->size(); i < n; ++i) {
       Ref< vector<Trajectory> > trajRef(hTraj, i);
       TrajTrackAssociationCollection::const_iterator match = hTTAss->find(trajRef);
@@ -238,14 +240,14 @@ void CosmicTrackSelector::produce( edm::Event& evt, const edm::EventSetup& es )
   }
   
   static const std::string emptyString;
-  evt.put(selTracks_);
+  evt.put(std::move(selTracks_));
   if (copyExtras_ ) {
-    evt.put(selTrackExtras_); 
-    evt.put(selHits_);
+    evt.put(std::move(selTrackExtras_)); 
+    evt.put(std::move(selHits_));
   }
   if ( copyTrajectories_ ) {
-    evt.put(selTrajs_);
-    evt.put(selTTAss_);
+    evt.put(std::move(selTrajs_));
+    evt.put(std::move(selTTAss_));
   }
 }
 

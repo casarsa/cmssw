@@ -8,6 +8,7 @@
 
 #include <memory>
 #include "cppunit/extensions/HelperMacros.h"
+#include "FWCore/Utilities/interface/do_nothing_deleter.h"
 #include "FWCore/Framework/interface/Callback.h"
 #include "FWCore/Framework/interface/ESProducts.h"
 #include <cassert>
@@ -38,11 +39,10 @@ namespace callbacktest {
       Data data_;
    };
 
-   struct AutoPtrProd {
-      AutoPtrProd() : value_(0) {}
-      std::auto_ptr<Data> method(const Record&) {
-         std::auto_ptr<Data> temp(new Data(++value_));
-         return temp;
+   struct UniquePtrProd {
+      UniquePtrProd() : value_(0) {}
+      std::unique_ptr<Data> method(const Record&) {
+         return std::make_unique<Data>(++value_);
       }
       
       int value_;
@@ -50,19 +50,19 @@ namespace callbacktest {
 
    struct SharedPtrProd {
       SharedPtrProd() : ptr_(new Data()) {}
-      boost::shared_ptr<Data> method(const Record&) {
+      std::shared_ptr<Data> method(const Record&) {
          ++ptr_->value_;
          return ptr_;
       }      
-      boost::shared_ptr<Data> ptr_;
+      std::shared_ptr<Data> ptr_;
    };
    
    struct PtrProductsProd {
       PtrProductsProd() : data_(), double_() {}
-      edm::ESProducts<const Data*, const Double*> method(const Record&) {
+      edm::ESProducts<std::shared_ptr<Data>, std::shared_ptr<Double>> method(const Record&) {
          using namespace edm::es;
-         const Data* dataT = &data_;
-         const Double* doubleT = &double_;
+         auto dataT = std::shared_ptr<Data>(&data_, edm::do_nothing_deleter());;
+         auto doubleT = std::shared_ptr<Double>(&double_, edm::do_nothing_deleter());
          ++data_.value_;
          ++double_.value_;
          return products(dataT, doubleT);
@@ -74,14 +74,12 @@ namespace callbacktest {
 
 using namespace callbacktest;
 using namespace edm::eventsetup;
-typedef Callback<ConstPtrProd, const Data*, Record> ConstPtrCallback;
 
 class testCallback: public CppUnit::TestFixture
 {
 CPPUNIT_TEST_SUITE(testCallback);
 
-CPPUNIT_TEST(constPtrTest);
-CPPUNIT_TEST(autoPtrTest);
+CPPUNIT_TEST(uniquePtrTest);
 CPPUNIT_TEST(sharedPtrTest);
 CPPUNIT_TEST(ptrProductsTest);
 
@@ -90,8 +88,7 @@ public:
   void setUp(){}
   void tearDown(){}
 
-  void constPtrTest();
-  void autoPtrTest();
+  void uniquePtrTest();
   void sharedPtrTest();
   void ptrProductsTest();
 };
@@ -99,43 +96,14 @@ public:
 ///registration of the test so that the runner can find it
 CPPUNIT_TEST_SUITE_REGISTRATION(testCallback);
 
-void testCallback::constPtrTest()
+typedef Callback<UniquePtrProd, std::unique_ptr<Data>, Record> UniquePtrCallback;
+
+void testCallback::uniquePtrTest()
 {
-   ConstPtrProd prod;
-
-   ConstPtrCallback callback(&prod, &ConstPtrProd::method);
-   const Data* handle;
-
-
-   callback.holdOntoPointer(&handle);
+   UniquePtrProd prod;
    
-   Record record;
-   callback.newRecordComing();
-   callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
-   CPPUNIT_ASSERT(prod.data_.value_ == 1);
-
-   //since haven't cleared, should not have changed
-   callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
-   CPPUNIT_ASSERT(prod.data_.value_ == 1);
-
-   callback.newRecordComing();
-
-   callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
-   CPPUNIT_ASSERT(prod.data_.value_ == 2);
-   
-}
-
-typedef Callback<AutoPtrProd, std::auto_ptr<Data>, Record> AutoPtrCallback;
-
-void testCallback::autoPtrTest()
-{
-   AutoPtrProd prod;
-   
-   AutoPtrCallback callback(&prod, &AutoPtrProd::method);
-   std::auto_ptr<Data> handle;
+   UniquePtrCallback callback(&prod, &UniquePtrProd::method);
+   std::unique_ptr<Data> handle;
    
    
    callback.holdOntoPointer(&handle);
@@ -165,14 +133,14 @@ void testCallback::autoPtrTest()
    
 }
 
-typedef Callback<SharedPtrProd, boost::shared_ptr<Data>, Record> SharedPtrCallback;
+typedef Callback<SharedPtrProd, std::shared_ptr<Data>, Record> SharedPtrCallback;
 
 void testCallback::sharedPtrTest()
 {
    SharedPtrProd prod;
    
    SharedPtrCallback callback(&prod, &SharedPtrProd::method);
-   boost::shared_ptr<Data> handle;
+   std::shared_ptr<Data> handle;
    
    
    callback.holdOntoPointer(&handle);
@@ -197,15 +165,15 @@ void testCallback::sharedPtrTest()
    
 }
 
-typedef Callback<PtrProductsProd, edm::ESProducts<const Data*, const Double*>, Record> PtrProductsCallback;
+typedef Callback<PtrProductsProd, edm::ESProducts<std::shared_ptr<Data>, std::shared_ptr<Double>>, Record> PtrProductsCallback;
 
 void testCallback::ptrProductsTest()
 {
    PtrProductsProd prod;
    
    PtrProductsCallback callback(&prod, &PtrProductsProd::method);
-   const Data* handle;
-   const Double* doubleHandle;
+   std::shared_ptr<Data> handle;
+   std::shared_ptr<Double> doubleHandle;
    
    callback.holdOntoPointer(&handle);
    callback.holdOntoPointer(&doubleHandle);
@@ -213,18 +181,18 @@ void testCallback::ptrProductsTest()
    Record record;
    callback.newRecordComing();
    callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
+   CPPUNIT_ASSERT(handle.get() == &(prod.data_));
    CPPUNIT_ASSERT(prod.data_.value_ == 1);
    
    //since haven't cleared, should not have changed
    callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
+   CPPUNIT_ASSERT(handle.get() == &(prod.data_));
    CPPUNIT_ASSERT(prod.data_.value_ == 1);
    
    callback.newRecordComing();
    
    callback(record);
-   CPPUNIT_ASSERT(handle == &(prod.data_));
+   CPPUNIT_ASSERT(handle.get() == &(prod.data_));
    CPPUNIT_ASSERT(prod.data_.value_ == 2);
    
 }

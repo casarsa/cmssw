@@ -1,38 +1,30 @@
-/***************************************************************************
-                          DDLDivision.cc  -  description
-                             -------------------
-    begin                : Friday, April 23, 2004
-    email                : case@ucdhep.ucdavis.edu
- ***************************************************************************/
-
-/***************************************************************************
- *                                                                         *
- *           DDDParser sub-component of DDD                                *
- *                                                                         *
- ***************************************************************************/
-
 #include "DetectorDescription/Parser/src/DDLDivision.h"
-#include "DetectorDescription/Parser/src/DDDividedBox.h"
-#include "DetectorDescription/Parser/src/DDDividedTubs.h"
-#include "DetectorDescription/Parser/src/DDDividedTrd.h"
-#include "DetectorDescription/Parser/src/DDDividedCons.h"
-#include "DetectorDescription/Parser/src/DDDividedPolycone.h"
-#include "DetectorDescription/Parser/src/DDDividedPolyhedra.h"
-
-#include "DetectorDescription/Core/interface/DDName.h"
 #include "DetectorDescription/Core/interface/DDAxes.h"
+#include "DetectorDescription/Core/interface/DDLogicalPart.h"
+#include "DetectorDescription/Core/interface/DDName.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
 #include "DetectorDescription/Core/interface/DDSolidShapes.h"
-#include "DetectorDescription/Core/interface/DDLogicalPart.h"
-#include "DetectorDescription/Base/interface/DDdebug.h"
+#include "DetectorDescription/Core/interface/ClhepEvaluator.h"
+#include "DetectorDescription/Parser/interface/DDLElementRegistry.h"
+#include "DetectorDescription/Parser/src/DDDividedBox.h"
+#include "DetectorDescription/Parser/src/DDDividedCons.h"
+#include "DetectorDescription/Parser/src/DDDividedGeometryObject.h"
+#include "DetectorDescription/Parser/src/DDDividedPolycone.h"
+#include "DetectorDescription/Parser/src/DDDividedPolyhedra.h"
+#include "DetectorDescription/Parser/src/DDDividedTrd.h"
+#include "DetectorDescription/Parser/src/DDDividedTubs.h"
+#include "DetectorDescription/Parser/src/DDXMLElement.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include "DetectorDescription/ExprAlgo/interface/ClhepEvaluator.h"
+#include <cstddef>
+#include <map>
+#include <ostream>
+#include <utility>
+
+class DDCompactView;
 
 DDLDivision::DDLDivision( DDLElementRegistry* myreg )
   : DDXMLElement( myreg )
-{}
-
-DDLDivision::~DDLDivision( void )
 {}
 
 void
@@ -42,8 +34,6 @@ DDLDivision::preProcessElement( const std::string& name, const std::string& nmsp
 void
 DDLDivision::processElement( const std::string& name, const std::string& nmspace, DDCompactView& cpv )
 {
-  DCOUT_V('P', "DDLDivision::processElement started");
-
   DDXMLAttribute atts = getAttributeSet();
 
   DDName parent = getDDName(nmspace, "parent");
@@ -87,8 +77,6 @@ DDLDivision::processElement( const std::string& name, const std::string& nmspace
   else if (atts.find("width")     != atts.end()
 	   && atts.find("offset") != atts.end())
   {
-    DCOUT_V ('D', " width = " << ev.eval(nmspace, atts.find("width")->second) << std::endl);
-    DCOUT_V ('D', " offset = " << ev.eval(nmspace, atts.find("offset")->second) << std::endl);
     div = DDDivision(getDDName(nmspace)
 		     , parent
 		     , DDAxes(ax)
@@ -106,23 +94,21 @@ DDLDivision::processElement( const std::string& name, const std::string& nmspace
   delete dg;
 
   clear();
-
-  DCOUT_V('P', "DDLDivision::processElement completed");
 }
 
 DDDividedGeometryObject*
 DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
 {
-  DDDividedGeometryObject* dg = NULL;
+  DDDividedGeometryObject* dg = nullptr;
 
   switch (div.parent().solid().shape()) 
   {
-  case ddbox:
-    if (div.axis() == x)
+  case DDSolidShape::ddbox:
+    if (div.axis() == DDAxes::x)
       dg = new DDDividedBoxX(div,cpv);
-    else if (div.axis() == y)
+    else if (div.axis() == DDAxes::y)
       dg = new DDDividedBoxY(div,cpv);
-    else if (div.axis() == z)
+    else if (div.axis() == DDAxes::z)
       dg = new DDDividedBoxZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -135,12 +121,12 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddtubs:
-    if (div.axis() == rho)
+  case DDSolidShape::ddtubs:
+    if (div.axis() == DDAxes::rho)
       dg = new DDDividedTubsRho(div,cpv);
-    else if (div.axis() == phi)
+    else if (div.axis() == DDAxes::phi)
       dg = new DDDividedTubsPhi(div,cpv);
-    else if (div.axis() == z)
+    else if (div.axis() == DDAxes::z)
       dg = new DDDividedTubsZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -153,12 +139,12 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddtrap:
-    if (div.axis() == x)
+  case DDSolidShape::ddtrap:
+    if (div.axis() == DDAxes::x)
       dg = new DDDividedTrdX(div,cpv);
-    else if (div.axis() == y )
+    else if (div.axis() == DDAxes::y )
       dg = new DDDividedTrdY(div,cpv);
-    else if (div.axis() == z )
+    else if (div.axis() == DDAxes::z )
       dg = new DDDividedTrdZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -172,12 +158,12 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddcons:
-    if (div.axis() == rho)
+  case DDSolidShape::ddcons:
+    if (div.axis() == DDAxes::rho)
       dg = new DDDividedConsRho(div,cpv);
-    else if (div.axis() == phi)
+    else if (div.axis() == DDAxes::phi)
       dg = new DDDividedConsPhi(div,cpv);
-    else if (div.axis() == z)
+    else if (div.axis() == DDAxes::z)
       dg = new DDDividedConsZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -190,12 +176,12 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddpolycone_rrz:
-    if (div.axis() == rho)
+  case DDSolidShape::ddpolycone_rrz:
+    if (div.axis() == DDAxes::rho)
       dg = new DDDividedPolyconeRho(div,cpv);
-    else if (div.axis() == phi)
+    else if (div.axis() == DDAxes::phi)
       dg = new DDDividedPolyconePhi(div,cpv);
-    else if (div.axis() == z)
+    else if (div.axis() == DDAxes::z)
       dg = new DDDividedPolyconeZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -209,12 +195,12 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddpolyhedra_rrz:
-    if (div.axis() == rho)
+  case DDSolidShape::ddpolyhedra_rrz:
+    if (div.axis() == DDAxes::rho)
       dg = new DDDividedPolyhedraRho(div,cpv);
-    else if (div.axis() == phi)
+    else if (div.axis() == DDAxes::phi)
       dg = new DDDividedPolyhedraPhi(div,cpv);
-    else if (div.axis() == z)
+    else if (div.axis() == DDAxes::z)
       dg = new DDDividedPolyhedraZ(div,cpv);
     else {
       std::string s = "DDLDivision can not divide a ";
@@ -228,8 +214,8 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
     }
     break;
 
-  case ddpolycone_rz:
-  case ddpolyhedra_rz: {
+  case DDSolidShape::ddpolycone_rz:
+  case DDSolidShape::ddpolyhedra_rz: {
     std::string s = "ERROR:  A Polycone or Polyhedra can not be divided on any axis if it's\n";
     s += "original definition used r and z instead of ZSections. This has\n";
     s += "not (yet) been implemented.";
@@ -238,14 +224,13 @@ DDLDivision::makeDivider( const DDDivision& div, DDCompactView* cpv )
   }
     break;
 
-  case ddunion: 
-  case ddsubtraction: 
-  case ddintersection: 
-  case ddreflected: 
-  case ddshapeless: 
-  case ddpseudotrap: 
-  case ddtrunctubs:
-  case dd_not_init: {
+  case DDSolidShape::ddunion: 
+  case DDSolidShape::ddsubtraction: 
+  case DDSolidShape::ddintersection: 
+  case DDSolidShape::ddshapeless: 
+  case DDSolidShape::ddpseudotrap: 
+  case DDSolidShape::ddtrunctubs:
+  case DDSolidShape::dd_not_init: {
     std::string s = "DDLDivision can not divide a ";
     s += DDSolidShapesName::name(div.parent().solid().shape());
     s += " at all (yet?).  Requested axis was ";

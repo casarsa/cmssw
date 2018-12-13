@@ -12,29 +12,30 @@
 #include "TrackingTools/PatternTools/interface/Trajectory.h"
 #include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
-#include "Geometry/TrackerGeometryBuilder/interface/GluedGeomDet.h"
 
 #include "RecoTracker/DeDx/interface/DeDxTools.h"
 
 #include "TFile.h"
 #include "TH3F.h"
 
+#include <memory>
+
 class DeDxDiscriminatorLearner : public ConditionDBWriter<PhysicsTools::Calibration::HistogramD3D> {
 
 public:
 
   explicit DeDxDiscriminatorLearner(const edm::ParameterSet&);
-  ~DeDxDiscriminatorLearner();
+  ~DeDxDiscriminatorLearner() override;
 
 private:
-  virtual void algoBeginJob(const edm::EventSetup&) ;
-  virtual void algoAnalyze(const edm::Event&, const edm::EventSetup&);
-  virtual void algoEndJob();
+  void algoBeginJob(const edm::EventSetup&) override ;
+  void algoAnalyze(const edm::Event&, const edm::EventSetup&) override;
+  void algoEndJob() override;
 
   void         processHit(const TrackingRecHit* recHit, float trackMomentum, float& cosine,  const TrajectoryStateOnSurface& trajState);
   void         algoAnalyzeTheTree(const edm::EventSetup& iSetup);
 
-  PhysicsTools::Calibration::HistogramD3D * getNewObject();
+  std::unique_ptr<PhysicsTools::Calibration::HistogramD3D> getNewObject() override;
 
   // ----------member data ---------------------------
   edm::EDGetTokenT<TrajTrackAssociationCollection>   m_trajTrackAssociationTag;

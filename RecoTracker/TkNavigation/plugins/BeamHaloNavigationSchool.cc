@@ -10,14 +10,14 @@ public:
   
   BeamHaloNavigationSchool(const GeometricSearchTracker* theTracker,
 			 const MagneticField* field);
-  ~BeamHaloNavigationSchool(){ cleanMemory();}
+  ~BeamHaloNavigationSchool() override{ cleanMemory();}
 
  protected:
   //addon to SimpleNavigationSchool
   void linkOtherEndLayers( SymmetricLayerFinder& symFinder);
   void addInward(const DetLayer * det, const FDLC& news);
   void addInward(const DetLayer * det, const ForwardDetLayer * newF);
-  void establishInverseRelations();
+  void establishInverseRelations() override;
   FDLC reachableFromHorizontal();
 };
 
@@ -178,9 +178,9 @@ addInward(const DetLayer * det, const ForwardDetLayer * newF){
   for ( DLC::iterator dli=inwardsLayers.begin();dli!=inwardsLayers.end();dli++)
     {
       if ((**dli).location()==GeomDetEnumerators::barrel)
-        inwardsBarrel.push_back((BarrelDetLayer*)*dli);
+        inwardsBarrel.push_back(static_cast<const BarrelDetLayer*>(*dli));
       else
-        inwardsForward.push_back((ForwardDetLayer*)*dli);
+        inwardsForward.push_back(static_cast<const ForwardDetLayer*>(*dli));
     }
   LogDebug("BeamHaloNavigationSchool")<<"add the new ones";
   //add the other forward layers provided
@@ -219,9 +219,9 @@ addInward(const DetLayer * det, const FDLC& news){
   for ( DLC::iterator dli=inwardsLayers.begin();dli!=inwardsLayers.end();dli++)
     {
       if ((**dli).location()==GeomDetEnumerators::barrel)
-	inwardsBarrel.push_back((BarrelDetLayer*)*dli);	
+	inwardsBarrel.push_back(static_cast<const BarrelDetLayer*>(*dli));
       else
-	inwardsForward.push_back((ForwardDetLayer*)*dli);
+	inwardsForward.push_back(static_cast<const ForwardDetLayer*>(*dli));
     }
   
   LogDebug("BeamHaloNavigationSchool")<<"add the new ones";
@@ -248,7 +248,7 @@ BeamHaloNavigationSchool::reachableFromHorizontal()
   FDLI end   = myRightLayers.end();
 
   //sort along Z to be sure
-  sort(begin, end, DetLessZ());
+  sort(begin, end, isDetLessZ);
 
   FDLC reachableFL;
 

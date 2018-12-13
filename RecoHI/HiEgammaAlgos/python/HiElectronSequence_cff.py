@@ -6,8 +6,6 @@ from TrackingTools.GsfTracking.GsfElectronTracking_cff import *
 ecalDrivenElectronSeeds.SeedConfiguration.initialSeeds = "hiPixelTrackSeeds"
 electronCkfTrackCandidates.src = "ecalDrivenElectronSeeds"
 
-ecalDrivenElectronSeeds.barrelSuperClusters = cms.InputTag("correctedIslandBarrelSuperClusters")
-
 ecalDrivenElectronSeeds.SeedConfiguration.maxHOverEBarrel = cms.double(0.25)
 ecalDrivenElectronSeeds.SeedConfiguration.maxHOverEEndcaps = cms.double(0.25)
 
@@ -24,6 +22,7 @@ pfElectronTranslator.emptyIsOk = cms.bool(True)
 
 ecalDrivenGsfElectrons.ctfTracksTag = cms.InputTag("hiGeneralTracks")
 ecalDrivenGsfElectronCores.ctfTracks = cms.InputTag("hiGeneralTracks")
+ecalDrivenGsfElectrons.vtxTag = cms.InputTag("hiSelectedVertex")
 
 ecalDrivenGsfElectrons.maxHOverEBarrel = cms.double(0.25)
 ecalDrivenGsfElectrons.maxHOverEEndcaps = cms.double(0.25)
@@ -35,7 +34,7 @@ pfTrack.UseQuality = cms.bool(True)
 pfTrack.TrackQuality = cms.string('highPurity')
 pfTrack.TkColList = cms.VInputTag("hiGeneralTracks")
 pfTrack.PrimaryVertexLabel = cms.InputTag("hiSelectedVertex")
-pfTrack.MuColl = cms.InputTag("muons")
+pfTrack.MuColl = cms.InputTag("hiMuons1stStep")
 
 from RecoParticleFlow.PFTracking.pfTrackElec_cfi import *
 pfTrackElec.applyGsfTrackCleaning = cms.bool(True)

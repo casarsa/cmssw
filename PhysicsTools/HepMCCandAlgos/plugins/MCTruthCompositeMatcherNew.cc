@@ -6,12 +6,13 @@
 
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-#include "PhysicsTools/CandUtils/interface/CandMatcherNew.h"
+#include "CommonTools/CandUtils/interface/CandMatcherNew.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/Common/interface/Association.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/transform.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/makeRefToBaseProdFrom.h"
 #include "DataFormats/Common/interface/Handle.h"
 
 namespace reco {
@@ -20,7 +21,7 @@ namespace reco {
     class MCTruthCompositeMatcher : public edm::EDProducer {
     public:
       explicit MCTruthCompositeMatcher( const edm::ParameterSet & );
-      ~MCTruthCompositeMatcher();
+      ~MCTruthCompositeMatcher() override;
     private:
       edm::EDGetTokenT<CandidateView>  srcToken_;
       std::vector<edm::EDGetTokenT<reco::GenParticleMatch> > matchMapTokens_;
@@ -52,7 +53,7 @@ namespace reco {
 	maps.push_back(& * matchMap);
       }
       utilsNew::CandMatcher<GenParticleCollection> match(maps);
-      auto_ptr<GenParticleMatch> matchMap(new GenParticleMatch(match.ref()));
+      auto matchMap = std::make_unique<GenParticleMatch>(match.ref());
       int size = cands->size();
       vector<int>::const_iterator begin = pdgId_.begin(), end = pdgId_.end();
       if(size != 0) {
@@ -69,11 +70,11 @@ namespace reco {
 	    indices[i] = found ? int(mc.key()) : -1;
 	  }
 	}
-	CandidateBaseRefProd ref(cands->refAt(0));
+	CandidateBaseRefProd ref(edm::makeRefToBaseProdFrom(cands->refAt(0), evt));
 	filler.insert(ref, indices.begin(), indices.end());
 	filler.fill();
       }
-      evt.put(matchMap);
+      evt.put(std::move(matchMap));
     }
 
   }

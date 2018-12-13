@@ -33,7 +33,7 @@ namespace ecaldqm
     bool retrieveSource(DQMStore::IGetter&, ProcessType);
 
     bool runsOn(ProcessType _type) const { return _type == kJob || hasLumiPlots_; }
-    void resetMEs();
+    virtual void resetMEs();
     virtual void producePlots(ProcessType) = 0;
 
     void setStatusManager(StatusManager const& _manager) { statusManager_ = &_manager; }
@@ -48,7 +48,7 @@ namespace ecaldqm
     };
 
   protected:
-    void setME(edm::ParameterSet const& _ps) final { DQWorker::setME(_ps); }
+    void setME(edm::ParameterSet const& _ps) final;
     void setSource(edm::ParameterSet const&) override;
 
     bool using_(std::string const& _name, ProcessType _type = kJob) const

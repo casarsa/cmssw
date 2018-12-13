@@ -12,7 +12,7 @@
 #include "TrackingTools/DetLayers/interface/MeasurementEstimator.h"
 #include "TrackingTools/GeomPropagators/interface/HelixBarrelCylinderCrossing.h"
 #include "TrackingTools/DetLayers/interface/CylinderBuilderFromDet.h"
-#include "TrackingTools/DetLayers/interface/PhiLess.h"
+#include "DataFormats/GeometryVector/interface/VectorUtil.h"
 
 
 using namespace std;
@@ -34,11 +34,11 @@ void TBPLayer::construct() {
   theInnerCylinder = cylinder( theInnerComps);
   theOuterCylinder = cylinder( theOuterComps);
 
-  if (theInnerComps.size())
+  if (!theInnerComps.empty())
     theInnerBinFinder = BinFinderType(theInnerComps.front()->position().phi(),
 				      theInnerComps.size());
 
-  if (theOuterComps.size())
+  if (!theOuterComps.empty())
     theOuterBinFinder = BinFinderType(theOuterComps.front()->position().phi(),
 				      theOuterComps.size());
   
@@ -104,8 +104,8 @@ std::tuple<bool,int,int>  TBPLayer::computeIndexes(GlobalPoint gInnerPoint, Glob
   float outerDist = theOuterBinFinder.binPosition(outerIndex) - gOuterPoint.barePhi() ;
 
   
-  innerDist *= PhiLess()( theInnerBinFinder.binPosition(innerIndex),gInnerPoint.barePhi()) ? -1.f : 1.f; 
-  outerDist *= PhiLess()( theOuterBinFinder.binPosition(outerIndex),gOuterPoint.barePhi()) ? -1.f : 1.f; 
+  innerDist *= Geom::phiLess( theInnerBinFinder.binPosition(innerIndex),gInnerPoint.barePhi()) ? -1.f : 1.f; 
+  outerDist *= Geom::phiLess( theOuterBinFinder.binPosition(outerIndex),gOuterPoint.barePhi()) ? -1.f : 1.f; 
   if (innerDist < 0.f) { innerDist += Geom::ftwoPi();}
   if (outerDist < 0.f) { outerDist += Geom::ftwoPi();}
  
@@ -132,7 +132,7 @@ void TBPLayer::searchNeighbors( const TrajectoryStateOnSurface& tsos,
 				bool checkClosest) const {
   using barrelUtil::overlap;
   
-  GlobalPoint gCrossingPos = crossing.position();
+  const GlobalPoint& gCrossingPos = crossing.position();
   auto gphi = gCrossingPos.barePhi();  
   
   const vector<const GeometricSearchDet*>& sLayer( subLayer( crossing.subLayerIndex()));
@@ -142,7 +142,7 @@ void TBPLayer::searchNeighbors( const TrajectoryStateOnSurface& tsos,
   int posStartIndex = closestIndex+1;
 
   if (checkClosest) { // must decide if the closest is on the neg or pos side
-    if ( PhiLess()( gphi, sLayer[closestIndex]->surface().phi())) {
+    if ( Geom::phiLess( gphi, sLayer[closestIndex]->surface().phi())) {
       posStartIndex = closestIndex;
     }
     else {

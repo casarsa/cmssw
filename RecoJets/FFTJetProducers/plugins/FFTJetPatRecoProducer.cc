@@ -64,7 +64,7 @@ class FFTJetPatRecoProducer : public FFTJetInterface
 {
 public:
     explicit FFTJetPatRecoProducer(const edm::ParameterSet&);
-    ~FFTJetPatRecoProducer();
+    ~FFTJetPatRecoProducer() override;
 
 protected:
     // Useful local typedefs
@@ -93,26 +93,26 @@ protected:
     // Basically, we need to create FFTJet objects
     // ClusteringSequencer and ClusteringTreeSparsifier
     // which will subsequently perform most of the work
-    std::auto_ptr<Sequencer> sequencer;
-    std::auto_ptr<Sparsifier> sparsifier;
+    std::unique_ptr<Sequencer> sequencer;
+    std::unique_ptr<Sparsifier> sparsifier;
 
     // The FFT engine(s)
-    std::auto_ptr<MyFFTEngine> engine;
-    std::auto_ptr<MyFFTEngine> anotherEngine;
+    std::unique_ptr<MyFFTEngine> engine;
+    std::unique_ptr<MyFFTEngine> anotherEngine;
 
     // The pattern recognition kernel(s)
-    std::auto_ptr<fftjet::AbsFrequencyKernel> kernel2d;
-    std::auto_ptr<fftjet::AbsFrequencyKernel1d> etaKernel;
-    std::auto_ptr<fftjet::AbsFrequencyKernel1d> phiKernel;
+    std::unique_ptr<fftjet::AbsFrequencyKernel> kernel2d;
+    std::unique_ptr<fftjet::AbsFrequencyKernel1d> etaKernel;
+    std::unique_ptr<fftjet::AbsFrequencyKernel1d> phiKernel;
 
     // The kernel convolver
-    std::auto_ptr<fftjet::AbsConvolverBase<Real> > convolver;
+    std::unique_ptr<fftjet::AbsConvolverBase<Real> > convolver;
 
     // The peak selector for the clustering tree
-    std::auto_ptr<fftjet::Functor1<bool,fftjet::Peak> > peakSelector;
+    std::unique_ptr<fftjet::Functor1<bool,fftjet::Peak> > peakSelector;
 
     // Distance calculator for the clustering tree
-    std::auto_ptr<fftjet::AbsDistanceCalculator<fftjet::Peak> > distanceCalc;
+    std::unique_ptr<fftjet::AbsDistanceCalculator<fftjet::Peak> > distanceCalc;
 
     // The sparse clustering tree
     SparseTree sparseTree;
@@ -136,9 +136,9 @@ protected:
     const bool sparsify;
 
 private:
-    FFTJetPatRecoProducer();
-    FFTJetPatRecoProducer(const FFTJetPatRecoProducer&);
-    FFTJetPatRecoProducer& operator=(const FFTJetPatRecoProducer&);
+    FFTJetPatRecoProducer() = delete;
+    FFTJetPatRecoProducer(const FFTJetPatRecoProducer&) = delete;
+    FFTJetPatRecoProducer& operator=(const FFTJetPatRecoProducer&) = delete;
 
     // Members needed for storing grids externally
     std::ofstream externalGridStream;
@@ -151,13 +151,13 @@ private:
 //
 FFTJetPatRecoProducer::FFTJetPatRecoProducer(const edm::ParameterSet& ps)
     : FFTJetInterface(ps),
-      clusteringTree(0),
+      clusteringTree(nullptr),
       completeEventDataCutoff(ps.getParameter<double>("completeEventDataCutoff")),
       makeClusteringTree(ps.getParameter<bool>("makeClusteringTree")),
       verifyDataConversion(ps.getUntrackedParameter<bool>("verifyDataConversion",false)),
       storeDiscretizationGrid(ps.getParameter<bool>("storeDiscretizationGrid")),
       sparsify(ps.getParameter<bool>("sparsify")),
-      extGrid(0)
+      extGrid(nullptr)
 {
     // register your products
     if (makeClusteringTree)
@@ -172,7 +172,7 @@ FFTJetPatRecoProducer::FFTJetPatRecoProducer(const edm::ParameterSet& ps)
 
     // Check if we want to write the grids into an external file
     const std::string externalGridFile(ps.getParameter<std::string>("externalGridFile"));
-    storeGridsExternally = externalGridFile.size() > 0;
+    storeGridsExternally = !externalGridFile.empty();
     if (storeGridsExternally)
     {
         externalGridStream.open(externalGridFile.c_str(), std::ios_base::out | 
@@ -207,7 +207,7 @@ FFTJetPatRecoProducer::FFTJetPatRecoProducer(const edm::ParameterSet& ps)
     checkConfig(peakSelector, "invalid peak selector");
 
     // Build the initial set of pattern recognition scales
-    std::auto_ptr<std::vector<double> > iniScales = fftjet_ScaleSet_parser(
+    std::unique_ptr<std::vector<double> > iniScales = fftjet_ScaleSet_parser(
         ps.getParameter<edm::ParameterSet>("InitialScales"));
     checkConfig(iniScales, "invalid set of scales");
 
@@ -233,7 +233,7 @@ FFTJetPatRecoProducer::FFTJetPatRecoProducer(const edm::ParameterSet& ps)
     }
 
     // At this point we are ready to build the clustering sequencer
-    sequencer = std::auto_ptr<Sequencer>(new Sequencer(
+    sequencer = std::unique_ptr<Sequencer>(new Sequencer(
         convolver.get(), peakSelector.get(), buildPeakFinder(ps),
         *iniScales, maxAdaptiveScales, minAdaptiveRatioLog));
 
@@ -295,17 +295,17 @@ void FFTJetPatRecoProducer::buildKernelConvolver(const edm::ParameterSet& ps)
     if (use2dKernel)
     {
         // Build the FFT engine
-        engine = std::auto_ptr<MyFFTEngine>(
+        engine = std::unique_ptr<MyFFTEngine>(
             new MyFFTEngine(energyFlow->nEta(), energyFlow->nPhi()));
 
         // 2d kernel
-        kernel2d = std::auto_ptr<fftjet::AbsFrequencyKernel>(
+        kernel2d = std::unique_ptr<fftjet::AbsFrequencyKernel>(
             new fftjet::DiscreteGauss2d(
                 kernelEtaScale, kernelPhiScale,
                 energyFlow->nEta(), energyFlow->nPhi()));
 
         // 2d convolver
-        convolver = std::auto_ptr<fftjet::AbsConvolverBase<Real> >(
+        convolver = std::unique_ptr<fftjet::AbsConvolverBase<Real> >(
             new fftjet::FrequencyKernelConvolver<Real,Complex>(
                 engine.get(), kernel2d.get(),
                 convolverMinBin, convolverMaxBin));
@@ -313,20 +313,20 @@ void FFTJetPatRecoProducer::buildKernelConvolver(const edm::ParameterSet& ps)
     else
     {
         // Need separate FFT engines for eta and phi
-        engine = std::auto_ptr<MyFFTEngine>(
+        engine = std::unique_ptr<MyFFTEngine>(
             new MyFFTEngine(1, energyFlow->nEta()));
-        anotherEngine = std::auto_ptr<MyFFTEngine>(
+        anotherEngine = std::unique_ptr<MyFFTEngine>(
             new MyFFTEngine(1, energyFlow->nPhi()));
 
         // 1d kernels
-        etaKernel = std::auto_ptr<fftjet::AbsFrequencyKernel1d>(
+        etaKernel = std::unique_ptr<fftjet::AbsFrequencyKernel1d>(
             new fftjet::DiscreteGauss1d(kernelEtaScale, energyFlow->nEta()));
 
-        phiKernel = std::auto_ptr<fftjet::AbsFrequencyKernel1d>(
+        phiKernel = std::unique_ptr<fftjet::AbsFrequencyKernel1d>(
             new fftjet::DiscreteGauss1d(kernelPhiScale, energyFlow->nPhi()));
 
         // Sequential convolver
-        convolver = std::auto_ptr<fftjet::AbsConvolverBase<Real> >(
+        convolver = std::unique_ptr<fftjet::AbsConvolverBase<Real> >(
             new fftjet::FrequencySequentialConvolver<Real,Complex>(
                 engine.get(), anotherEngine.get(),
                 etaKernel.get(), phiKernel.get(),
@@ -370,7 +370,7 @@ void FFTJetPatRecoProducer::buildSparseProduct(edm::Event& ev) const
 {
     typedef reco::PattRecoTree<Real,reco::PattRecoPeak<Real> > StoredTree;
 
-    std::auto_ptr<StoredTree> tree(new StoredTree());
+    auto tree = std::make_unique<StoredTree>();
 
     sparsePeakTreeToStorable(sparseTree,
                              sequencer->maxAdaptiveScales(),
@@ -388,7 +388,7 @@ void FFTJetPatRecoProducer::buildSparseProduct(edm::Event& ev) const
                 << std::endl;
     }
 
-    ev.put(tree, outputLabel);
+    ev.put(std::move(tree), outputLabel);
 }
 
 
@@ -397,7 +397,7 @@ void FFTJetPatRecoProducer::buildDenseProduct(edm::Event& ev) const
 {
     typedef reco::PattRecoTree<Real,reco::PattRecoPeak<Real> > StoredTree;
 
-    std::auto_ptr<StoredTree> tree(new StoredTree());
+    auto tree = std::make_unique<StoredTree>();
 
     densePeakTreeToStorable(*clusteringTree,
                             sequencer->maxAdaptiveScales(),
@@ -415,7 +415,7 @@ void FFTJetPatRecoProducer::buildDenseProduct(edm::Event& ev) const
                 << std::endl;
     }
 
-    ev.put(tree, outputLabel);
+    ev.put(std::move(tree), outputLabel);
 }
 
 
@@ -460,10 +460,9 @@ void FFTJetPatRecoProducer::produce(
     {
         const fftjet::Grid2d<Real>& g(*energyFlow);
 
-        std::auto_ptr<reco::DiscretizedEnergyFlow> flow(
-            new reco::DiscretizedEnergyFlow(
+        auto flow = std::make_unique<reco::DiscretizedEnergyFlow>(
                 g.data(), g.title(), g.etaMin(), g.etaMax(),
-                g.phiBin0Edge(), g.nEta(), g.nPhi()));
+                g.phiBin0Edge(), g.nEta(), g.nPhi());
 
         if (verifyDataConversion)
         {
@@ -474,7 +473,7 @@ void FFTJetPatRecoProducer::produce(
             assert(g == check);
         }
 
-        iEvent.put(flow, outputLabel);
+        iEvent.put(std::move(flow), outputLabel);
     }
 
     if (storeGridsExternally)

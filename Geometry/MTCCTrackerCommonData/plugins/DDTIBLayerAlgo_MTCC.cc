@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "DetectorDescription/Base/interface/DDutils.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
 #include "DetectorDescription/Core/interface/DDMaterial.h"
@@ -191,8 +190,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
 		      << genMat << " from 0 to " << CLHEP::twopi/CLHEP::deg 
 		      << " with Rin " << rmin << " Rout " << rmax << " ZHalf "
 		      << 0.5*layerL;
-  DDName matname(DDSplit(genMat).first, DDSplit(genMat).second);
-  DDMaterial matter(matname);
+  DDMaterial matter( DDName( DDSplit(genMat).first, DDSplit(genMat).second ));
   DDLogicalPart layer(solid.ddname(), matter, solid);
   
   //Lower part first
@@ -226,7 +224,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       if (phideg != 0) {
 	double theta  = 90*CLHEP::deg;
 	double phiy   = phix + 90.*CLHEP::deg;
-	std::string rotstr = idName + dbl_to_string(phideg*10.);
+	std::string rotstr = idName + std::to_string(phideg*10.);
 	rotation = DDRotation(DDName(rotstr, idNameSpace));
 	if (!rotation) {
 	  LogDebug("TIBGeom") << "DDTIBLayer_MTCC test: Creating a new "
@@ -240,8 +238,8 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       
       // fill strings in the stringLoList with modules, the others with only structure
       bool empty=true;
-      for(unsigned int i=0; i<stringLoList.size(); i++) {
-	if(n+1==(int)stringLoList[i]) {
+      for(double i : stringLoList) {
+	if(n+1==(int)i) {
 	  empty=false;
 	}
       }
@@ -315,7 +313,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       if (phideg != 0) {
 	double theta  = 90*CLHEP::deg;
 	double phiy   = phix + 90.*CLHEP::deg;
-	std::string rotstr = idName + dbl_to_string(phideg*10.);
+	std::string rotstr = idName + std::to_string(phideg*10.);
 	rotation = DDRotation(DDName(rotstr, idNameSpace));
 	if (!rotation) {
 	  LogDebug("TIBGeom") << "DDTIBLayer_MTCC test: Creating a new "
@@ -329,8 +327,8 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       
       // fill strings in the stringUpList with modules, the others with only structure
       bool empty=true;
-      for(unsigned int i=0; i<stringUpList.size(); i++) {
-	if(n+1==(int)stringUpList[i]) {
+      for(double i : stringUpList) {
+	if(n+1==(int)i) {
 	  empty=false;
 	}
       }
@@ -388,10 +386,9 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
 		      << cylinderMat << " from " << phiMin/CLHEP::deg << " to "
 		      << (phiMin+phidiff)/CLHEP::deg << " with Rin " << rin 
 		      << " Rout " << rout << " ZHalf " << 0.25*layerL;
-  matname = DDName(DDSplit(cylinderMat).first, DDSplit(cylinderMat).second);
-  DDMaterial matcyl(matname);
+  DDMaterial matcyl( DDName( DDSplit(cylinderMat).first, DDSplit(cylinderMat).second ));
   DDLogicalPart cylinder(solid.ddname(), matcyl, solid);
- cpv.position(cylinder, layer, 1, DDTranslation(0.0,0.0,0.25*layerL), DDRotation());
+  cpv.position(cylinder, layer, 1, DDTranslation(0.0,0.0,0.25*layerL), DDRotation());
   LogDebug("TIBGeom") << "DDTIBLayerAlgo_MTCC test: " << cylinder.name() 
 		      << " number 1 positioned in " << layer.name()
 		      << " at (0,0," << 0.25*layerL << ") with no rotation";
@@ -407,7 +404,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
 		      << " with Rin " << rin << " Rout " << rout << " ZHalf " 
 		      << 0.5*layerL;
   DDLogicalPart cylinderIn(solid.ddname(), matter, solid);
- cpv.position(cylinderIn, cylinder, 1, DDTranslation(0.0, 0.0, -0.25*layerL), DDRotation());
+  cpv.position(cylinderIn, cylinder, 1, DDTranslation(0.0, 0.0, -0.25*layerL), DDRotation());
   LogDebug("TIBGeom") << "DDTIBLayerAlgo_MTCC test: " << cylinderIn.name() 
 		      << " number 1 positioned in " << cylinder.name()
 		      << " at (0,0," << -0.25*layerL << ") with no rotation";
@@ -419,17 +416,15 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
 		      << genMat << " from " << phiMin/CLHEP::deg << " to " 
 		      << (phiMin+phidiff)/CLHEP::deg << " with Rin " << rin 
 		      << " Rout " << rout << " ZHalf " << 0.5*supportW;
-  matname = DDName(DDSplit(supportMat).first, DDSplit(supportMat).second);
-  DDMaterial matsup(matname);
+  DDMaterial matsup( DDName( DDSplit(supportMat).first, DDSplit(supportMat).second ));
   DDLogicalPart cylinderSup(solid.ddname(), matsup, solid);
- cpv.position(cylinderSup, cylinderIn, 1, DDTranslation(0., 0., 0.), DDRotation());
+  cpv.position(cylinderSup, cylinderIn, 1, DDTranslation(0., 0., 0.), DDRotation());
   LogDebug("TIBGeom") << "DDTIBLayerAlgo_MTCC test: " << cylinderSup.name() 
 		      << " number 1 positioned in " << cylinderIn.name()
 		      << " at (0,0,0) with no rotation";
-  matname = DDName(DDSplit(ribMat).first, DDSplit(ribMat).second);
-  DDMaterial matrib(matname);
+  DDMaterial matrib( DDName( DDSplit(ribMat).first, DDSplit(ribMat).second ));
   for (unsigned int i = 0; i < ribW.size(); i++) {
-    name = idName + "Rib" + dbl_to_string(i);
+    name = idName + "Rib" + std::to_string(i);
     double width = 2.*ribW[i]/(rin+rout);
     double dz    = 0.25*(layerL - supportW);
     solid = DDSolidFactory::tubs(DDName(name, idNameSpace), dz, rin, rout, 
@@ -447,7 +442,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       if (phideg != 0) {
 	double theta  = 90*CLHEP::deg;
 	double phiy   = phix + 90.*CLHEP::deg;
-	std::string rotstr = idName + dbl_to_string(phideg*10.);
+	std::string rotstr = idName + std::to_string(phideg*10.);
 	rotation = DDRotation(DDName(rotstr, idNameSpace));
 	if (!rotation) {
 	  LogDebug("TIBGeom") << "DDTIBLayer_MTCC test: Creating a new "
@@ -561,7 +556,7 @@ void DDTIBLayerAlgo_MTCC::execute(DDCompactView& cpv) {
       if (phideg != 0) {
 	double theta  = 90*CLHEP::deg;
 	double phiy   = phix + 90.*CLHEP::deg;
-	std::string rotstr = idName + dbl_to_string(phideg*10.);
+	std::string rotstr = idName + std::to_string(phideg*10.);
 	rotation = DDRotation(DDName(rotstr, idNameSpace));
 	if (!rotation) {
 	  LogDebug("TIBGeom") << "DDTIBLayer_MTCC test: Creating a new "

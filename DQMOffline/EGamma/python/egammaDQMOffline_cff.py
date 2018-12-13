@@ -31,9 +31,27 @@ zmumugammaOldAnalysis.ComponentName = cms.string('zmumugammaOldAnalysis')
 zmumugammaOldAnalysis.analyzerName = cms.string('zmumugammaOldValidation')
 zmumugammaOldAnalysis.phoProducer = cms.InputTag('photons')
 
-
-
+# HGCal customizations
+from Configuration.Eras.Modifier_phase2_hgcal_cff import phase2_hgcal
+stdPhotonAnalysisHGCal = stdPhotonAnalysis.clone()
+stdPhotonAnalysisHGCal.ComponentName = 'stdPhotonAnalyzerHGCalFromMultiCl'
+stdPhotonAnalysisHGCal.analyzerName = 'stdPhotonAnalyzerHGCalFromMultiCl'
+stdPhotonAnalysisHGCal.phoProducer = 'photonsFromMultiCl'
+stdPhotonAnalysisHGCal.isolationStrength = 2
+stdPhotonAnalysisHGCal.etaMin = -3.0
+stdPhotonAnalysisHGCal.etaMax = 3.0
+stdPhotonAnalysisHGCal.maxPhoEta = 3.0
 
 egammaDQMOffline = cms.Sequence(photonAnalysis*stdPhotonAnalysis*zmumugammaOldAnalysis*zmumugammaAnalysis*piZeroAnalysis*electronAnalyzerSequence)
+_egammaDQMOfflineHGCal = egammaDQMOffline.copy()
+_egammaDQMOfflineHGCal += stdPhotonAnalysisHGCal
 
+phase2_hgcal.toReplaceWith(
+  egammaDQMOffline, _egammaDQMOfflineHGCal
+)
 
+from Configuration.Eras.Modifier_peripheralPbPb_cff import peripheralPbPb
+from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
+for e in [peripheralPbPb, pp_on_AA_2018, pp_on_XeXe_2017]:
+    e.toModify(stdPhotonAnalysis, phoProducer = cms.InputTag('islandPhotons'))

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import cmsPerfPublish as cspp
 import cmsPerfSuite      as cps
 import cmsPerfHarvest    as cph
@@ -12,7 +13,7 @@ import socket, os, sys, SimpleXMLRPCServer, threading, exceptions
 CandlesString=""
 for candle in Candles:
     CandlesString=CandlesString+","+candle
-print CandlesString[1:]
+print(CandlesString[1:])
 _outputdir  = os.getcwd()
 _reqnumber  = 0
 _logreturn  = False
@@ -98,12 +99,12 @@ def runserv(port):
     try:
         server = SimpleXMLRPCServer.SimpleXMLRPCServer((socket.gethostname(),port))
         server.register_function(request_benchmark)
-    except socket.error, detail:
-        print "ERROR: Could not initialise server:", detail
+    except socket.error as detail:
+        print("ERROR: Could not initialise server:", detail)
         sys.stdout.flush()        
         sys.exit()
 
-    print "Running server on port %s... " % port
+    print("Running server on port %s... " % port)
     sys.stdout.flush()    
     while True:
         try:
@@ -141,12 +142,12 @@ def readlog(logfile):
     try:
         for line in open(logfile,"r"):
             astr += line
-    except (OSError, IOError) , detail:
-        print detail
+    except (OSError, IOError) as detail:
+        print(detail)
     return astr
 
 def getCPSkeyword(key,dict):
-    if dict.has_key(key):
+    if key in dict:
         return dict[key]
     else:
         return _DEFAULTS[key]
@@ -158,8 +159,8 @@ def request_benchmark(cmds):
     #Most common use will be only 1 dictionary, but for testing with reproducibility and statistical errors
     #one can easily think of sending the same command 10 times for example and then compare the outputs
     global _outputdir, _reqnumber
-    print "Commands received running perfsuite for these jobs:"
-    print cmds
+    print("Commands received running perfsuite for these jobs:")
+    print(cmds)
     sys.stdout.flush()
     try:
         # input is a list of dictionaries each defining the
@@ -183,15 +184,15 @@ def request_benchmark(cmds):
             logfile = os.path.join(curperfdir, "cmsPerfSuite.log")
             if os.path.exists(logfile):
                 logfile = logfile + str(cmd_num)
-            print cmd
-            if cmd.has_key('cpus'):
+            print(cmd)
+            if 'cpus' in cmd:
                 if cmd['cpus'] == "All":
-                    print "Running performance suite on all CPUS!\n"
+                    print("Running performance suite on all CPUS!\n")
                     cmd['cpus']=""
                     for cpu in range(cmsCpuInfo.get_NumOfCores()):
                         cmd["cpus"]=cmd["cpus"]+str(cpu)+","
                     cmd["cpus"]=cmd["cpus"][:-1] #eliminate the last comma for cleanliness 
-                    print "I.e. on cpus %s\n"%cmd["cpus"]
+                    print("I.e. on cpus %s\n"%cmd["cpus"])
                 
             #Not sure this is the most elegant solution... we keep cloning dictionaries...
             cmdwdefs = {}
@@ -229,7 +230,7 @@ def request_benchmark(cmds):
             for key in cmdwdefs.keys():
                 logh.write(key + "\t" +str(cmdwdefs[key])+"\n")
             logh.close()
-            print "Calling cmsPerfSuite.main() function\n"
+            print("Calling cmsPerfSuite.main() function\n")
             cpsInputArgs=[
                       #"-a",cmdwdefs["castordir"],
                       "-t",cmdwdefs["TimeSizeEvents"  ],
@@ -255,9 +256,9 @@ def request_benchmark(cmds):
                       "--notrunspare"#,cmdwdefs["runonspare"      ]#,
                       #"--logfile",cmdwdefs["logfile"         ]
                       ]
-            print cpsInputArgs
+            print(cpsInputArgs)
             cps.main(cpsInputArgs)
-            print "Running of the Performance Suite is done!"          
+            print("Running of the Performance Suite is done!")          
             #logreturn is false... so this does not get executed
             #Maybe we can replace this so that we can have more verbose logging of the server activity
             if _logreturn:
@@ -269,18 +270,18 @@ def request_benchmark(cmds):
 
             
         return outs #Not sure what James intended to return here... the contents of all logfiles in a list of logfiles?
-    except exceptions.Exception, detail:
+    except exceptions.Exception as detail:
         # wrap the entire function in try except so we can log the error at client and server
         logh = open(os.path.join(os.getcwd(),"error.log"),"a")
         logh.write(str(detail) + "\n")
         logh.flush()
         logh.close()
-        print detail
+        print(detail)
         sys.stdout.flush()
         raise
 
 def _main():
-    print _DEFAULTS
+    print(_DEFAULTS)
     (port, outputdir) = optionparse()
     server_thread = threading.Thread(target = runserv(port))
     server_thread.setDaemon(True) # Allow process to finish if this is the only remaining thread

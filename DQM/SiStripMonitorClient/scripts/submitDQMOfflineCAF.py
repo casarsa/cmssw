@@ -10,6 +10,7 @@
 #  Questions and comments to: volker.adler@cern.ch
 
 
+from __future__ import print_function
 import sys
 import os
 import os.path
@@ -25,7 +26,7 @@ import smtplib
 # Constants
 
 # numbers
-OCT_rwx_r_r          = 0744
+OCT_rwx_r_r          = 0o744
 LFLOAT_valueMagField = [0.0,2.0,3.0,3.5,3.8,4.0]
 TD_shiftUTC          = datetime.timedelta(hours = 2) # positive for timezones with later time than UTC
 # strings
@@ -238,7 +239,7 @@ def Func_Usage():
   """ Function Func_Usage():
   Displays usage of the script
   """
-  print STR_textUsage
+  print(STR_textUsage)
 
 ## Function Func_Exit()
 #
@@ -247,8 +248,8 @@ def Func_Exit():
   """ Function Func_Exit():
   Exit after error
   """
-  print '                           exit'
-  print
+  print('                           exit')
+  print()
   sys.exit(1)
 
 ## Function Func_ExitUsage()
@@ -258,8 +259,8 @@ def Func_ExitUsage():
   """ Function Func_ExitUsage():
   Exit after wrong invocation of script
   """
-  print '                           exit'
-  print
+  print('                           exit')
+  print()
   Func_Usage()
   sys.exit(1)
 
@@ -270,7 +271,7 @@ def Func_ExitBool(int_index):
   """ Function Func_ExitBool():
   Exit after wrong assignment of bool option
   """
-  print '> submitDQMOfflineCAF.py > option %s expects 0/1, FALSE/TRUE, False/True or false/true' %(DICT_optionLetters.items()[int_index])
+  print('> submitDQMOfflineCAF.py > option %s expects 0/1, FALSE/TRUE, False/True or false/true' %(DICT_optionLetters.items()[int_index]))
   Func_Exit()
 
 ## Function Func_MkDir()
@@ -298,19 +299,19 @@ def Func_MagConfig(float_magFieldMeasured):
   
 ## Main program
 
-print
+print()
   
 # Current environment
 
 Str_pathCurrentDir       = os.getcwd()
 Str_pathCmsswBase        = os.getenv('CMSSW_BASE')
 if not Str_pathCmsswBase:
-  print '> submitDQMOfflineCAF.py > CMSSW environment not set properly;'
-  print '                           first do'
-  print
-  print '                           $ cd [your/CMSSW/release/area]/src'
-  print '                           $ cmsenv'
-  print
+  print('> submitDQMOfflineCAF.py > CMSSW environment not set properly;')
+  print('                           first do')
+  print()
+  print('                           $ cd [your/CMSSW/release/area]/src')
+  print('                           $ cmsenv')
+  print()
   Func_Exit()
 Str_nameCmsswRel         = os.getenv('CMSSW_VERSION')
 Str_pathCmsswBasePackage = Str_pathCmsswBase + '/src/' + STR_nameCmsswPackage
@@ -325,13 +326,13 @@ if len(LSTR_wordArgument) == 0:
 int_nFunctionLetters = 0
 for str_argument in LSTR_wordArgument:
   if str_argument in LSTR_functionLetters       or\
-     DICT_functionLetters.has_key(str_argument)   :
+     str_argument in DICT_functionLetters   :
     int_nFunctionLetters += 1
 if int_nFunctionLetters == 0:
-  print '> submitDQMOfflineCAF.py > no or unknown function letter used'
+  print('> submitDQMOfflineCAF.py > no or unknown function letter used')
   Func_ExitUsage()
 elif int_nFunctionLetters > 1:
-  print '> submitDQMOfflineCAF.py > too many function letter used'
+  print('> submitDQMOfflineCAF.py > too many function letter used')
   Func_ExitUsage()
     
 # Check options
@@ -339,13 +340,13 @@ elif int_nFunctionLetters > 1:
 str_argumentFormer = ''
 bool_standBy       = False
 for str_argument in LSTR_wordArgument:
-  if not ( str_argument in LSTR_functionLetters or DICT_functionLetters.has_key(str_argument) or\
-           str_argument in LSTR_optionLetters   or DICT_optionLetters.has_key(str_argument)     ):
+  if not ( str_argument in LSTR_functionLetters or str_argument in DICT_functionLetters or\
+           str_argument in LSTR_optionLetters   or str_argument in DICT_optionLetters     ):
     if str_argument[0] == '-':
-      print '> submitDQMOfflineCAF.py > unknown option used'
+      print('> submitDQMOfflineCAF.py > unknown option used')
       Func_ExitUsage()
     if not bool_standBy:
-      print '> submitDQMOfflineCAF.py > value without option used'
+      print('> submitDQMOfflineCAF.py > value without option used')
       Func_ExitUsage()
     Dict_arguments[str_argumentFormer] = str_argument
     bool_standBy                       = False
@@ -353,22 +354,22 @@ for str_argument in LSTR_wordArgument:
     if bool_standBy:
       Dict_arguments[str_argumentFormer] = STR_default
       if str_argumentFormer in LSTR_optionLetters or\
-         DICT_optionLetters.has_key(str_argumentFormer):
-        print '> submitDQMOfflineCAF.py > option "%s" w/o value' %(str_argumentFormer)
-        print '                           default used'
-        print
+         str_argumentFormer in DICT_optionLetters:
+        print('> submitDQMOfflineCAF.py > option "%s" w/o value' %(str_argumentFormer))
+        print('                           default used')
+        print()
     bool_standBy = not ( str_argument in LSTR_functionLetters       or\
-                         DICT_functionLetters.has_key(str_argument)   )
+                         str_argument in DICT_functionLetters   )
     if not bool_standBy:
       Dict_arguments[str_argument] = STR_default
   str_argumentFormer = str_argument
 if bool_standBy:
   Dict_arguments[str_argumentFormer] = STR_default
   if str_argumentFormer in LSTR_optionLetters       or\
-     DICT_optionLetters.has_key(str_argumentFormer)   :
-    print '> submitDQMOfflineCAF.py > option "%s" w/o value' %(str_argumentFormer)
-    print '                           default used'
-    print
+     str_argumentFormer in DICT_optionLetters   :
+    print('> submitDQMOfflineCAF.py > option "%s" w/o value' %(str_argumentFormer))
+    print('                           default used')
+    print()
     
 # Correct arguments' dictionary
 
@@ -383,21 +384,21 @@ for str_key, str_value in dict_arguments.items():
     
 # Help (exit)
 
-if Dict_arguments.has_key(LSTR_functionLetters[2]):
+if LSTR_functionLetters[2] in Dict_arguments:
   Func_Usage()
   sys.exit(0)
   
 # Check and assign arguments
 
 # run number
-if Dict_arguments.has_key(LSTR_optionLetters[0])        and\
+if LSTR_optionLetters[0] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[0]] != STR_default    :
   Str_run = Dict_arguments[LSTR_optionLetters[0]]
 else:   
-  print '> submitDQMOfflineCAF.py > no run number given'
+  print('> submitDQMOfflineCAF.py > no run number given')
   Func_Exit()
 # use CRAB
-if Dict_arguments.has_key(LSTR_optionLetters[1])        and\
+if LSTR_optionLetters[1] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[1]] != STR_default    :
   if Dict_arguments[LSTR_optionLetters[1]] in LSTR_true:
     Bool_CRAB = True
@@ -406,31 +407,31 @@ if Dict_arguments.has_key(LSTR_optionLetters[1])        and\
   else:
     Func_ExitBool(1)
 # name of CRAB server
-if Dict_arguments.has_key(LSTR_optionLetters[2])        and\
+if LSTR_optionLetters[2] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[2]] != STR_default    :
   Str_server = Dict_arguments[LSTR_optionLetters[2]]
 # email address to be used by CRAB server
-if Dict_arguments.has_key(LSTR_optionLetters[3])        and\
+if LSTR_optionLetters[3] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[3]] != STR_default    :
   Str_email = Dict_arguments[LSTR_optionLetters[3]]
 # number of jobs to create
-if Dict_arguments.has_key(LSTR_optionLetters[4])        and\
+if LSTR_optionLetters[4] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[4]] != STR_default    :
   Int_jobs  = int(Dict_arguments[LSTR_optionLetters[4]])
 # magnetic field
-if Dict_arguments.has_key(LSTR_optionLetters[5])        and\
+if LSTR_optionLetters[5] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[5]] != STR_default    :
   Str_magField = Dict_arguments[LSTR_optionLetters[5]]
 if Str_magField in LSTR_auto:
 #   Bool_magFieldAuto = True
-  print '> submitDQMOfflineCAF.py > automatic determination of magnetic field disabled at the moment'
+  print('> submitDQMOfflineCAF.py > automatic determination of magnetic field disabled at the moment')
   Func_Exit()
 # global tag
-if Dict_arguments.has_key(LSTR_optionLetters[6])        and\
+if LSTR_optionLetters[6] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[6]] != STR_default    :
   Str_globalTag  = Dict_arguments[LSTR_optionLetters[6]]
 # use HLT to filter events
-if Dict_arguments.has_key(LSTR_optionLetters[7])        and\
+if LSTR_optionLetters[7] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[7]] != STR_default    :
   if Dict_arguments[LSTR_optionLetters[7]] in LSTR_true:
     Bool_filter = True
@@ -439,18 +440,18 @@ if Dict_arguments.has_key(LSTR_optionLetters[7])        and\
   else:
     Func_ExitBool(7)
 # primary dataset
-if Dict_arguments.has_key(LSTR_optionLetters[8])        and\
+if LSTR_optionLetters[8] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[8]] != STR_default    :
   Str_dataset = Dict_arguments[LSTR_optionLetters[8]]
 else:   
-  print '> submitDQMOfflineCAF.py > no primary dataset given'
+  print('> submitDQMOfflineCAF.py > no primary dataset given')
   Func_Exit()
 # path for job output
-if Dict_arguments.has_key(LSTR_optionLetters[9])        and\
+if LSTR_optionLetters[9] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[9]] != STR_default    :
   Str_outpath = Dict_arguments[LSTR_optionLetters[9]]
 # path for merged output
-if Dict_arguments.has_key(LSTR_optionLetters[10])        and\
+if LSTR_optionLetters[10] in Dict_arguments        and\
    Dict_arguments[LSTR_optionLetters[10]] != STR_default    :
   Str_mergepath = Dict_arguments[LSTR_optionLetters[10]]
   
@@ -463,25 +464,25 @@ if Bool_CRAB:
     str_suffixShell          = 'csh'
     if not os.getenv('SHELL')[-3:] == str_suffixShell:
       str_suffixShell = 'sh'
-    print '> submitDQMOfflineCAF.py > CRAB environment not set properly;'
-    print '                           please use'
-    print
-    print '                           $ source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.%s' %(str_suffixShell)
-    print
+    print('> submitDQMOfflineCAF.py > CRAB environment not set properly;')
+    print('                           please use')
+    print()
+    print('                           $ source /afs/cern.ch/cms/ccs/wm/scripts/Crab/crab.%s' %(str_suffixShell))
+    print()
     Func_Exit()
 # on name of CRAB server
 if not Str_server in LSTR_server:
-  print '> submitDQMOfflineCAF.py > CRAB server "%s" not available' %(Str_server)
+  print('> submitDQMOfflineCAF.py > CRAB server "%s" not available' %(Str_server))
   Func_Exit()
 # on number of jobs
 if Int_jobs == 0:
   Int_jobs = 1
-  print '> submitDQMOfflineCAF.py > number of requested jobs was 0'
-  print '                           set to 1'
+  print('> submitDQMOfflineCAF.py > number of requested jobs was 0')
+  print('                           set to 1')
 # on magnetic field
 if Str_magField in LSTR_auto:
 #   Bool_magFieldAuto = True
-  print '> submitDQMOfflineCAF.py > automatic determination of magnetic field disabled at the moment'
+  print('> submitDQMOfflineCAF.py > automatic determination of magnetic field disabled at the moment')
   Func_Exit()
 elif Str_magField[-1] == 'T':
   bool_foundField = False
@@ -491,7 +492,7 @@ elif Str_magField[-1] == 'T':
       bool_foundField = True
       break
   if not bool_foundField:
-    print '> submitDQMOfflineCAF.py > no magnet configuration for \'%s\' available' %(Str_magField)
+    print('> submitDQMOfflineCAF.py > no magnet configuration for \'%s\' available' %(Str_magField))
     Func_Exit()
 else:
   Float_magField = float(Str_magField) # FIXME protect better from wrong user input
@@ -504,21 +505,21 @@ else:
   Str_datatier = str_datatier
 Str_datatier = Str_dataset.split('/')[-1]
 if not Str_datatier in LSTR_datatiers:
-  print '> submitDQMOfflineCAF.py > datatier "%s" not processable' %(Str_datatier)
+  print('> submitDQMOfflineCAF.py > datatier "%s" not processable' %(Str_datatier))
   Func_Exit()
 # on path for job output
 # use CASTOR
 if Str_outpath.split('/')[1] == 'afs':
   Bool_useCastor = False
 elif Str_outpath.split('/')[1] != 'castor':
-  print '> submitDQMOfflineCAF.py > output path not accepted'
+  print('> submitDQMOfflineCAF.py > output path not accepted')
   Func_ExitUsage()
 str_castorCp = 'cp'
 if Bool_useCastor:
   str_castorCp = 'rfcp'
 # on path for merged output
 if Str_mergepath.split('/')[1] != 'afs':
-  print '> submitDQMOfflineCAF.py > merge path not accepted'
+  print('> submitDQMOfflineCAF.py > merge path not accepted')
   Func_ExitUsage()
   
 # Prepare work area
@@ -551,15 +552,15 @@ for str_iLine in file_dbsOutput.readlines():
       int_nInputFiles += 1
       file_inputFilesCff.write(str_iLine)
 if int_nInputFiles == 0:
-  print '> submitDQMOfflineCAF.py > no input files found in DBS for run %s in dataset %s' %(Str_run,Str_dataset)
+  print('> submitDQMOfflineCAF.py > no input files found in DBS for run %s in dataset %s' %(Str_run,Str_dataset))
   Func_Exit()
 file_inputFilesCff.close()
-print '> submitDQMOfflineCAF.py > input files for run %s:   %i' %(Str_run,int_nInputFiles)
+print('> submitDQMOfflineCAF.py > input files for run %s:   %i' %(Str_run,int_nInputFiles))
 if int_nInputFiles < Int_jobs:
   Int_jobs = int_nInputFiles
-  print '                           number of requested jobs reduced accordingly'
+  print('                           number of requested jobs reduced accordingly')
 Int_jobsNew = Int_jobs
-print
+print()
 
 # magnetic field
 if Bool_magFieldAuto:
@@ -592,15 +593,15 @@ if Bool_magFieldAuto:
       bool_foundField = True
       break
   if not bool_foundField:
-    print  '> submitDQMOfflineCAF.py > could not extract magnetic field'
-    print  '                           please provide value'
+    print('> submitDQMOfflineCAF.py > could not extract magnetic field')
+    print('                           please provide value')
     Func_Exit()
 # determine corresponding configuration file to be included
 float_magField = Func_MagConfig(Float_magField)
 Str_magField   = str(int(float_magField*10)) + 'T'
-print '> submitDQMOfflineCAF.py > (average) magnetic field in run %s:   %s T' %(Str_run,Float_magField)
-print '                           using %s T for configuration' %(float_magField)
-print
+print('> submitDQMOfflineCAF.py > (average) magnetic field in run %s:   %s T' %(Str_run,Float_magField))
+print('                           using %s T for configuration' %(float_magField))
+print()
 
 # Create scripts
 
@@ -762,14 +763,14 @@ else:
 os.chdir(Str_pathRunIncludeDir+'/..')
 os.system('scramv1 b python')
 os.chdir(Str_pathCurrentDir)
-print
+print()
 
 # Create CRAB
 
 if Bool_CRAB:
   os.chdir(Str_nameRun)     
   os.system('crab -create')
-  print
+  print()
   # extract number of really created jobs
   bool_found = False
   file_logCRAB = file('crab'+Str_nameRun+'/log/crab.log')
@@ -781,15 +782,15 @@ if Bool_CRAB:
   file_logCRAB.close()
   os.chdir(Str_pathCurrentDir)
   if not bool_found:
-    print '> submitDQMOfflineCAF.py > could not extract number of jobs created by CRAB; check'
-    print '                           %s' %(Str_pathInputFilesCAFCff)
-    print '                           and modify manually, if necessary'
-    print
+    print('> submitDQMOfflineCAF.py > could not extract number of jobs created by CRAB; check')
+    print('                           %s' %(Str_pathInputFilesCAFCff))
+    print('                           and modify manually, if necessary')
+    print()
   
 # recreate included CAF input files list according to number of created jobs, if necessary
 
-print '> submitDQMOfflineCAF.py > number of created jobs: %i' %(Int_jobsNew)
-print
+print('> submitDQMOfflineCAF.py > number of created jobs: %i' %(Int_jobsNew))
+print()
 if Int_jobsNew != Int_jobs:
   file_inputFilesCAFCff = file(Str_pathInputFilesCAFCff, 'w')
   file_inputFilesCAFCff.write('import FWCore.ParameterSet.Config as cms\n\nsource = cms.Source ("PoolSource",\n    processingMode = cms.untracked.string( \'Runs\' ),\n    fileNames      = cms.untracked.vstring(\n')
@@ -809,14 +810,14 @@ if Int_jobsNew != Int_jobs:
 
 # Submit jobs
 
-if Dict_arguments.has_key(LSTR_functionLetters[0]):
+if LSTR_functionLetters[0] in Dict_arguments:
   os.chdir(Str_nameRun)
   if Bool_CRAB:
     str_crabCommand = 'crab -submit -c crab' + Str_nameRun
-    print '> submitDQMOfflineCAF.py >'
-    print '  %s : %s' %(os.getcwd(),str_crabCommand)
+    print('> submitDQMOfflineCAF.py >')
+    print('  %s : %s' %(os.getcwd(),str_crabCommand))
     os.system(str_crabCommand)
-    print
+    print()
     time.sleep(5)
     os.system('crab -status -c crab' + Str_nameRun)
   else:
@@ -825,10 +826,10 @@ if Dict_arguments.has_key(LSTR_functionLetters[0]):
       os.chdir(str_nameJobDir)     
       os.chmod('SiStripDQMOfflineCAF.job',OCT_rwx_r_r)
       str_batchCommand = 'bsub -q cmscaf SiStripDQMOfflineCAF.job'
-      print '> submitDQMOfflineCAF.py >'
-      print '  %s : %s' %(os.getcwd(),str_batchCommand)
+      print('> submitDQMOfflineCAF.py >')
+      print('  %s : %s' %(os.getcwd(),str_batchCommand))
       os.system(str_batchCommand)
-      print
+      print()
       os.chdir('../')
     time.sleep(5)
     os.system('bjobs -q cmscaf')
@@ -837,7 +838,7 @@ if Dict_arguments.has_key(LSTR_functionLetters[0]):
 
 # Send reminder email to submitter (not needed for CRAB)
     
-if Dict_arguments.has_key(LSTR_functionLetters[0]) and not Bool_CRAB:
+if LSTR_functionLetters[0] in Dict_arguments and not Bool_CRAB:
   str_mailFrom    = os.getenv('USER') + STR_mailServer
   str_mailTo      = [str_mailFrom,
                      'volker.adler@cern.ch',

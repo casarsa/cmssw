@@ -1,29 +1,26 @@
 #include "OuterDetCompatibility.h"
-#include "RecoTracker/TkTrackingRegions/interface/GlobalDetRangeZPhi.h"
-#include "RecoTracker/TkTrackingRegions/interface/GlobalDetRangeRPhi.h"
-#include "TrackingTools/DetLayers/interface/PhiLess.h"
 #include "TrackingTools/DetLayers/interface/rangesIntersect.h"
+#include "DataFormats/GeometryVector/interface/VectorUtil.h"
 
 using namespace std;
 
 bool OuterDetCompatibility::operator() (const BoundPlane& plane) const
 {
   if (barrel) {
-    GlobalDetRangeZPhi detRange(plane);
-    if (!checkPhi(detRange.phiRange())) return 0;
-    if (!checkZ(detRange.zRange())) return 0;
+    if (!checkPhi(plane.phiSpan())) return false;
+    if (!checkZ(plane.zSpan())) return false;
   } else {
-    GlobalDetRangeRPhi detRange(plane);
-    if (!checkPhi(detRange.phiRange())) return 0;
-    if (!checkR(detRange.rRange())) return 0;
+    if (!checkPhi(plane.phiSpan())) return false;
+    if (!checkR(plane.rSpan())) return false;
   }
-  return 1;
+  return true;
 }
 
 
 bool OuterDetCompatibility::checkPhi(
     const OuterHitPhiPrediction::Range & detPhiRange) const
-{ return rangesIntersect(detPhiRange, hitDetPhiRange, PhiLess()); }
+{ return rangesIntersect(detPhiRange, hitDetPhiRange,
+        [](auto x, auto y){ return Geom::phiLess(x,y); }); }
 
 bool OuterDetCompatibility::checkR(
     const Range & detRRange) const

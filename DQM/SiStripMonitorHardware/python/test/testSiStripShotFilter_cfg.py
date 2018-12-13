@@ -25,7 +25,7 @@ process.es_prefer_GlobalTag = cms.ESPrefer('PoolDBESSource','GlobalTag')
 
 process.load("CondCore.DBCommon.CondDBSetup_cfi")
 process.load("Configuration.StandardSequences.MagneticField_38T_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 # Real data raw to digi
 process.load("Configuration.StandardSequences.RawToDigi_Data_cff")
 process.load("Configuration.StandardSequences.ReconstructionCosmics_cff")
@@ -33,9 +33,7 @@ process.load("Configuration.StandardSequences.ReconstructionCosmics_cff")
 ##########################################################
 #needed to produce tkHistoMap+shot histos.
 #Can comment if commenting apvshotsanalyzer in main path
-process.DQMStore = cms.Service("DQMStore")
-process.TkDetMap = cms.Service("TkDetMap")
-process.SiStripDetInfoFileReader = cms.Service("SiStripDetInfoFileReader")
+process.load("DQM.SiStripCommon.TkHistoMap_cff")
 process.load("DPGAnalysis.SiStripTools.apvshotsanalyzer_cfi")
 process.TFileService = cms.Service("TFileService", 
                                    fileName = cms.string("Shot.root"),

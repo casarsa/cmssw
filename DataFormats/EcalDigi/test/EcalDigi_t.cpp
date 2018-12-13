@@ -1,11 +1,10 @@
 #include <Utilities/Testing/interface/CppUnit_testdriver.icpp>
 #include <cppunit/extensions/HelperMacros.h>
 
-#define private public
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "DataFormats/Common/interface/DataFrame.h"
 #include "DataFormats/Common/interface/DataFrameContainer.h"
-#undef private
+
 #include<vector>
 #include<algorithm>
 #include<boost/function.hpp>
@@ -47,18 +46,6 @@ TestEcalDigi<DigiCollection>::TestEcalDigi() : sv(10){
   edm::DataFrame::data_type v[10] = {0,1,2,3,4,5,6,7,8,9};
   std::copy(v,v+10,sv.begin());
 } 
-
-namespace {
-
-  inline void check_ctor(EBDigiCollection const& digis) {
-    CPPUNIT_ASSERT(digis.subdetId()==EcalBarrel);
-  }
-  inline void check_ctor(EEDigiCollection const& digis) {
-    CPPUNIT_ASSERT(digis.subdetId()==EcalEndcap);
-  }
-
-
-}
 
 
 template<typename DigiCollection>
@@ -143,7 +130,7 @@ namespace {
 
   void verifyBarrelId(edm::DataFrame::id_type id) {
     try {
-      EBDetId detid(DetId(id));
+      EBDetId detid{DetId(id)};
     } catch(...) {
       bool NotBarrelID=false;
       CPPUNIT_ASSERT(NotBarrelID);

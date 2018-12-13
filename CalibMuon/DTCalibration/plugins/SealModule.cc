@@ -9,8 +9,8 @@
 #include "CalibMuon/DTCalibration/plugins/DTTTrigWriter.h"
 #include "CalibMuon/DTCalibration/plugins/DTTTrigCorrection.h"
 #include "CalibMuon/DTCalibration/plugins/DTTTrigCorrectionFirst.h"
+#include "CalibMuon/DTCalibration/plugins/DTT0CalibrationRMS.h"
 #include "CalibMuon/DTCalibration/plugins/DTT0Calibration.h"
-//#include "CalibMuon/DTCalibration/plugins/DTT0CalibrationNew.h"
 #include "CalibMuon/DTCalibration/plugins/DTTPDeadWriter.h"
 #include "CalibMuon/DTCalibration/plugins/DTT0Correction.h"
 #include "CalibMuon/DTCalibration/plugins/DTVDriftCalibration.h"
@@ -21,9 +21,9 @@
 #include "CalibMuon/DTCalibration/plugins/DTVDriftSegmentCalibration.h"
 #include "CalibMuon/DTCalibration/plugins/DTResidualCalibration.h"
 
-#include "CalibMuon/DTCalibration/plugins/DTFakeTTrigESProducer.h"
-#include "CalibMuon/DTCalibration/plugins/DTFakeT0ESProducer.h"
-#include "CalibMuon/DTCalibration/plugins/DTFakeVDriftESProducer.h"
+// #include "CalibMuon/DTCalibration/plugins/DTFakeTTrigESProducer.h"
+ #include "CalibMuon/DTCalibration/plugins/DTFakeT0ESProducer.h"
+// #include "CalibMuon/DTCalibration/plugins/DTFakeVDriftESProducer.h"
 
 #include "CalibMuon/DTCalibration/interface/DTTTrigCorrectionFactory.h"
 #include "CalibMuon/DTCalibration/plugins/DTTTrigT0SegCorrection.h"
@@ -48,8 +48,8 @@ DEFINE_FWK_MODULE(DTTTrigCalibration);
 DEFINE_FWK_MODULE(DTTTrigWriter);
 DEFINE_FWK_MODULE(DTTTrigCorrection);
 DEFINE_FWK_MODULE(DTTTrigCorrectionFirst);
+DEFINE_FWK_MODULE(DTT0CalibrationRMS);
 DEFINE_FWK_MODULE(DTT0Calibration);
-//DEFINE_FWK_MODULE(DTT0CalibrationNew);
 DEFINE_FWK_MODULE(DTTPDeadWriter);
 DEFINE_FWK_MODULE(DTT0Correction);
 DEFINE_FWK_MODULE(DTVDriftCalibration);
@@ -60,9 +60,9 @@ DEFINE_FWK_MODULE(DTTTrigOffsetCalibration);
 DEFINE_FWK_MODULE(DTVDriftSegmentCalibration);
 DEFINE_FWK_MODULE(DTResidualCalibration);
 
-DEFINE_FWK_EVENTSETUP_SOURCE(DTFakeTTrigESProducer);
+// DEFINE_FWK_EVENTSETUP_SOURCE(DTFakeTTrigESProducer);
 DEFINE_FWK_EVENTSETUP_SOURCE(DTFakeT0ESProducer);
-DEFINE_FWK_EVENTSETUP_SOURCE(DTFakeVDriftESProducer);
+// DEFINE_FWK_EVENTSETUP_SOURCE(DTFakeVDriftESProducer);
 
 DEFINE_EDM_PLUGIN(DTTTrigCorrectionFactory,dtCalibration::DTTTrigT0SegCorrection,"DTTTrigT0SegCorrection");
 DEFINE_EDM_PLUGIN(DTTTrigCorrectionFactory,dtCalibration::DTTTrigResidualCorrection,"DTTTrigResidualCorrection");

@@ -1,3 +1,4 @@
+from __future__ import print_function
 from PhysicsTools.HeppyCore.framework.analyzer import Analyzer
 from PhysicsTools.Heppy.analyzers.AutoHandle import AutoHandle
 from PhysicsTools.HeppyCore.statistics.counter import Counter
@@ -23,8 +24,8 @@ class TriggerAnalyzer( Analyzer ):
             'std::vector<cmg::TriggerObject>'
             )
  
-    def beginLoop(self):
-        super(TriggerAnalyzer,self).beginLoop()
+    def beginLoop(self, setup):
+        super(TriggerAnalyzer,self).beginLoop(setup)
         self.triggerList = TriggerList( self.cfg_comp.triggers )
         if hasattr(self.cfg_comp,'vetoTriggers'):
             self.vetoTriggerList = TriggerList( self.cfg_comp.vetoTriggers )
@@ -94,9 +95,9 @@ class TriggerAnalyzer( Analyzer ):
         event.TriggerFired = 1
         return True
 
-    def write(self):
-        print 'writing TriggerAnalyzer'
-        super(TriggerAnalyzer, self).write()
+    def write(self, setup):
+        print('writing TriggerAnalyzer')
+        super(TriggerAnalyzer, self).write(setup)
         self.triggerList.write( self.dirName )
 
     def __str__(self):

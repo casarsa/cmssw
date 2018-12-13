@@ -3,20 +3,23 @@
 benedikt.hegner@cern.ch
 
 """
+from __future__ import absolute_import
+from __future__ import print_function
 import re
 import ROOT
 import exceptions
+import six
 import sys
 ### define tab completion
 try:
   import readline #cmscompleter
   readline.parse_and_bind('tab: complete')
 except:
-  print 'WARNING: Could not load tab completion'
+  print('WARNING: Could not load tab completion')
 
 
 # for adding iterators at runtime
-import iterators
+from . import iterators
 
 
 ### workaround iterator generators for ROOT classes
@@ -112,7 +115,7 @@ class EventTree(object):
       def tree(self):
           return self._tree
       def __setBranchIndicies(self):
-          for branch in self._usedBranches.itervalues():
+          for branch in six.itervalues(self._usedBranches):
               branch.setIndex(self._index)
       def __getattr__(self, name):
           return self.branch(name)
@@ -170,9 +173,9 @@ class EventBranch(object):
         return self._buffer
 
 
-class cmserror(exceptions.StandardError):
+class cmserror(exceptions.Exception):
     def __init__(self, message):
           length = len(message)+7   #7=len("ERROR: ")
-          print "="*length
-          print "ERROR:", message
-          print "="*length
+          print("="*length)
+          print("ERROR:", message)
+          print("="*length)

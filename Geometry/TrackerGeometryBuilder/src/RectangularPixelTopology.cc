@@ -18,7 +18,8 @@ RectangularPixelTopology::pixel( const LocalPoint& p ) const
   float px = p.x();
   
 #ifdef EDM_ML_DEBUG
-
+#define EPSCM 0
+#define EPS 0
   // This will catch points which are outside the active sensor area.
   // In the digitizer during the early induce_signal phase non valid
   // location are passed here. They are cleaned later.
@@ -50,7 +51,6 @@ RectangularPixelTopology::pixel( const LocalPoint& p ) const
   
   if( !debugstr.str().empty())
       LogDebug( "RectangularPixelTopology" ) << debugstr.str();
-    
 #endif // EDM_ML_DEBUG
 
   float newybin = ( py - m_yoffset ) / m_pitchy;
@@ -174,6 +174,7 @@ RectangularPixelTopology::localPosition( const MeasurementPoint& mp ) const
   float mpx = mp.x();
 
 #ifdef EDM_ML_DEBUG
+#define EPS 0
   // check limits
   std::ostringstream debugstr;
 
@@ -199,7 +200,6 @@ RectangularPixelTopology::localPosition( const MeasurementPoint& mp ) const
   }
   if(! debugstr.str().empty())
       LogDebug("RectangularPixelTopology") << debugstr.str();
-
 #endif // EDM_ML_DEBUG
 
   float lpY = localY( mpy );
@@ -220,11 +220,11 @@ RectangularPixelTopology::localX( const float mpx ) const
   float fractionX = mpx - float(binoffx); // find the fraction 
   float local_pitchx = m_pitchx;   // defaultpitch
 
-  if unlikely( m_upgradeGeometry ) {
+  if UNLIKELY( m_upgradeGeometry ) {
 #ifdef EDM_ML_DEBUG
-    if( binoffx > m_ROWS_PER_ROC * `m_ROCS_X ) // too large
-    {`
-      `LogDebug("RectangularPixelTopology") << " very bad, binx " << binoffx << "\n"
+    if( binoffx > m_ROWS_PER_ROC * m_ROCS_X ) // too large
+    {
+      LogDebug("RectangularPixelTopology") << " very bad, binx " << binoffx << "\n"
 					   << mpx << " " << binoffx << " "
 					   << fractionX << " " << local_pitchx << " " << m_xoffset << "\n";
     }
@@ -276,7 +276,7 @@ RectangularPixelTopology::localY( const float mpy ) const
   float fractionY = mpy - float(binoffy); // find the fraction 
   float local_pitchy = m_pitchy;   // defaultpitch
 
-  if unlikely( m_upgradeGeometry ){
+  if UNLIKELY( m_upgradeGeometry ){
  #ifdef EDM_ML_DEBUG
    if( binoffy > m_ROCS_Y * m_COLS_PER_ROC )   // too large
       {
@@ -335,7 +335,7 @@ RectangularPixelTopology::measurementError( const LocalPoint& lp,
   float pitchy=m_pitchy;
   float pitchx=m_pitchx;
 
-  if likely( !m_upgradeGeometry ) {    
+  if LIKELY( !m_upgradeGeometry ) {    
       int iybin = int( (lp.y() - m_yoffset)/m_pitchy );   //get bin for equal picth 
       int iybin0 = iybin%54;  //This is just to avoid many ifs by using the periodicy
       //quasi bins 0,1,52,53 fall into larger pixels  

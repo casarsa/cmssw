@@ -4,7 +4,7 @@
 #include <sstream>
 #include <string>
 #include <memory>
-#include <assert.h>
+#include <cassert>
 
 #include "GeneratorInterface/Pythia8Interface/plugins/LHAupLesHouches.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -42,15 +42,18 @@ bool LHAupLesHouches::setInit()
     infoPtr->setHeader("slha",slhaheader);
   }  
   
-  //work around missing initialization inside pythia8
-  infoPtr->eventAttributes = new std::map<std::string, std::string >;
-  
-  
+  //will be used to work around missing initialization inside pythia8
+  if(!fEvAttributes) {
+    fEvAttributes = new std::map<std::string, std::string >;
+  } else {
+    fEvAttributes->clear();
+  }
+
   return true;
 }
 
 
-bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
+bool LHAupLesHouches::setEvent(int inProcId)
 {
   if (!event) return false;
 	
@@ -64,9 +67,7 @@ bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
              hepeup.AQEDUP, hepeup.AQCDUP);
 
   const std::vector<float> &scales = event->scales();
-  
-  bool doRecalculate = (mRecalculate > 0.);
-  
+    
   unsigned int iscale = 0;
   for(int i = 0; i < hepeup.NUP; i++) {
     //retrieve scale corresponding to each particle
@@ -74,7 +75,7 @@ bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
     
     //handle clustering scales if present,
     //applies to outgoing partons only
-    if (scales.size()>0 && hepeup.ISTUP[i]==1) {
+    if (setScalesFromLHEF_ && !scales.empty() && hepeup.ISTUP[i]==1) {
       if (iscale>=scales.size()) {
         edm::LogError("InvalidLHEInput") << "Pythia8 requires"
                                     << "cluster scales for all outgoing partons or for none" 
@@ -83,30 +84,23 @@ bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
       scalein = scales[iscale];
       ++iscale;
     }
-    
-    double energy = hepeup.PUP[i][3];
-    double mass = hepeup.PUP[i][4];
-    
-    // Optionally recalculate mass from four-momentum.
-    if (doRecalculate && mass > mRecalculate) {
-      mass = sqrtpos( energy*energy - hepeup.PUP[i][0]*hepeup.PUP[i][0] - hepeup.PUP[i][1]*hepeup.PUP[i][1] - hepeup.PUP[i][2]*hepeup.PUP[i][2]);
-    }
-    // If not, recalculate energy from three-momentum and mass.
-    else {
-      energy = sqrt( hepeup.PUP[i][0]*hepeup.PUP[i][0] + hepeup.PUP[i][1]*hepeup.PUP[i][1] + hepeup.PUP[i][2]*hepeup.PUP[i][2] + mass*mass);
-    }
-    
+        
     addParticle(hepeup.IDUP[i], hepeup.ISTUP[i],
                 hepeup.MOTHUP[i].first, hepeup.MOTHUP[i].second,
                 hepeup.ICOLUP[i].first, hepeup.ICOLUP[i].second,
                 hepeup.PUP[i][0], hepeup.PUP[i][1],
-                hepeup.PUP[i][2], energy,
-                mass, hepeup.VTIMUP[i],
+                hepeup.PUP[i][2], hepeup.PUP[i][3],
+                hepeup.PUP[i][4], hepeup.VTIMUP[i],
                 hepeup.SPINUP[i],scalein);
   }
   
-  infoPtr->eventAttributes->clear();
-  
+  if(!infoPtr->eventAttributes) {
+    fEvAttributes->clear();
+    infoPtr->eventAttributes = fEvAttributes;
+  } else {
+    infoPtr->eventAttributes->clear();
+  }
+
   //fill parton multiplicities if available
   int npLO = event->npLO();
   int npNLO = event->npNLO();
@@ -124,6 +118,13 @@ bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
     (*infoPtr->eventAttributes)["npNLO"] = buffer;
   }
   
+  //add #rwgt info from comments 
+  const std::vector<std::string> &comments = event->getComments(); 
+  for (unsigned i=0; i<comments.size(); i++){
+    if (comments[i].rfind("#rwgt", 0)==0)
+      (*infoPtr->eventAttributes)["#rwgt"] = comments[i]; 
+  }
+  
   const lhef::LHEEvent::PDF *pdf = event->getPDF();
   if (pdf) {
     this->setPdf(pdf->id.first, pdf->id.second,
@@ -137,10 +138,6 @@ bool LHAupLesHouches::setEvent(int inProcId, double mRecalculate)
                  hepeup.PUP[1][3] / runInfo->getHEPRUP()->EBMUP.second,
                  0., 0., 0., false);
   }
-
-  //hadronisation->onBeforeHadronisation().emit();
-
-  //event.reset();
 
   event->attempted();
 

@@ -47,10 +47,10 @@ namespace fftjetcms {
         // Constructor which builds a function returning the given constant
         explicit LinInterpolatedTable1D(double c);
 
-        inline virtual ~LinInterpolatedTable1D() {}
+        inline ~LinInterpolatedTable1D() override {}
 
         // Main calculations are performed inside the following operator
-        virtual double operator()(const double& x) const;
+        double operator()(const double& x) const override;
 
         // Comparisons (useful for testing)
         bool operator==(const LinInterpolatedTable1D& r) const;
@@ -82,7 +82,7 @@ namespace fftjetcms {
         // refer to the inverted table (note that left and right will
         // exchange places if the original table is decreasing).
         //
-        std::auto_ptr<LinInterpolatedTable1D> inverse(
+        std::unique_ptr<LinInterpolatedTable1D> inverse(
             unsigned npoints, bool leftExtrapolationLinear,
             bool rightExtrapolationLinear) const;
 

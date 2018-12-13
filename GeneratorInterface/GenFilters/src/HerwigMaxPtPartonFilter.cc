@@ -12,7 +12,7 @@ PURPOSE: This Filter is designed to run on Herwig Monte Carlo Event Files
 (Pythia status codes are assumed to NOT BE EMULATED!!!!)
 
 For a description of Herwig Status Codes, See: 
-http://webber.home.cern.ch/webber/hw65_manual.html#htoc96
+https://arxiv.org/abs/hep-ph/0011363
 (Section 8.3.1)
 
 This Filter Finds all final state quarks (pdg_id=1,2,3,4 or 5, status=158 or 159) with Pt>1 GeV/c
@@ -38,13 +38,13 @@ If this is true, the event is accepted.
 #include "GeneratorInterface/GenFilters/interface/HerwigMaxPtPartonFilter.h"
 #include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
-#include <math.h>
+#include <cmath>
 
 using namespace edm;
 using namespace std;
 
 HerwigMaxPtPartonFilter::HerwigMaxPtPartonFilter(const edm::ParameterSet& iConfig) :
-  label_(iConfig.getUntrackedParameter("moduleLabel",std::string("generator"))),
+  token_(consumes<edm::HepMCProduct>(iConfig.getUntrackedParameter("moduleLabel",edm::InputTag("generator","unsmeared")))),
   minptcut(iConfig.getUntrackedParameter("MinPt", 0.)),
   maxptcut(iConfig.getUntrackedParameter("MaxPt", 10000.)),
   processID(iConfig.getUntrackedParameter("ProcessID", 0)){
@@ -88,7 +88,7 @@ bool HerwigMaxPtPartonFilter::filter(edm::Event& iEvent, const edm::EventSetup& 
   long counter = 0; //keeps track of the particle index in the event
   
   Handle<HepMCProduct> evt;
-  iEvent.getByLabel(label_, evt);
+  iEvent.getByToken(token_, evt);
   
   const HepMC::GenEvent * myGenEvent = evt->GetEvent();
   

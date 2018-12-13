@@ -3,11 +3,11 @@
 void BackgroundFunction::readParameters( TString fileName )
 {
   iterationNum_ = 0;
-  parArray_ = 0;
+  parArray_ = nullptr;
   // std::vector<double> parameterErrors;
 
   // Read the parameters file
-  ifstream parametersFile(fileName.Data());
+  std::ifstream parametersFile(fileName.Data());
   std::string line;
 
   std::string iteration("Iteration ");

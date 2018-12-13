@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os,coral,fnmatch,time
 from RecoLuminosity.LumiDB import nameDealer,dbUtil,revisionDML,lumiTime,CommonUtil,lumiCorrections
 from datetime import datetime
@@ -36,7 +37,7 @@ def guesscorrIdByName(schema,tagname=None):
         if tagname:
             qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             dataid=cursor.currentRow()['DATA_ID'].data()
             lumicorrectionids.append(dataid)
     except :
@@ -70,7 +71,7 @@ def lumicorrById(schema,correctiondataid):
         qHandle.defineOutput(qResult)
         qHandle.setCondition('DATA_ID=:dataid',qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             tagname=cursor.currentRow()['ENTRY_NAME'].data()
             a1=cursor.currentRow()['A1'].data()
             a2=0.0
@@ -126,7 +127,7 @@ def fillInRange(schema,fillmin,fillmax,amodetag,startT,stopT):
         qHandle.addToOutputList('RUNNUM','runnum')
         qHandle.addToOutputList('TO_CHAR('+r+'.STARTTIME,\'MM/DD/YY HH24:MI:SS\')','starttime')
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             currentfill=cursor.currentRow()['fillnum'].data()
             runnum=cursor.currentRow()['runnum'].data()
             starttimeStr=cursor.currentRow()['starttime'].data()
@@ -209,7 +210,7 @@ def fillrunMap(schema,fillnum=None,runmin=None,runmax=None,startT=None,stopT=Non
         qHandle.addToOutputList('RUNNUM','runnum')
         qHandle.addToOutputList('TO_CHAR('+r+'.STARTTIME,\'MM/DD/YY HH24:MI:SS\')','starttime')
         cursor=qHandle.execute()        
-        while cursor.next():
+        while next(cursor):
             currentfill=cursor.currentRow()['fillnum'].data()
             starttimeStr=cursor.currentRow()['starttime'].data()
             runnum=cursor.currentRow()['runnum'].data()
@@ -363,7 +364,7 @@ def runList(schema,datatagid,runmin=None,runmax=None,fillmin=None,fillmax=None,s
         lumiid=0
         trgid=0
         hltid=0
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             if preselectedruns and runnum not in preselectedruns:
                 continue
@@ -395,7 +396,7 @@ def runList(schema,datatagid,runmin=None,runmax=None,fillmin=None,fillmax=None,s
                 pass
             if not cursor.currentRow()['lumiid'].isNull():
                 lumiid=cursor.currentRow()['lumiid'].data()
-                if result.has_key(runnum):
+                if runnum in result:
                     if lumiid>result[runnum][0]:
                         result[runnum][0]=lumiid
                 else:
@@ -405,12 +406,12 @@ def runList(schema,datatagid,runmin=None,runmax=None,fillmin=None,fillmax=None,s
                     trgid=0
                 else:
                     trgid=cursor.currentRow()['trgid'].data()
-                if result.has_key(runnum):
+                if runnum in result:
                     if trgid>result[runnum][1]:
                         result[runnum][1]=trgid
             if requirehlt and not cursor.currentRow()['hltid'].isNull():
                 hltid=cursor.currentRow()['hltid'].data()
-                if result.has_key(runnum):
+                if runnum in result:
                     if hltid>result[runnum][2]:
                         result[runnum][2]=hltid
     except :
@@ -456,7 +457,7 @@ def runsummary(schema,runnum,sessionflavor=''):
         #qResult.extend('stoptime','string')
         qHandle.defineOutput(qResult)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             result.append(cursor.currentRow()['l1key'].data())
             result.append(cursor.currentRow()['amodetag'].data())
             #result.append(cursor.currentRow()['egev'].data())
@@ -584,7 +585,7 @@ def luminormById(schema,dataid):
         qHandle.defineOutput(qResult)
         qHandle.setCondition('DATA_ID=:dataid',qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             normname=cursor.currentRow()['normname'].data()
             amodetag=cursor.currentRow()['amodetag'].data()
             norm_1=cursor.currentRow()['norm_1'].data()
@@ -702,7 +703,7 @@ def luminormById(schema,dataid):
         qHandle.defineOutput(qResult)
         qHandle.setCondition('DATA_ID=:dataid',qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             normname=cursor.currentRow()['normname'].data()
             amodetag=cursor.currentRow()['amodetag'].data()
             norm_1=cursor.currentRow()['norm_1'].data()
@@ -767,7 +768,7 @@ def trgRunById(schema,dataid,trgbitname=None,trgbitnamepattern=None):
         cursor=qHandle.execute()
         bitnameclob=None
         bitnames=[]
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             source=cursor.currentRow()['source'].data()
             bitzeroname=cursor.currentRow()['bitzeroname'].data()
@@ -838,7 +839,7 @@ def trgLSById(schema,dataid,trgbitname=None,trgbitnamepattern=None,withL1Count=F
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             cmslsnum=cursor.currentRow()['cmslsnum'].data()
             deadtimecount=cursor.currentRow()['deadtimecount'].data()
@@ -847,7 +848,7 @@ def trgLSById(schema,dataid,trgbitname=None,trgbitnamepattern=None,withL1Count=F
             bitzerocount=0
             bitzeroprescale=0
             deadfrac=cursor.currentRow()['deadfrac'].data()
-            if not result.has_key(cmslsnum):
+            if cmslsnum not in result:
                 result[cmslsnum]=[]
             result[cmslsnum].append(deadtimecount)
             result[cmslsnum].append(bitzerocount)
@@ -927,7 +928,7 @@ def beamstatusByIds(schema,dataidMap):
         return result
     inputRange=dataidMap.keys()
     for r in inputRange:
-        if not result.has_key(r):
+        if r not in result:
             result[r]={}
         lumidataid=dataidMap[r][0]
         if lumidataid:
@@ -946,7 +947,7 @@ def beamstatusByIds(schema,dataidMap):
                 qHandle.defineOutput(qResult)
                 qHandle.setCondition(qConditionStr,qCondition)
                 cursor=qHandle.execute()
-                while cursor.next():
+                while next(cursor):
                     cmslsnum=cursor.currentRow()['CMSLSNUM'].data()
                     bs=cursor.currentRow()['BEAMSTATUS'].data()
                     if bs!='STABLE BEAMS':
@@ -997,7 +998,7 @@ def lumiRunById(schema,lumidataid,lumitype='HF'):
         cursor=qHandle.execute()
         lu=lumiTime.lumiTime()
         nls=0
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['RUNNUM'].data()
             datasource=cursor.currentRow()['SOURCE'].data()
             nominalegev=0
@@ -1072,7 +1073,7 @@ def allfillschemes(schema):
         qHandle.addToOutputList('FILLSCHEMEPATTERN')
         qHandle.addToOutputList('CORRECTIONFACTOR')
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             fillschemePattern=cursor.currentRow()['FILLSCHEMEPATTERN'].data()
             afterglowfac=cursor.currentRow()['CORRECTIONFACTOR'].data()
             afterglows.append((fillschemePattern,afterglowfac))
@@ -1149,7 +1150,7 @@ def lumiLSById(schema,dataid,beamstatus=None,withBXInfo=False,bxAlgo='OCC1',with
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             lumilsnum=cursor.currentRow()['lumilsnum'].data()
             cmslsnum=cursor.currentRow()['cmslsnum'].data()
@@ -1210,7 +1211,7 @@ def beamInfoById(schema,dataid,withBeamIntensity=False,minIntensity=0.1):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             ncollidingbunches=cursor.currentRow()['NCOLLIDINGBUNCHES'].data()
     except :
         del qHandle
@@ -1245,7 +1246,7 @@ def beamInfoById(schema,dataid,withBeamIntensity=False,minIntensity=0.1):
        qHandle.defineOutput(qResult)
        qHandle.setCondition(qConditionStr,qCondition)
        cursor=qHandle.execute()
-       while cursor.next():
+       while next(cursor):
            runnum=cursor.currentRow()['RUNNUM'].data()
            cmslsnum=cursor.currentRow()['CMSLSNUM'].data()
            lumilsnum=cursor.currentRow()['LUMILSNUM'].data()
@@ -1311,7 +1312,7 @@ def lumiBXByAlgo(schema,dataid,algoname):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             cmslsnum=cursor.currentRow()['cmslsnum'].data()
             lumilsnum=cursor.currentRow()['lumilsnum'].data()
             numorbit=cursor.currentRow()['numorbit'].data()
@@ -1319,9 +1320,9 @@ def lumiBXByAlgo(schema,dataid,algoname):
             bxlumivalue=cursor.currentRow()['bxlumivalue'].data()
             bxlumierr=cursor.currentRow()['bxlumierr'].data()
             bxlumiqlty=cursor.currentRow()['bxlumiqlty'].data()
-            if not result.has_key(algoname):
+            if algoname not in result:
                 result[algoname]={}
-            if not result[algoname].has_key(lumilsnum):
+            if lumilsnum not in result[algoname]:
                 result[algoname][lumilsnum]=[]
             result[algoname][lumilsnum].extend([cmslsnum,numorbit,startorbit,bxlumivalue,bxlumierr,bxlumiqlty])
     except :
@@ -1363,7 +1364,7 @@ def hltRunById(schema,dataid,hltpathname=None,hltpathpattern=None):
         cursor=qHandle.execute()
         pathnameclob=None
         pathnames=[]
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             datasource=cursor.currentRow()['datasource'].data()
             npath=cursor.currentRow()['npath'].data()
@@ -1419,10 +1420,10 @@ def hlttrgMappingByrun(schema,runnum,hltpathname=None,hltpathpattern=None):
         queryResult.extend('l1seed','string')
         queryHandle.defineOutput(queryResult)
         cursor=queryHandle.execute()
-        while cursor.next():
+        while next(cursor):
             pname=cursor.currentRow()['pname'].data()
             l1seed=cursor.currentRow()['l1seed'].data()
-            if not result.has_key(hltpathname):
+            if hltpathname not in result:
                 if hltpathpattern:
                     if fnmatch.fnmatch(pname,hltpathpattern):
                         result[pname]=l1seed
@@ -1477,7 +1478,7 @@ def hltLSById(schema,dataid,hltpathname=None,hltpathpattern=None,withL1Pass=Fals
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             cmslsnum=cursor.currentRow()['cmslsnum'].data()
             prescaleblob=None
@@ -1489,7 +1490,7 @@ def hltLSById(schema,dataid,hltpathname=None,hltpathpattern=None,withL1Pass=Fals
                 hltcountblob=cursor.currentRow()['hltcountblob'].data()
             if withHLTAccept:
                 hltacceptblob=cursor.currentRow()['hltacceptblob'].data()
-            if not result.has_key(cmslsnum):
+            if cmslsnum not in result:
                 result[cmslsnum]=[]
             pathinfo=[]
             prescales=None
@@ -1559,7 +1560,7 @@ def intglumiForRange(schema,runlist):
         qHandle.setCondition(qConditionStr,qCondition)
         qHandle.defineOutput(qResult)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['RUNNUM'].data()
             intglumi=cursor.currentRow()['INTGLUMI'].data()
             result[runnum]=intglumi
@@ -1589,7 +1590,7 @@ def fillschemePatternMap(schema,lumitype):
         qHandle.addToOutputList('FILLSCHEMEPATTERN')
         qHandle.addToOutputList(correctorField)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             fillschemePattern=cursor.currentRow()['FILLSCHEMEPATTERN'].data()
             afterglowfac=cursor.currentRow()['CORRECTIONFACTOR'].data()
             result[fillschemePattern]=afterglowfac
@@ -1636,7 +1637,7 @@ def guessDataIdByRun(schema,runnum,tablename,revfilter=None):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             dataid=cursor.currentRow()['DATA_ID'].data()
             ids.append(dataid)
     except :
@@ -1682,10 +1683,10 @@ def guessDataIdForRange(schema,inputRange,tablename):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             dataid=cursor.currentRow()['DATA_ID'].data()
             runnum=cursor.currentRow()['RUNNUM'].data()
-            if result.has_key(runnum):
+            if runnum in result:
                 if dataid>result[runnum]:
                     result[runnum]=dataid
     except :
@@ -1761,7 +1762,7 @@ def guessnormIdByContext(schema,amodetag,egev1):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             normdataid=cursor.currentRow()['normdataid'].data()
             luminormids.append(normdataid)
     except :
@@ -1791,7 +1792,7 @@ def guessnormIdByName(schema,normname):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             normdataid=cursor.currentRow()['normdataid'].data()
             luminormids.append(normdataid)
     except :
@@ -1830,7 +1831,7 @@ def dataentryIdByRun(schema,runnum,branchfilter):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             lumientryid=cursor.currentRow()['lumientryid'].data()
             trgentryid=cursor.currentRow()['trgentryid'].data()
             hltentryid=cursor.currentRow()['hltentryid'].data()
@@ -1874,7 +1875,7 @@ def latestdataIdByEntry(schema,entryid,datatype,branchfilter):
         qHandle.defineOutput(qResult)
         qHandle.setCondition(qConditionStr,qCondition)
         cursor=qHandle.execute()
-        while cursor.next():
+        while next(cursor):
             dataid=cursor.currentRow()['dataid'].data()
             revisionid=cursor.currentRow()['revisionid'].data()
             if revisionid in branchfilter:
@@ -1900,16 +1901,16 @@ def addNormToBranch(schema,normname,amodetag,norm1,egev1,optionalnormdata,branch
     '''
     #print 'branchinfo ',branchinfo
     norm_occ2=1.0
-    if optionalnormdata.has_key('normOcc2'):
+    if 'normOcc2' in optionalnormdata:
         norm_occ2=optionalnormdata['norm_occ2']
     norm_et=1.0
-    if optionalnormdata.has_key('norm_et'):
+    if 'norm_et' in optionalnormdata:
         norm_et=optionalnormdata['norm_et']
     norm_pu=1.0
-    if optionalnormdata.has_key('norm_pu'):
+    if 'norm_pu' in optionalnormdata:
         norm_pu=optionalnormdata['norm_pu']
     constfactor=1.0
-    if optionalnormdata.has_key('constfactor'):
+    if 'constfactor' in optionalnormdata:
         constfactor=optionalnormdata['constfactor']
     try:
         entry_id=revisionDML.entryInBranch(schema,nameDealer.luminormTableName(),normname,branchinfo[1])
@@ -1937,10 +1938,10 @@ def addCorrToBranch(schema,corrname,a1,optionalcorrdata,branchinfo):
        (revision_id,entry_id,data_id)
     '''
     a2=1.0
-    if optionalcorrdata.has_key('a2'):
+    if 'a2' in optionalcorrdata:
         a2=optionalcorrdata['a2']
     drift=1.0
-    if optionalcorrdata.has_key('drift'):
+    if 'drift' in optionalcorrdata:
         drift=optionalcorrdata['drift']
     try:
         entry_id=revisionDML.entryInBranch(schema,nameDealer.lumicorrectionsTableName(),corrname,branchinfo[1])
@@ -2110,7 +2111,7 @@ def insertTrgHltMap(schema,hltkey,trghltmap):
         kQuery.setCondition('HLTKEY=:hltkey',kQueryBindList)
         kQueryBindList['hltkey'].setData(hltkey)
         kResult=kQuery.execute()
-        while kResult.next():
+        while next(kResult):
             hltkeyExists=True
         if not hltkeyExists:
             bulkvalues=[]   
@@ -2122,7 +2123,7 @@ def insertTrgHltMap(schema,hltkey,trghltmap):
             nrows=len(bulkvalues)
         return nrows
     except :
-        print 'error in insertTrgHltMap '
+        print('error in insertTrgHltMap ')
         raise
 def bulkInsertTrgLSData(session,runnumber,data_id,trglsdata,bulksize=500):
     '''
@@ -2132,7 +2133,7 @@ def bulkInsertTrgLSData(session,runnumber,data_id,trglsdata,bulksize=500):
     result nrows inserted
     if nrows==0, then this insertion failed
     '''
-    print 'total number of trg rows ',len(trglsdata)
+    print('total number of trg rows ',len(trglsdata))
     lstrgDefDict=[('DATA_ID','unsigned long long'),('RUNNUM','unsigned int'),('CMSLSNUM','unsigned int'),('DEADTIMECOUNT','unsigned long long'),('BITZEROCOUNT','unsigned int'),('BITZEROPRESCALE','unsigned int'),('PRESCALEBLOB','blob'),('TRGCOUNTBLOB','blob')]
     committedrows=0
     nrows=0
@@ -2148,7 +2149,7 @@ def bulkInsertTrgLSData(session,runnumber,data_id,trglsdata,bulksize=500):
             nrows+=1
             committedrows+=1
             if nrows==bulksize:
-                print 'committing trg in LS chunck ',nrows
+                print('committing trg in LS chunck ',nrows)
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(nameDealer.lstrgTableName(),lstrgDefDict,bulkvalues)
@@ -2156,20 +2157,20 @@ def bulkInsertTrgLSData(session,runnumber,data_id,trglsdata,bulksize=500):
                 nrows=0
                 bulkvalues=[]
             elif committedrows==len(trglsdata):
-                print 'committing trg at the end '
+                print('committing trg at the end ')
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(nameDealer.lstrgTableName(),lstrgDefDict,bulkvalues)
                 session.transaction().commit()
     except :
-        print 'error in bulkInsertTrgLSData'
+        print('error in bulkInsertTrgLSData')
         raise 
 def bulkInsertHltLSData(session,runnumber,data_id,hltlsdata,bulksize=500):
     '''
     input:
     hltlsdata {cmslsnum:[inputcountBlob,acceptcountBlob,prescaleBlob]}
     '''
-    print 'total number of hlt rows ',len(hltlsdata)
+    print('total number of hlt rows ',len(hltlsdata))
     lshltDefDict=[('DATA_ID','unsigned long long'),('RUNNUM','unsigned int'),('CMSLSNUM','unsigned int'),('PRESCALEBLOB','blob'),('HLTCOUNTBLOB','blob'),('HLTACCEPTBLOB','blob')]
     committedrows=0
     nrows=0
@@ -2184,7 +2185,7 @@ def bulkInsertHltLSData(session,runnumber,data_id,hltlsdata,bulksize=500):
             nrows+=1
             committedrows+=1
             if nrows==bulksize:
-                print 'committing hlt in LS chunck ',nrows
+                print('committing hlt in LS chunck ',nrows)
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(nameDealer.lshltTableName(),lshltDefDict,bulkvalues)
@@ -2192,13 +2193,13 @@ def bulkInsertHltLSData(session,runnumber,data_id,hltlsdata,bulksize=500):
                 nrows=0
                 bulkvalues=[]
             elif committedrows==len(hltlsdata):
-                print 'committing hlt at the end '
+                print('committing hlt at the end ')
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(nameDealer.lshltTableName(),lshltDefDict,bulkvalues)
                 session.transaction().commit()
     except  :
-        print 'error in bulkInsertHltLSData'
+        print('error in bulkInsertHltLSData')
         raise 
     
 def bulkInsertLumiLSSummary(session,runnumber,data_id,lumilsdata,tableName,bulksize=500,withDetails=True):
@@ -2211,7 +2212,7 @@ def bulkInsertLumiLSSummary(session,runnumber,data_id,lumilsdata,tableName,bulks
         lslumiDefDict=[('DATA_ID','unsigned long long'),('RUNNUM','unsigned int'),('LUMILSNUM','unsigned int'),('CMSLSNUM','unsigned int'),('INSTLUMI','float'),('INSTLUMIERROR','float'),('INSTLUMIQUALITY','short'),('BEAMSTATUS','string'),('BEAMENERGY','float'),('NUMORBIT','unsigned int'),('STARTORBIT','unsigned int'),('CMSBXINDEXBLOB','blob'),('BEAMINTENSITYBLOB_1','blob'),('BEAMINTENSITYBLOB_2','blob'),('BXLUMIVALUE_OCC1','blob'),('BXLUMIERROR_OCC1','blob'),('BXLUMIQUALITY_OCC1','blob'),('BXLUMIVALUE_OCC2','blob'),('BXLUMIERROR_OCC2','blob'),('BXLUMIQUALITY_OCC2','blob'),('BXLUMIVALUE_ET','blob'),('BXLUMIERROR_ET','blob'),('BXLUMIQUALITY_ET','blob')]
     else:
         lslumiDefDict=[('DATA_ID','unsigned long long'),('RUNNUM','unsigned int'),('LUMILSNUM','unsigned int'),('CMSLSNUM','unsigned int'),('INSTLUMI','float'),('INSTLUMIERROR','float'),('INSTLUMIQUALITY','short'),('BEAMSTATUS','string'),('BEAMENERGY','float'),('NUMORBIT','unsigned int'),('STARTORBIT','unsigned int')]
-    print 'total number of lumi rows ',len(lumilsdata)
+    print('total number of lumi rows ',len(lumilsdata))
     try:
         committedrows=0
         nrows=0
@@ -2244,7 +2245,7 @@ def bulkInsertLumiLSSummary(session,runnumber,data_id,lumilsdata,tableName,bulks
             nrows+=1
             committedrows+=1
             if nrows==bulksize:
-                print 'committing lumi in LS chunck ',nrows
+                print('committing lumi in LS chunck ',nrows)
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(tableName,lslumiDefDict,bulkvalues)
@@ -2252,7 +2253,7 @@ def bulkInsertLumiLSSummary(session,runnumber,data_id,lumilsdata,tableName,bulks
                 nrows=0
                 bulkvalues=[]
             elif committedrows==len(lumilsdata):
-                print 'committing lumi at the end '
+                print('committing lumi at the end ')
                 db=dbUtil.dbUtil(session.nominalSchema())
                 session.transaction().start(False)
                 db.bulkInsert(tableName,lslumiDefDict,bulkvalues)
@@ -2339,11 +2340,11 @@ if __name__ == "__main__":
     try:
     #    #lumidbDDL.createUniqueConstraints(schema)
         trunkinfo=revisionDML.createBranch(schema,'TRUNK',None,comment='main')
-        print trunkinfo
+        print(trunkinfo)
         datainfo=revisionDML.createBranch(schema,'DATA','TRUNK',comment='hold data')
-        print datainfo
+        print(datainfo)
         norminfo=revisionDML.createBranch(schema,'NORM','TRUNK',comment='hold normalization factor')
-        print norminfo
+        print(norminfo)
     except:
         raise
         #print 'branch already exists, do nothing'
@@ -2374,51 +2375,51 @@ if __name__ == "__main__":
         (hltrevid,hltentryid,hltdataid)=addHLTRunDataToBranch(schema,runnum,hltrundata,branchinfo)
         insertHltLSData(schema,runnum,hltdataid,hltlsdata)
     session.transaction().commit()
-    print 'test reading'
+    print('test reading')
     session.transaction().start(True)
-    print '===inspecting NORM by name==='
+    print('===inspecting NORM by name===')
     normrevlist=revisionDML.revisionsInBranchName(schema,'NORM')
     luminormentry_id=revisionDML.entryInBranch(schema,nameDealer.luminormTableName(),'pp7TeV','NORM')
     latestNorms=revisionDML.latestDataRevisionOfEntry(schema,nameDealer.luminormTableName(),luminormentry_id,normrevlist)
-    print 'latest norm data_id for pp7TeV ',latestNorms
+    print('latest norm data_id for pp7TeV ',latestNorms)
     
-    print '===inspecting DATA branch==='
-    print revisionDML.branchType(schema,'DATA')
+    print('===inspecting DATA branch===')
+    print(revisionDML.branchType(schema,'DATA'))
     revlist=revisionDML.revisionsInBranchName(schema,'DATA')
-    print revlist
+    print(revlist)
     lumientry_id=revisionDML.entryInBranch(schema,nameDealer.lumidataTableName(),'1211','DATA')
     latestrevision=revisionDML.latestDataRevisionOfEntry(schema,nameDealer.lumidataTableName(),lumientry_id,revlist)
-    print 'latest lumi data_id for run 1211 ',latestrevision
+    print('latest lumi data_id for run 1211 ',latestrevision)
     lumientry_id=revisionDML.entryInBranch(schema,nameDealer.lumidataTableName(),'1222','DATA')
     latestrevision=revisionDML.latestDataRevisionOfEntry(schema,nameDealer.lumidataTableName(),lumientry_id,revlist)
-    print 'latest lumi data_id for run 1222 ',latestrevision
+    print('latest lumi data_id for run 1222 ',latestrevision)
     trgentry_id=revisionDML.entryInBranch(schema,nameDealer.trgdataTableName(),'1222','DATA')
     latestrevision=revisionDML.latestDataRevisionOfEntry(schema,nameDealer.trgdataTableName(),trgentry_id,revlist)
-    print 'latest trg data_id for run 1222 ',latestrevision
+    print('latest trg data_id for run 1222 ',latestrevision)
     session.transaction().commit()
-    print 'tagging data so far as data_orig'
+    print('tagging data so far as data_orig')
     session.transaction().start(False)
     (revisionid,parentid,parentname)=revisionDML.createBranch(schema,'data_orig','DATA',comment='tag of 2010data')
     session.transaction().commit()
     session.transaction().start(True)
-    print revisionDML.branchType(schema,'data_orig')
+    print(revisionDML.branchType(schema,'data_orig'))
     revlist=revisionDML.revisionsInTag(schema,revisionid,branchinfo[0])
-    print revlist
+    print(revlist)
     session.transaction().commit()
     session.transaction().start(False)
     for runnum in [1200,1222]:
-        print 'revising lumidata for run ',runnum
+        print('revising lumidata for run ',runnum)
         lumidummydata=generateDummyData.lumiSummary(schema,20)
         lumirundata=[lumidummydata[0]]
         lumilsdata=lumidummydata[1]
         (lumirevid,lumientryid,lumidataid)=addLumiRunDataToBranch(schema,runnum,lumirundata,branchinfo)
         insertLumiLSSummary(schema,runnum,lumidataid,lumilsdata)
     revlist=revisionDML.revisionsInTag(schema,revisionid,branchinfo[0])
-    print 'revisions in branch DATA',revisionDML.revisionsInBranch(schema,branchinfo[0])
+    print('revisions in branch DATA',revisionDML.revisionsInBranch(schema,branchinfo[0]))
     session.transaction().commit()
     #print 'revisions in tag data_orig ',revlist
     
-    print '===test reading==='
+    print('===test reading===')
     session.transaction().start(True)
     #print 'guess norm by name'
     #normid1=guessnormIdByName(schema,'pp7TeV')
@@ -2441,8 +2442,8 @@ if __name__ == "__main__":
     #print beamInfoById(schema,lumidataid)
     #print 'lumibx by algo OCC1'
     #print lumiBXByAlgo(schema,lumidataid,'OCC1')
-    print 'trg run, trgdataid ',trgdataid
-    print trgRunById(schema,trgdataid,withblobdata=True)  
+    print('trg run, trgdataid ',trgdataid)
+    print(trgRunById(schema,trgdataid,withblobdata=True))  
     #print 'trg ls'
     #print trgLSById(schema,trgdataid)
     #print 'hlt run'

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import os,sys,csv
 from RecoLuminosity.LumiDB import argparse,idDealer,nameDealer,CommonUtil,dbUtil,sessionManager
 def insertIntglumiData(dbsession,intlumitorun,bulksize=1000):
@@ -22,7 +23,7 @@ def insertIntglumiData(dbsession,intlumitorun,bulksize=1000):
             committedrows+=1
             perrunData.append([('RUNNUM',runnum),('STARTRUN',startrun),('INTGLUMI',intglumi)])
             if nrows==bulksize:
-                print 'committing ',nrows,' rows'
+                print('committing ',nrows,' rows')
                 db=dbUtil.dbUtil(dbsession.nominalSchema())
                 dbsession.transaction().start(False)
                 db.bulkInsert('INTGLUMI',dataDef,perrunData)
@@ -30,15 +31,15 @@ def insertIntglumiData(dbsession,intlumitorun,bulksize=1000):
                 nrows=0
                 perrunData=[]
             elif committedrows==len(intlumitorun):
-                print 'committing trg at the end '
+                print('committing trg at the end ')
                 dbsession.transaction().start(False)
                 db=dbUtil.dbUtil(dbsession.nominalSchema())
                 db.bulkInsert('INTGLUMI',dataDef,perrunData)
                 dbsession.transaction().commit()            
-    except Exception, e:
+    except Exception as e:
         dbsession.transaction().rollback()
         del dbsession
-        raise Exception, 'insertIntglumiData: '+str(e)
+        raise Exception('insertIntglumiData: '+str(e))
 
 def parselumifile(ifilename):
     '''
@@ -57,7 +58,7 @@ def parselumifile(ifilename):
                 continue
             delivered=float(row[2])
             result.append((runnumber,delivered))
-    except Exception,e:
+    except Exception as e:
         raise RuntimeError(str(e))
     return result
 
@@ -89,7 +90,7 @@ if __name__=='__main__':
     irunlumimap= parselumifile(ifilename)
     intlumitorun=lumiuptorun(irunlumimap)
     if options.dryrun:
-        print intlumitorun
+        print(intlumitorun)
         exit(0)
     if options.authpath:
         os.environ['CORAL_AUTH_PATH'] = options.authpath

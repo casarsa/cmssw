@@ -179,7 +179,7 @@ void PFClient::createProjectionPlots(DQMStore::IBooker& ibooker, DQMStore::IGett
   MonitorElement* me = igetter.get(folder+"/"+name);
   if (!me) return;
 
-  MonitorElement* projection = 0;
+  MonitorElement* projection = nullptr;
 
   if ( (me->kind() == MonitorElement::DQM_KIND_TH2F) ||
        (me->kind() == MonitorElement::DQM_KIND_TH2S) ||
@@ -293,7 +293,7 @@ void PFClient::getHistogramParameters(MonitorElement* me_slice, double& average,
     if (th_slice && th_slice->GetEntries() > 0) {
       //need our own copy for thread safety
       TF1 gaus("mygaus","gaus");
-      th_slice->Fit( &gaus,"Q0");
+      th_slice->Fit( &gaus,"Q0 SERIAL");
       sigma = gaus.GetParameter(2);
       mean  = gaus.GetParameter(1);
     }

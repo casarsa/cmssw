@@ -5,8 +5,8 @@
 #include <ostream>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "DetectorDescription/Base/interface/DDTypes.h"
-#include "DetectorDescription/Base/interface/DDutils.h"
+#include "DetectorDescription/Core/interface/DDTypes.h"
+#include "DetectorDescription/Core/interface/DDutils.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
 #include "DetectorDescription/Core/interface/DDMaterial.h"
@@ -153,12 +153,10 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
   int sz = int(quadMax_.size());
 
   DDTranslation tran;
-  DDRotation    rot1, rot2;
-  DDName        name1, name2;
-  name1 = DDName("SWED", idNameSpace);
-  name2 = DDName("SFBX", idNameSpace);
-  rot1 = DDRotation("rotations:RM1299");
-  rot2 = DDRotation("rotations:RM1298");
+  DDName name1("SWED", idNameSpace);
+  DDName name2("SFBX", idNameSpace);
+  DDRotation rot1("rotations:RM1299");
+  DDRotation rot2("rotations:RM1298");
   // Do Plane X
   for(int I=1; I<=sz;++I) {
     for(int J=int(quadMax_[I-1]); J>=int(quadMin_[I-1]); --J) {
@@ -166,8 +164,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       nx += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesx.size(); m++) 
-	if (micromodulesx[m]==icopy) {go=1; icopyt +=1; }
+      for (double m : micromodulesx) 
+	if (m==icopy) {go=1; icopyt +=1; }
       xpos = -1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		  - waf_intra_col_sep/2.);
       ypos = (sz-int(I))*waf_active + wedge_length/2. + 0.05*cm;
@@ -198,8 +196,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       nx += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesx.size(); m++) 
-	if (micromodulesx[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesx) 
+	if (m==icopy) {go=1; icopyt +=1;}
       xpos = 1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		 - waf_intra_col_sep/2.);
       ypos = (sz-int(I))*waf_active + wedge_length/2. + 0.05*cm;
@@ -235,8 +233,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       nx += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesx.size(); m++) 
-	if (micromodulesx[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesx) 
+	if (m==icopy) {go=1; icopyt +=1;}
       //LogDebug("HCalGeom") <<"DDEcalPreshowerAlgoTB::I=" << I << " J="  << J;
       xpos = -1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		  - waf_intra_col_sep/2.);
@@ -267,8 +265,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       nx += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesx.size(); m++) 
-	if (micromodulesx[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesx) 
+	if (m==icopy) {go=1; icopyt +=1;}
       xpos = 1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		 - waf_intra_col_sep/2.);
       ypos = -1.*(sz-int(I))*waf_active - wedge_length/2. - 0.05*cm;
@@ -307,8 +305,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       ny += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesy.size(); m++) 
-	if (micromodulesy[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesy) 
+	if (m==icopy) {go=1; icopyt +=1;}
       //LogDebug("HCalGeom") <<"DDEcalPreshowerAlgoTB::I=" << I << " J="  << J;
       ypos = -1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		  - waf_intra_col_sep/2.);
@@ -339,8 +337,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       ny += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesy.size(); m++) 
-	if (micromodulesy[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesy) 
+	if (m==icopy) {go=1; icopyt +=1;}
       //LogDebug("HCalGeom") <<"DDEcalPreshowerAlgoTB::I=" << I << " J="  << J;
       ypos = 1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		 - waf_intra_col_sep/2.);
@@ -376,8 +374,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       ny += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesy.size(); m++) 
-	if (micromodulesy[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesy) 
+	if (m==icopy) {go=1; icopyt +=1;}
       //LogDebug("HCalGeom") <<"DDEcalPreshowerAlgoTB::I=" << I << " J="  << J;
       ypos = -1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		  - waf_intra_col_sep/2.);
@@ -408,8 +406,8 @@ void DDEcalPreshowerAlgoTB::doWedges(DDCompactView& cpv) {
       ny += 1;
       icopy += 1;
       go=0; 
-      for (unsigned int m=0; m<micromodulesy.size(); m++) 
-	if (micromodulesy[m]==icopy) {go=1; icopyt +=1;}
+      for (double m : micromodulesy) 
+	if (m==icopy) {go=1; icopyt +=1;}
       //LogDebug("HCalGeom") <<"DDEcalPreshowerAlgoTB::I=" << I << " J="  << J;
       ypos = 1.*(J*waf_intra_col_sep + (int(J/2))*waf_inter_col_sep 
 		 - waf_intra_col_sep/2.);

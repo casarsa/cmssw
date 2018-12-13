@@ -29,6 +29,11 @@ class EcalContainer {
                    
                 EcalContainer() {checkAndResize();}
 
+                void clear() {
+                        m_items.clear();
+                        checkAndResize();
+                }
+
                 void insert(std::pair<uint32_t, Item> const &a) {
                         (*this)[a.first] = a.second;
                 }
@@ -51,7 +56,7 @@ class EcalContainer {
 
 
 		void checkAndResize() {
-		  if (m_items.size()==0) {
+		  if (m_items.empty()) {
 		    //		    std::cout << "resizing to " << DetId::kSizeForDenseIndexing << std::endl;
 		    m_items.resize(DetId::kSizeForDenseIndexing);
 		  }
@@ -60,7 +65,7 @@ class EcalContainer {
 
 		void checkAndResize( size_t priv_size ) {
 		  // this method allows to resize the vector to a specific size forcing a specific value
-		  if (m_items.size()==0) {
+		  if (m_items.empty()) {
 		    //		    std::cout << "resizing to " << priv_size << std::endl;
 		    m_items.resize(priv_size);
 		  }

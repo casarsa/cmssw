@@ -1,7 +1,6 @@
 #ifndef SimG4Core_RunManagerMT_H
 #define SimG4Core_RunManagerMT_H
 
-#include <memory>
 #include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -11,23 +10,13 @@
 #include "SimG4Core/Geometry/interface/SensitiveDetectorCatalog.h"
 
 #include "SimG4Core/Notification/interface/SimActivityRegistry.h"
-#include "SimDataFormats/GeneratorProducts/interface/HepMCProduct.h"
 
 #include <memory>
-#include "boost/shared_ptr.hpp"
-
-namespace CLHEP {
-  class HepJamesRandom;
-}
-
-namespace sim {
-  class FieldBuilder;
-  class ChordFinderSetter;
-}
 
 class PrimaryTransformer;
 class Generator;
 class PhysicsList;
+class CustomUIsession;
 
 class SimWatcher;
 class SimProducer;
@@ -37,16 +26,18 @@ class RunAction;
 
 class DDCompactView;
 class DDDWorld;
+class DDG4ProductionCuts;
 class MagneticField;
 
 class G4MTRunManagerKernel;
 class G4Run;
 class G4Event;
 class G4Field;
+class G4StateManager;
+class G4GeometryManager;
 class RunAction;
 
 class SimRunInterface;
-//class ExceptionHandler;
 
 namespace HepPDT {
   class ParticleDataTable;
@@ -57,11 +48,14 @@ namespace HepPDT {
  * (acting as the Geant4 master thread), and there should be exactly
  * one instance of it. 
  */
+class RunManagerMTWorker;
 
 class RunManagerMT 
 {
+  friend class RunManagerMTWorker;
+
 public:
-  RunManagerMT(edm::ParameterSet const & p);
+  explicit RunManagerMT(edm::ParameterSet const & p);
   ~RunManagerMT();
 
   void initG4(const DDCompactView *pDD, const MagneticField *pMF, const HepPDT::ParticleDataTable *fPDGTable);
@@ -70,39 +64,29 @@ public:
 
   void stopG4();
 
-  void             Connect(RunAction*);
+  void Connect(RunAction*);
 
   // Keep this to keep ExceptionHandler to compile, probably removed
   // later (or functionality moved to RunManagerMTWorker)
-  void abortRun(bool softAbort=false) {}
+  inline void abortRun(bool softAbort=false) {}
 
-  const DDDWorld& world() const {
+  inline const DDDWorld& world() const {
     return *m_world;
   }
 
-  const SensitiveDetectorCatalog& catalog() const {
+  inline const SensitiveDetectorCatalog& catalog() const {
     return m_catalog;
   }
 
-  const std::vector<std::string>& G4Commands() const {
+  inline const std::vector<std::string>& G4Commands() const {
     return m_G4Commands;
   }
 
   // In order to share the physics list with the worker threads, we
   // need a non-const pointer. Thread-safety is handled inside Geant4
-  // with TLS. Should we consider a friend declaration here in order
-  // to avoid misuse?
-  PhysicsList *physicsListForWorker() const {
+  // with TLS. 
+  inline PhysicsList *physicsListForWorker() const {
     return m_physicsList.get();
-  }
-
-  // In order to share the ChordFinderSetter (for
-  // G4MonopoleTransportation) with the worker threads, we need a
-  // non-const pointer. Thread-safety is handled inside
-  // ChordFinderStter with TLS. Should we consider a friend
-  // declaration here in order to avoid misuse?
-  sim::ChordFinderSetter *chordFinderSetterForWorker() const {
-    return m_chordFinderSetter.get();
   }
 
 private:
@@ -111,11 +95,16 @@ private:
 
   G4MTRunManagerKernel * m_kernel;
     
+  std::unique_ptr<CustomUIsession> m_UIsession;
   std::unique_ptr<PhysicsList> m_physicsList;
   bool m_managerInitialized;
   bool m_runTerminated;
-  const bool m_pUseMagneticField;
-  std::unique_ptr<RunAction> m_userRunAction;
+  bool m_pUseMagneticField;
+  RunAction* m_userRunAction;
+  G4Run* m_currentRun;
+  G4StateManager* m_stateManager;
+  G4GeometryManager* m_geometryManager;
+
   std::unique_ptr<SimRunInterface> m_runInterface;
 
   const std::string m_PhysicsTablesDir;
@@ -125,18 +114,18 @@ private:
   edm::ParameterSet m_pField;
   edm::ParameterSet m_pPhysics; 
   edm::ParameterSet m_pRunAction;      
+  edm::ParameterSet m_g4overlap;
   std::vector<std::string> m_G4Commands;
-  //ExceptionHandler* m_CustomExceptionHandler ;
+  edm::ParameterSet m_p;
 
   std::unique_ptr<DDDWorld> m_world;
+  std::unique_ptr<DDG4ProductionCuts> m_prodCuts;
   SimActivityRegistry m_registry;
   SensitiveDetectorCatalog m_catalog;
     
-  sim::FieldBuilder             *m_fieldBuilder;
-  std::unique_ptr<sim::ChordFinderSetter> m_chordFinderSetter;
-    
   std::string m_FieldFile;
   std::string m_WriteFile;
+  std::string m_RegionFile;
 };
 
 #endif

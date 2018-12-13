@@ -5,10 +5,10 @@
 #include "DataFormats/DetId/interface/DetId.h"
 #include "Geometry/TrackerNumberingBuilder/plugins/CmsTrackerRingBuilder.h"
 #include "Geometry/TrackerNumberingBuilder/plugins/CmsTrackerPetalBuilder.h"
-#include "Geometry/TrackerNumberingBuilder/plugins/TrackerStablePhiSort.h"
+#include "Geometry/TrackerNumberingBuilder/interface/trackerStablePhiSort.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include<vector>
 
+#include <vector>
 #include <bitset>
 
 void CmsTrackerWheelBuilder::buildComponent(DDFilteredView& fv, GeometricDet* g, std::string s){
@@ -32,22 +32,22 @@ void CmsTrackerWheelBuilder::buildComponent(DDFilteredView& fv, GeometricDet* g,
 void CmsTrackerWheelBuilder::sortNS(DDFilteredView& fv, GeometricDet* det){
   GeometricDet::ConstGeometricDetContainer& comp = det->components();
        
-  if(comp.size()){
+  if(!comp.empty()){
     if(comp.front()->type()==GeometricDet::petal){
       GeometricDet::GeometricDetContainer compfw;
       GeometricDet::GeometricDetContainer compbw;
       compfw.clear();
       compbw.clear();
       for(uint32_t i=0; i<comp.size();i++){
-	if(fabs(comp[i]->translation().z())<fabs(det->translation().z())){
-	  compfw.push_back(det->component(i));
+	if(std::abs(comp[i]->translation().z())<std::abs(det->translation().z())){
+	  compfw.emplace_back(det->component(i));
 	}else{
-	  compbw.push_back(det->component(i));      
+	  compbw.emplace_back(det->component(i));      
 	}
       }    
       
-      TrackerStablePhiSort(compfw.begin(), compfw.end(), ExtractPhiModule());
-      TrackerStablePhiSort(compbw.begin(), compbw.end(), ExtractPhiModule());
+      trackerStablePhiSort(compfw.begin(), compfw.end(), getPhiModule);
+      trackerStablePhiSort(compbw.begin(), compbw.end(), getPhiModule);
       
       //
       // TEC
@@ -70,7 +70,7 @@ void CmsTrackerWheelBuilder::sortNS(DDFilteredView& fv, GeometricDet* det){
       det->addComponents(compbw);
       
     }else{
-      std::stable_sort(comp.begin(),comp.end(),LessR_module());
+      std::stable_sort(comp.begin(),comp.end(),isLessRModule);
 
       // TID
       // Disk Number: 2 bits [1,2,3]

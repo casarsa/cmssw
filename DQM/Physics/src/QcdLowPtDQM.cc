@@ -4,7 +4,7 @@
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/GeometryVector/interface/LocalPoint.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
@@ -35,7 +35,7 @@ using namespace edm;
 struct deleter {
   void operator()(TH3F *&h) {
     delete h;
-    h = 0;
+    h = nullptr;
   }
 };
 
@@ -75,14 +75,13 @@ QcdLowPtDQM::QcdLowPtDQM(const ParameterSet &parameters)
                                                          false)),
       usePixelQ_(
           parameters.getUntrackedParameter<bool>("usePixelQualityWord", true)),
-      AlphaTracklets12_(0),
-      AlphaTracklets13_(0),
-      AlphaTracklets23_(0),
-      tgeo_(0),
-      theDbe_(0),
-      repSumMap_(0),
-      repSummary_(0),
-      h2TrigCorr_(0) {
+      AlphaTracklets12_(nullptr),
+      AlphaTracklets13_(nullptr),
+      AlphaTracklets23_(nullptr),
+      tgeo_(nullptr),
+      repSumMap_(nullptr),
+      repSummary_(nullptr),
+      h2TrigCorr_(nullptr) {
   // Constructor.
 
   if (parameters.exists("hltTrgNames"))
@@ -104,12 +103,15 @@ QcdLowPtDQM::QcdLowPtDQM(const ParameterSet &parameters)
                  pixLayers_));
     pixLayers_ = 12;
   }
+  
+  // This used to be at the end of the beginJob,
+  // hence before any of the beginRun operations
+  // So this now is placed at the end of the constructor
+  yieldAlphaHistogram(pixLayers_);
 }
 
-//--------------------------------------------------------------------------------------------------
 QcdLowPtDQM::~QcdLowPtDQM() {
   // Destructor.
-
   std::for_each(NsigTracklets12_.begin(), NsigTracklets12_.end(), deleter());
   std::for_each(NbkgTracklets12_.begin(), NbkgTracklets12_.end(), deleter());
   deleter()(AlphaTracklets12_);
@@ -121,54 +123,7 @@ QcdLowPtDQM::~QcdLowPtDQM() {
   deleter()(AlphaTracklets23_);
 }
 
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::analyze(const Event &iEvent, const EventSetup &iSetup) {
-  // Analyze the given event.
-
-  // get tracker geometry
-  ESHandle<TrackerGeometry> trackerHandle;
-  iSetup.get<TrackerDigiGeometryRecord>().get(trackerHandle);
-  tgeo_ = trackerHandle.product();
-  if (!tgeo_) {
-    print(3,
-          "QcdLowPtDQM::analyze -- Could not obtain pointer to "
-          "TrackerGeometry. Return.");
-    return;
-  }
-
-  fillHltBits(iEvent);
-  fillPixels(iEvent, iSetup);
-  trackletVertexUnbinned(iEvent, pixLayers_);
-  fillTracklets(iEvent, pixLayers_);
-  fillPixelClusterInfos(iEvent, clusLayers_);
-}
-
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::beginJob() {
-  // Begin job and setup the DQM store.
-
-  theDbe_ = Service<DQMStore>().operator->();
-  if (!theDbe_) {
-    print(3,
-          "QcdLowPtDQM::beginJob -- Could not obtain pointer to DQMStore. "
-          "Return.");
-    return;
-  }
-  theDbe_->setCurrentFolder("Physics/QcdLowPt");
-  yieldAlphaHistogram(pixLayers_);
-}
-
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::beginLuminosityBlock(const LuminosityBlock &l,
-                                       const EventSetup &iSetup) {
-  // At the moment, nothing needed to be done.
-}
-
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::beginRun(const Run &run, const EventSetup &iSetup) {
-  // Begin run, get or create needed structures.  TODO: can this be called
-  // several times in DQM??? -> YES!
-
+void QcdLowPtDQM::dqmBeginRun(const Run &run, const EventSetup &iSetup) {
   bool isinit = false;
   bool isHltCfgChanged = false;  // for new HLTConfigProvider::init
   string teststr;
@@ -186,11 +141,9 @@ void QcdLowPtDQM::beginRun(const Run &run, const EventSetup &iSetup) {
       break;
     }
   }
-
   if (!isinit)
     print(3, Form("Could not obtain HLT config for process name(s) %s",
                   teststr.c_str()));
-
   // setup "Any" bit
   hltTrgBits_.clear();
   hltTrgBits_.push_back(-1);
@@ -203,10 +156,10 @@ void QcdLowPtDQM::beginRun(const Run &run, const EventSetup &iSetup) {
   // names/bits
   for (size_t i = 0; i < hltTrgNames_.size(); ++i) {
     const string &n1(hltTrgNames_.at(i));
-    bool found = 0;
+    bool found = false;
     for (size_t j = 0; j < hltConfig_.size(); ++j) {
       const string &n2(hltConfig_.triggerName(j));
-      if (0)
+      if (false)
         print(0,
               Form("Checking trigger name %s for %s", n2.c_str(), n1.c_str()));
       if (n2 == n1) {
@@ -215,7 +168,7 @@ void QcdLowPtDQM::beginRun(const Run &run, const EventSetup &iSetup) {
         hltTrgDeci_.push_back(false);
         print(0, Form("Added trigger %d with name %s for bit %d",
                       int(hltTrgBits_.size() - 1), n1.c_str(), int(j)));
-        found = 1;
+        found = true;
         break;
       }
     }
@@ -263,19 +216,325 @@ void QcdLowPtDQM::beginRun(const Run &run, const EventSetup &iSetup) {
       NbkgTracklets23_.push_back(h3);
     }
   }
-
-  // book monitoring histograms
-  createHistos();
 }
 
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::book1D(std::vector<MonitorElement *> &mes,
+void QcdLowPtDQM::bookHistograms(DQMStore::IBooker &iBooker,
+                                     edm::Run const &,
+                                     edm::EventSetup const &) {
+  iBooker.setCurrentFolder("Physics/QcdLowPt");
+  if (!hNhitsL1_.empty()) return;  // histograms already booked
+
+  if (true) {
+    iBooker.setCurrentFolder("Physics/EventInfo/");
+    repSumMap_ = iBooker.book2D("reportSummaryMap", "reportSummaryMap", 1, 0,
+                                 1, 1, 0, 1);
+    repSummary_ = iBooker.bookFloat("reportSummary");
+  }
+
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/");
+    const int Nx = hltTrgUsedNames_.size();
+    const double x1 = -0.5;
+    const double x2 = Nx - 0.5;
+    h2TrigCorr_ = iBooker.book2D(
+        "h2TriCorr", "Trigger bit x vs y (y&&!x,x&&y)", Nx, x1, x2, Nx, x1, x2);
+    for (size_t i = 1; i <= hltTrgUsedNames_.size(); ++i) {
+      h2TrigCorr_->setBinLabel(i, hltTrgUsedNames_.at(i - 1), 1);
+      h2TrigCorr_->setBinLabel(i, hltTrgUsedNames_.at(i - 1), 2);
+    }
+    TH1 *h = h2TrigCorr_->getTH1();
+    if (h) h->SetStats(false);
+  }
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/HitsLayer/");
+    const int Nx = 30;
+    const double x1 = -0.5;
+    const double x2 = 149.5;
+    book1D(iBooker, hNhitsL1_, "hNhitsLayer1", "number of hits on layer 1;#hits;#", Nx,
+           x1, x2);
+    if (false)
+      book1D(iBooker, hNhitsL2_, "hNhitsLayer2", "number of hits on layer 2;#hits;#", Nx,
+             x1, x2);
+    if (false)
+      book1D(iBooker, hNhitsL3_, "hNhitsLayer3", "number of hits on layer 3;#hits;#", Nx,
+             x1, x2);
+  }
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/HitsLayerZoom/");
+    const int Nx = 15;
+    const double x1 = -0.5;
+    const double x2 = 14.5;
+    book1D(iBooker, hNhitsL1z_, "hNhitsLayer1Zoom", "number of hits on layer 1;#hits;#",
+           Nx, x1, x2);
+    if (false)
+      book1D(iBooker, hNhitsL2z_, "hNhitsLayer2Zoom",
+             "number of hits on layer 2;#hits;#", Nx, x1, x2);
+    if (false)
+      book1D(iBooker, hNhitsL3z_, "hNhitsLayer3Zoom",
+             "number of hits on layer 3;#hits;#", Nx, x1, x2);
+  }
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/HitsLayerEta/");
+    const int Nx = 60;
+    const double x1 = -3;
+    const double x2 = +3;
+    book1D(iBooker, hdNdEtaHitsL1_, "hdNdEtaHitsLayer1",
+           "Hits on layer 1;detector #eta;#", Nx, x1, x2);
+    if (false)
+      book1D(iBooker, hdNdEtaHitsL2_, "hdNdEtaHitsLayer2",
+             "Hits on layer 2;detector #eta;#", Nx, x1, x2);
+    if (false)
+      book1D(iBooker, hdNdEtaHitsL3_, "hdNdEtaHitsLayer3",
+             "Hits on layer 3;detector #eta;#", Nx, x1, x2);
+  }
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/HitsLayerPhi/");
+    const int Nx = 64;
+    const double x1 = -3.2;
+    const double x2 = +3.2;
+    book1D(iBooker, hdNdPhiHitsL1_, "hdNdPhiHitsLayer1", "Hits on layer 1;#phi;#", Nx,
+           x1, x2);
+    if (false)
+      book1D(iBooker, hdNdPhiHitsL2_, "hdNdPhiHitsLayer2", "Hits on layer 2;#phi;#", Nx,
+             x1, x2);
+    if (false)
+      book1D(iBooker, hdNdPhiHitsL3_, "hdNdPhiHitsLayer3", "Hits on layer 3;#phi;#", Nx,
+             x1, x2);
+  }
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/TrackletVtxZ/");
+    const int Nx = 100;
+    const double x1 = -25;
+    const double x2 = +25;
+    if (pixLayers_ >= 12)
+      book1D(iBooker, hTrkVtxZ12_, "hTrackletVtxZ12",
+             "z vertex from tracklets12;vz [cm];#", Nx, x1, x2);
+    if (pixLayers_ >= 13)
+      book1D(iBooker, hTrkVtxZ13_, "hTrackletVtxZ13",
+             "z vertex from tracklets13;vz [cm];#", Nx, x1, x2);
+    if (pixLayers_ >= 23)
+      book1D(iBooker, hTrkVtxZ23_, "hTrackletVtxZ23",
+             "z vertex from tracklets23;vz [cm];#", Nx, x1, x2);
+  }
+
+  if (true) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/TrackletEtaVtxZ/");
+    const int Nx = 60;
+    const double x1 = -3;
+    const double x2 = +3;
+    const int Ny = 2 * (int)ZVCut_;
+    const double y1 = -ZVCut_;
+    const double y2 = +ZVCut_;
+    if (pixLayers_ >= 12)
+      book2D(iBooker, hRawTrkEtaVtxZ12_, "hRawTrkEtaVtxZ12",
+             "raw #eta vs z vertex from tracklets12;#eta;vz [cm]", Nx, x1, x2,
+             Ny, y1, y2, false, false);
+    if (pixLayers_ >= 13)
+      book2D(iBooker, hRawTrkEtaVtxZ13_, "hRawTrkEtaVtxZ13",
+             "raw #eta vs z vertex from tracklets13;#eta;vz [cm]", Nx, x1, x2,
+             Ny, y1, y2, false, false);
+    if (pixLayers_ >= 23)
+      book2D(iBooker, hRawTrkEtaVtxZ23_, "hRawTrkEtaVtxZ23",
+             "raw #eta vs z vertex from tracklets23;#eta;vz [cm]", Nx, x1, x2,
+             Ny, y1, y2, false, false);
+  }
+  if (false) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/TrackletDetaDphi/");
+    const int Nx = 60;
+    const double x1 = -3;
+    const double x2 = +3;
+    const int Ny = 64;
+    const double y1 = -3.2;
+    const double y2 = +3.2;
+    if (pixLayers_ >= 12)
+      book2D(iBooker, hTrkRawDetaDphi12_, "hTracklet12RawDetaDphi",
+             "tracklet12 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
+             Nx, x1, x2, Ny, y1, y2, false, false);
+    if (pixLayers_ >= 13)
+      book2D(iBooker, hTrkRawDetaDphi13_, "hTracklet13RawDetaDphi",
+             "tracklet13 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
+             Nx, x1, x2, Ny, y1, y2, false, false);
+    if (pixLayers_ >= 23)
+      book2D(iBooker, hTrkRawDetaDphi23_, "hTracklet23RawDetaDphi",
+             "tracklet12 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
+             Nx, x1, x2, Ny, y1, y2, false, false);
+  }
+  if (false) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/TrackletDeta/");
+    const int Nx = 60;
+    const double x1 = -3;
+    const double x2 = +3;
+    if (pixLayers_ >= 12)
+      book1D(iBooker, hTrkRawDeta12_, "hTracklet12RawDeta",
+             "tracklet12 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
+             x2, false, false);
+    if (pixLayers_ >= 13)
+      book1D(iBooker, hTrkRawDeta13_, "hTracklet13RawDeta",
+             "tracklet13 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
+             x2, false, false);
+    if (pixLayers_ >= 23)
+      book1D(iBooker, hTrkRawDeta23_, "hTracklet23RawDeta",
+             "tracklet23 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
+             x2, false, false);
+  }
+  if (false) {
+    iBooker.setCurrentFolder("Physics/QcdLowPt/TrackletDphi/");
+    const int Nx = 64;
+    const double x1 = -3.2;
+    const double x2 = +3.2;
+    if (pixLayers_ >= 12)
+      book1D(iBooker, hTrkRawDphi12_, "hTracklet12RawDphi",
+             "tracklet12 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
+             x2, false, false);
+    if (pixLayers_ >= 13)
+      book1D(iBooker, hTrkRawDphi13_, "hTracklet13RawDphi",
+             "tracklet13 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
+             x2, false, false);
+    if (pixLayers_ >= 23)
+      book1D(iBooker, hTrkRawDphi23_, "hTracklet23RawDphi",
+             "tracklet23 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
+             x2, false, false);
+  }
+  if (AlphaTracklets12_) {
+    TAxis *xa = AlphaTracklets12_->GetXaxis();
+    const int Nx = xa->GetNbins();
+    const double x1 = xa->GetBinLowEdge(1);
+    const double x2 = xa->GetBinLowEdge(Nx + 1);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
+    book1D(iBooker, hdNdEtaRawTrkl12_, "hdNdEtaRawTracklets12",
+           "raw dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
+    book1D(iBooker, hdNdEtaSubTrkl12_, "hdNdEtaSubTracklets12",
+           "(1-#beta) dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, false,
+           false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
+    book1D(iBooker, hdNdEtaTrklets12_, "hdNdEtaTracklets12",
+           "dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    create1D(hEvtCountsPerEta12_, "hEventCountsPerEta12_",
+             "Events per vtx-#eta bin from tracklets12;#eta;#", 1,
+             -ZVEtaRegion_, ZVEtaRegion_, false, false);
+  }
+  if (AlphaTracklets13_) {
+    TAxis *xa = AlphaTracklets13_->GetXaxis();
+    const int Nx = xa->GetNbins();
+    const double x1 = xa->GetBinLowEdge(1);
+    const double x2 = xa->GetBinLowEdge(Nx + 1);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
+    book1D(iBooker, hdNdEtaRawTrkl13_, "hdNdEtaRawTracklets13",
+           "raw dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
+    book1D(iBooker, hdNdEtaSubTrkl13_, "hdNdEtaSubTracklets13",
+           "(1-#beta) dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, false,
+           false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
+    book1D(iBooker, hdNdEtaTrklets13_, "hdNdEtaTracklets13",
+           "dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    create1D(hEvtCountsPerEta13_, "hEventCountsPerEta13",
+             "Events per vtx-#eta bin from tracklets13;#eta;#", 1,
+             -ZVEtaRegion_, ZVEtaRegion_, false, false);
+  }
+  if (AlphaTracklets23_) {
+    TAxis *xa = AlphaTracklets23_->GetXaxis();
+    const int Nx = xa->GetNbins();
+    const double x1 = xa->GetBinLowEdge(1);
+    const double x2 = xa->GetBinLowEdge(Nx + 1);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
+    book1D(iBooker, hdNdEtaRawTrkl23_, "hdNdEtaRawTracklets23",
+           "raw dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
+    book1D(iBooker, hdNdEtaSubTrkl23_, "hdNdEtaSubTracklets23",
+           "(1-#beta) dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, false,
+           false);
+    iBooker.setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
+    book1D(iBooker, hdNdEtaTrklets23_, "hdNdEtaTracklets23",
+           "dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, false, false);
+    create1D(hEvtCountsPerEta23_, "hEventCountsPerEta23",
+             "Events per vtx-#eta bin from tracklets23;#eta;#", 1,
+             -ZVEtaRegion_, ZVEtaRegion_, false, false);
+  }
+  if (true) {
+    if (true) {
+      const int Nx = 100;
+      const double x1 = -25;
+      const double x2 = +25;
+      iBooker.setCurrentFolder("Physics/QcdLowPt/ClusterVtxZ/");
+      book1D(iBooker, hClusterVertexZ_, "hClusterVertex",
+             "z vertex from clusters12;vz [cm];#", Nx, x1, x2);
+    }
+    if (true) {
+      iBooker.setCurrentFolder("Physics/QcdLowPt/ClusterSize/");
+      const int Nx = 60;
+      const double x1 = -3;
+      const double x2 = +3;
+      const int Ny = 25;
+      const double y1 = -0.5;
+      const double y2 = 24.5;
+      if (clusLayers_ >= 12)
+        book2D(iBooker, hClusterYSize1_, "hClusterYSize1",
+               "cluster #eta vs local y size on layer 1;#eta;size", Nx, x1, x2,
+               Ny, y1, y2, false, false);
+      if (clusLayers_ >= 13)
+        book2D(iBooker, hClusterYSize2_, "hClusterYSize2",
+               "cluster #eta vs local y size on layer 2;#eta;size", Nx, x1, x2,
+               Ny, y1, y2, false, false);
+      if (clusLayers_ >= 23)
+        book2D(iBooker, hClusterYSize3_, "hClusterYSize3",
+               "cluster #eta vs local y size on layer 3;#eta;size", Nx, x1, x2,
+               Ny, y1, y2, false, false);
+    }
+    if (true) {
+      iBooker.setCurrentFolder("Physics/QcdLowPt/ClusterCharge/");
+      const int Nx = 60;
+      const double x1 = -3;
+      const double x2 = +3;
+      const int Ny = 125;
+      const double y1 = 0;
+      const double y2 = 2500;
+      if (clusLayers_ >= 12)
+        book2D(iBooker, hClusterADC1_, "hClusterADC1",
+               "cluster #eta vs adc on layer 1;#eta;adc", Nx, x1, x2, Ny, y1,
+               y2, false, false);
+      if (clusLayers_ >= 13)
+        book2D(iBooker, hClusterADC2_, "hClusterADC2",
+               "cluster #eta vs adc on layer 2;#eta;adc", Nx, x1, x2, Ny, y1,
+               y2, false, false);
+      if (clusLayers_ >= 23)
+        book2D(iBooker, hClusterADC3_, "hClusterADC3",
+               "cluster #eta vs adc on layer 3;#eta;adc", Nx, x1, x2, Ny, y1,
+               y2, false, false);
+    }
+  }
+}
+
+void QcdLowPtDQM::analyze(const Event &iEvent, const EventSetup &iSetup) {
+  // Analyze the given event.
+
+  // get tracker geometry
+  ESHandle<TrackerGeometry> trackerHandle;
+  iSetup.get<TrackerDigiGeometryRecord>().get(trackerHandle);
+  tgeo_ = trackerHandle.product();
+  if (!tgeo_) {
+    print(3,
+          "QcdLowPtDQM::analyze -- Could not obtain pointer to "
+          "TrackerGeometry. Return.");
+    return;
+  }
+
+  fillHltBits(iEvent);
+  fillPixels(iEvent, iSetup);
+  trackletVertexUnbinned(iEvent, pixLayers_);
+  fillTracklets(iEvent, pixLayers_);
+  fillPixelClusterInfos(iEvent, clusLayers_);
+}
+
+void QcdLowPtDQM::book1D(DQMStore::IBooker &iBooker,
+                         std::vector<MonitorElement *> &mes,
                          const std::string &name, const std::string &title,
                          int nx, double x1, double x2, bool sumw2, bool sbox) {
   // Book 1D histos.
 
   for (size_t i = 0; i < hltTrgUsedNames_.size(); ++i) {
-    MonitorElement *e = theDbe_->book1D(
+    MonitorElement *e = iBooker.book1D(
         Form("%s_%s", name.c_str(), hltTrgUsedNames_.at(i).c_str()),
         Form("%s: %s", hltTrgUsedNames_.at(i).c_str(), title.c_str()), nx, x1,
         x2);
@@ -286,15 +545,14 @@ void QcdLowPtDQM::book1D(std::vector<MonitorElement *> &mes,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::book2D(std::vector<MonitorElement *> &mes,
+void QcdLowPtDQM::book2D(DQMStore::IBooker &iBooker,
+                         std::vector<MonitorElement *> &mes,
                          const std::string &name, const std::string &title,
                          int nx, double x1, double x2, int ny, double y1,
                          double y2, bool sumw2, bool sbox) {
   // Book 2D histos.
-
   for (size_t i = 0; i < hltTrgUsedNames_.size(); ++i) {
-    MonitorElement *e = theDbe_->book2D(
+    MonitorElement *e = iBooker.book2D(
         Form("%s_%s", name.c_str(), hltTrgUsedNames_.at(i).c_str()),
         Form("%s: %s", hltTrgUsedNames_.at(i).c_str(), title.c_str()), nx, x1,
         x2, ny, y1, y2);
@@ -305,7 +563,6 @@ void QcdLowPtDQM::book2D(std::vector<MonitorElement *> &mes,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::create1D(std::vector<TH1F *> &hs, const std::string &name,
                            const std::string &title, int nx, double x1,
                            double x2, bool sumw2, bool sbox) {
@@ -322,7 +579,6 @@ void QcdLowPtDQM::create1D(std::vector<TH1F *> &hs, const std::string &name,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::create2D(std::vector<TH2F *> &hs, const std::string &name,
                            const std::string &title, int nx, double x1,
                            double x2, int ny, double y1, double y2, bool sumw2,
@@ -340,300 +596,6 @@ void QcdLowPtDQM::create2D(std::vector<TH2F *> &hs, const std::string &name,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::createHistos() {
-  // Book histograms if needed.
-
-  if (hNhitsL1_.size()) return;  // histograms already booked
-
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/EventInfo/");
-    repSumMap_ = theDbe_->book2D("reportSummaryMap", "reportSummaryMap", 1, 0,
-                                 1, 1, 0, 1);
-    repSummary_ = theDbe_->bookFloat("reportSummary");
-  }
-
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/");
-    const int Nx = hltTrgUsedNames_.size();
-    const double x1 = -0.5;
-    const double x2 = Nx - 0.5;
-    h2TrigCorr_ = theDbe_->book2D(
-        "h2TriCorr", "Trigger bit x vs y (y&&!x,x&&y)", Nx, x1, x2, Nx, x1, x2);
-    for (size_t i = 1; i <= hltTrgUsedNames_.size(); ++i) {
-      h2TrigCorr_->setBinLabel(i, hltTrgUsedNames_.at(i - 1), 1);
-      h2TrigCorr_->setBinLabel(i, hltTrgUsedNames_.at(i - 1), 2);
-    }
-    TH1 *h = h2TrigCorr_->getTH1();
-    if (h) h->SetStats(0);
-  }
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/HitsLayer/");
-    const int Nx = 30;
-    const double x1 = -0.5;
-    const double x2 = 149.5;
-    book1D(hNhitsL1_, "hNhitsLayer1", "number of hits on layer 1;#hits;#", Nx,
-           x1, x2);
-    if (0)
-      book1D(hNhitsL2_, "hNhitsLayer2", "number of hits on layer 2;#hits;#", Nx,
-             x1, x2);
-    if (0)
-      book1D(hNhitsL3_, "hNhitsLayer3", "number of hits on layer 3;#hits;#", Nx,
-             x1, x2);
-  }
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/HitsLayerZoom/");
-    const int Nx = 15;
-    const double x1 = -0.5;
-    const double x2 = 14.5;
-    book1D(hNhitsL1z_, "hNhitsLayer1Zoom", "number of hits on layer 1;#hits;#",
-           Nx, x1, x2);
-    if (0)
-      book1D(hNhitsL2z_, "hNhitsLayer2Zoom",
-             "number of hits on layer 2;#hits;#", Nx, x1, x2);
-    if (0)
-      book1D(hNhitsL3z_, "hNhitsLayer3Zoom",
-             "number of hits on layer 3;#hits;#", Nx, x1, x2);
-  }
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/HitsLayerEta/");
-    const int Nx = 60;
-    const double x1 = -3;
-    const double x2 = +3;
-    book1D(hdNdEtaHitsL1_, "hdNdEtaHitsLayer1",
-           "Hits on layer 1;detector #eta;#", Nx, x1, x2);
-    if (0)
-      book1D(hdNdEtaHitsL2_, "hdNdEtaHitsLayer2",
-             "Hits on layer 2;detector #eta;#", Nx, x1, x2);
-    if (0)
-      book1D(hdNdEtaHitsL3_, "hdNdEtaHitsLayer3",
-             "Hits on layer 3;detector #eta;#", Nx, x1, x2);
-  }
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/HitsLayerPhi/");
-    const int Nx = 64;
-    const double x1 = -3.2;
-    const double x2 = +3.2;
-    book1D(hdNdPhiHitsL1_, "hdNdPhiHitsLayer1", "Hits on layer 1;#phi;#", Nx,
-           x1, x2);
-    if (0)
-      book1D(hdNdPhiHitsL2_, "hdNdPhiHitsLayer2", "Hits on layer 2;#phi;#", Nx,
-             x1, x2);
-    if (0)
-      book1D(hdNdPhiHitsL3_, "hdNdPhiHitsLayer3", "Hits on layer 3;#phi;#", Nx,
-             x1, x2);
-  }
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/TrackletVtxZ/");
-    const int Nx = 100;
-    const double x1 = -25;
-    const double x2 = +25;
-    if (pixLayers_ >= 12)
-      book1D(hTrkVtxZ12_, "hTrackletVtxZ12",
-             "z vertex from tracklets12;vz [cm];#", Nx, x1, x2);
-    if (pixLayers_ >= 13)
-      book1D(hTrkVtxZ13_, "hTrackletVtxZ13",
-             "z vertex from tracklets13;vz [cm];#", Nx, x1, x2);
-    if (pixLayers_ >= 23)
-      book1D(hTrkVtxZ23_, "hTrackletVtxZ23",
-             "z vertex from tracklets23;vz [cm];#", Nx, x1, x2);
-  }
-
-  if (1) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/TrackletEtaVtxZ/");
-    const int Nx = 60;
-    const double x1 = -3;
-    const double x2 = +3;
-    const int Ny = 2 * (int)ZVCut_;
-    const double y1 = -ZVCut_;
-    const double y2 = +ZVCut_;
-    if (pixLayers_ >= 12)
-      book2D(hRawTrkEtaVtxZ12_, "hRawTrkEtaVtxZ12",
-             "raw #eta vs z vertex from tracklets12;#eta;vz [cm]", Nx, x1, x2,
-             Ny, y1, y2, 0, 0);
-    if (pixLayers_ >= 13)
-      book2D(hRawTrkEtaVtxZ13_, "hRawTrkEtaVtxZ13",
-             "raw #eta vs z vertex from tracklets13;#eta;vz [cm]", Nx, x1, x2,
-             Ny, y1, y2, 0, 0);
-    if (pixLayers_ >= 23)
-      book2D(hRawTrkEtaVtxZ23_, "hRawTrkEtaVtxZ23",
-             "raw #eta vs z vertex from tracklets23;#eta;vz [cm]", Nx, x1, x2,
-             Ny, y1, y2, 0, 0);
-  }
-  if (0) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/TrackletDetaDphi/");
-    const int Nx = 60;
-    const double x1 = -3;
-    const double x2 = +3;
-    const int Ny = 64;
-    const double y1 = -3.2;
-    const double y2 = +3.2;
-    if (pixLayers_ >= 12)
-      book2D(hTrkRawDetaDphi12_, "hTracklet12RawDetaDphi",
-             "tracklet12 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
-             Nx, x1, x2, Ny, y1, y2, 0, 0);
-    if (pixLayers_ >= 13)
-      book2D(hTrkRawDetaDphi13_, "hTracklet13RawDetaDphi",
-             "tracklet13 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
-             Nx, x1, x2, Ny, y1, y2, 0, 0);
-    if (pixLayers_ >= 23)
-      book2D(hTrkRawDetaDphi23_, "hTracklet23RawDetaDphi",
-             "tracklet12 raw #Delta#eta vs #Delta#phi;#Delta#eta;#Delta#phi",
-             Nx, x1, x2, Ny, y1, y2, 0, 0);
-  }
-  if (0) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/TrackletDeta/");
-    const int Nx = 60;
-    const double x1 = -3;
-    const double x2 = +3;
-    if (pixLayers_ >= 12)
-      book1D(hTrkRawDeta12_, "hTracklet12RawDeta",
-             "tracklet12 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
-             x2, 0, 0);
-    if (pixLayers_ >= 13)
-      book1D(hTrkRawDeta13_, "hTracklet13RawDeta",
-             "tracklet13 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
-             x2, 0, 0);
-    if (pixLayers_ >= 23)
-      book1D(hTrkRawDeta23_, "hTracklet23RawDeta",
-             "tracklet23 raw dN/#Delta#eta;#Delta#eta;dN/#Delta#eta", Nx, x1,
-             x2, 0, 0);
-  }
-  if (0) {
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/TrackletDphi/");
-    const int Nx = 64;
-    const double x1 = -3.2;
-    const double x2 = +3.2;
-    if (pixLayers_ >= 12)
-      book1D(hTrkRawDphi12_, "hTracklet12RawDphi",
-             "tracklet12 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
-             x2, 0, 0);
-    if (pixLayers_ >= 13)
-      book1D(hTrkRawDphi13_, "hTracklet13RawDphi",
-             "tracklet13 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
-             x2, 0, 0);
-    if (pixLayers_ >= 23)
-      book1D(hTrkRawDphi23_, "hTracklet23RawDphi",
-             "tracklet23 raw dN/#Delta#phi;#Delta#phi;dN/#Delta#phi", Nx, x1,
-             x2, 0, 0);
-  }
-  if (AlphaTracklets12_) {
-    TAxis *xa = AlphaTracklets12_->GetXaxis();
-    const int Nx = xa->GetNbins();
-    const double x1 = xa->GetBinLowEdge(1);
-    const double x2 = xa->GetBinLowEdge(Nx + 1);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
-    book1D(hdNdEtaRawTrkl12_, "hdNdEtaRawTracklets12",
-           "raw dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
-    book1D(hdNdEtaSubTrkl12_, "hdNdEtaSubTracklets12",
-           "(1-#beta) dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, 0,
-           0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
-    book1D(hdNdEtaTrklets12_, "hdNdEtaTracklets12",
-           "dN/d#eta for tracklets12;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    create1D(hEvtCountsPerEta12_, "hEventCountsPerEta12_",
-             "Events per vtx-#eta bin from tracklets12;#eta;#", 1,
-             -ZVEtaRegion_, ZVEtaRegion_, 0, 0);
-  }
-  if (AlphaTracklets13_) {
-    TAxis *xa = AlphaTracklets13_->GetXaxis();
-    const int Nx = xa->GetNbins();
-    const double x1 = xa->GetBinLowEdge(1);
-    const double x2 = xa->GetBinLowEdge(Nx + 1);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
-    book1D(hdNdEtaRawTrkl13_, "hdNdEtaRawTracklets13",
-           "raw dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
-    book1D(hdNdEtaSubTrkl13_, "hdNdEtaSubTracklets13",
-           "(1-#beta) dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, 0,
-           0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
-    book1D(hdNdEtaTrklets13_, "hdNdEtaTracklets13",
-           "dN/d#eta for tracklets13;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    create1D(hEvtCountsPerEta13_, "hEventCountsPerEta13",
-             "Events per vtx-#eta bin from tracklets13;#eta;#", 1,
-             -ZVEtaRegion_, ZVEtaRegion_, 0, 0);
-  }
-  if (AlphaTracklets23_) {
-    TAxis *xa = AlphaTracklets23_->GetXaxis();
-    const int Nx = xa->GetNbins();
-    const double x1 = xa->GetBinLowEdge(1);
-    const double x2 = xa->GetBinLowEdge(Nx + 1);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/RawTracklets/");
-    book1D(hdNdEtaRawTrkl23_, "hdNdEtaRawTracklets23",
-           "raw dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/SubTracklets/");
-    book1D(hdNdEtaSubTrkl23_, "hdNdEtaSubTracklets23",
-           "(1-#beta) dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, 0,
-           0);
-    theDbe_->setCurrentFolder("Physics/QcdLowPt/CorTracklets/");
-    book1D(hdNdEtaTrklets23_, "hdNdEtaTracklets23",
-           "dN/d#eta for tracklets23;#eta;dN/d#eta", Nx, x1, x2, 0, 0);
-    create1D(hEvtCountsPerEta23_, "hEventCountsPerEta23",
-             "Events per vtx-#eta bin from tracklets23;#eta;#", 1,
-             -ZVEtaRegion_, ZVEtaRegion_, 0, 0);
-  }
-  if (1) {
-    if (1) {
-      const int Nx = 100;
-      const double x1 = -25;
-      const double x2 = +25;
-      theDbe_->setCurrentFolder("Physics/QcdLowPt/ClusterVtxZ/");
-      book1D(hClusterVertexZ_, "hClusterVertex",
-             "z vertex from clusters12;vz [cm];#", Nx, x1, x2);
-    }
-    if (1) {
-      theDbe_->setCurrentFolder("Physics/QcdLowPt/ClusterSize/");
-      const int Nx = 60;
-      const double x1 = -3;
-      const double x2 = +3;
-      const int Ny = 25;
-      const double y1 = -0.5;
-      const double y2 = 24.5;
-      if (clusLayers_ >= 12)
-        book2D(hClusterYSize1_, "hClusterYSize1",
-               "cluster #eta vs local y size on layer 1;#eta;size", Nx, x1, x2,
-               Ny, y1, y2, 0, 0);
-      if (clusLayers_ >= 13)
-        book2D(hClusterYSize2_, "hClusterYSize2",
-               "cluster #eta vs local y size on layer 2;#eta;size", Nx, x1, x2,
-               Ny, y1, y2, 0, 0);
-      if (clusLayers_ >= 23)
-        book2D(hClusterYSize3_, "hClusterYSize3",
-               "cluster #eta vs local y size on layer 3;#eta;size", Nx, x1, x2,
-               Ny, y1, y2, 0, 0);
-    }
-    if (1) {
-      theDbe_->setCurrentFolder("Physics/QcdLowPt/ClusterCharge/");
-      const int Nx = 60;
-      const double x1 = -3;
-      const double x2 = +3;
-      const int Ny = 125;
-      const double y1 = 0;
-      const double y2 = 2500;
-      if (clusLayers_ >= 12)
-        book2D(hClusterADC1_, "hClusterADC1",
-               "cluster #eta vs adc on layer 1;#eta;adc", Nx, x1, x2, Ny, y1,
-               y2, 0, 0);
-      if (clusLayers_ >= 13)
-        book2D(hClusterADC2_, "hClusterADC2",
-               "cluster #eta vs adc on layer 2;#eta;adc", Nx, x1, x2, Ny, y1,
-               y2, 0, 0);
-      if (clusLayers_ >= 23)
-        book2D(hClusterADC3_, "hClusterADC3",
-               "cluster #eta vs adc on layer 3;#eta;adc", Nx, x1, x2, Ny, y1,
-               y2, 0, 0);
-    }
-  }
-}
-
-//--------------------------------------------------------------------------------------------------
-void QcdLowPtDQM::endJob(void) {
-  // At the moment, nothing needed to be done.
-}
-
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::filldNdeta(const TH3F *AlphaTracklets,
                              const std::vector<TH3F *> &NsigTracklets,
                              const std::vector<TH3F *> &NbkgTracklets,
@@ -732,11 +694,9 @@ void QcdLowPtDQM::filldNdeta(const TH3F *AlphaTracklets,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::endLuminosityBlock(const LuminosityBlock &l,
                                      const EventSetup &iSetup) {
   // Update various histograms.
-
   repSummary_->Fill(1.);
   repSumMap_->Fill(0.5, 0.5, 1.);
 
@@ -751,10 +711,8 @@ void QcdLowPtDQM::endLuminosityBlock(const LuminosityBlock &l,
              hdNdEtaTrklets23_);
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::endRun(const Run &, const EventSetup &) {
-  // End run, cleanup. TODO: can this be called several times in DQM???
-
+  // End run, cleanup.
   for (size_t i = 0; i < NsigTracklets12_.size(); ++i) {
     NsigTracklets12_.at(i)->Reset();
     NbkgTracklets12_.at(i)->Reset();
@@ -769,7 +727,6 @@ void QcdLowPtDQM::endRun(const Run &, const EventSetup &) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fill1D(std::vector<TH1F *> &hs, double val, double w) {
   // Loop over histograms and fill if trigger has fired.
 
@@ -779,7 +736,6 @@ void QcdLowPtDQM::fill1D(std::vector<TH1F *> &hs, double val, double w) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fill1D(std::vector<MonitorElement *> &mes, double val,
                          double w) {
   // Loop over histograms and fill if trigger has fired.
@@ -790,7 +746,6 @@ void QcdLowPtDQM::fill1D(std::vector<MonitorElement *> &mes, double val,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fill2D(std::vector<TH2F *> &hs, double valx, double valy,
                          double w) {
   // Loop over histograms and fill if trigger has fired.
@@ -801,7 +756,6 @@ void QcdLowPtDQM::fill2D(std::vector<TH2F *> &hs, double valx, double valy,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fill2D(std::vector<MonitorElement *> &mes, double valx,
                          double valy, double w) {
   // Loop over histograms and fill if trigger has fired.
@@ -812,7 +766,6 @@ void QcdLowPtDQM::fill2D(std::vector<MonitorElement *> &mes, double valx,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fill3D(std::vector<TH3F *> &hs, int gbin, double w) {
   // Loop over histograms and fill if trigger has fired.
 
@@ -822,7 +775,6 @@ void QcdLowPtDQM::fill3D(std::vector<TH3F *> &hs, int gbin, double w) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillHltBits(const Event &iEvent) {
   // Fill HLT trigger bits.
 
@@ -834,7 +786,7 @@ void QcdLowPtDQM::fillHltBits(const Event &iEvent) {
     size_t tbit = hltTrgBits_.at(i);
     if (tbit < triggerResultsHLT->size()) {
       hltTrgDeci_[i] = triggerResultsHLT->accept(tbit);
-      if (0)
+      if (false)
         print(0, Form("Decision %i for %s", (int)hltTrgDeci_.at(i),
                       hltTrgUsedNames_.at(i).c_str()));
     } else {
@@ -853,7 +805,6 @@ void QcdLowPtDQM::fillHltBits(const Event &iEvent) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillPixels(const Event &iEvent,
                              const edm::EventSetup &iSetup) {
   // Fill pixel hit collections.
@@ -871,7 +822,7 @@ void QcdLowPtDQM::fillPixels(const Event &iEvent,
 
   // Retrieve tracker topology from geometry
   edm::ESHandle<TrackerTopology> tTopoHandle;
-  iSetup.get<IdealGeometryRecord>().get(tTopoHandle);
+  iSetup.get<TrackerTopologyRcd>().get(tTopoHandle);
   const TrackerTopology *const tTopo = tTopoHandle.product();
 
   const SiPixelRecHitCollection *hits = hRecHits.product();
@@ -879,7 +830,6 @@ void QcdLowPtDQM::fillPixels(const Event &iEvent,
            hit = hits->data().begin(),
            end = hits->data().end();
        hit != end; ++hit) {
-
     if (!hit->isValid()) continue;
 
     if (useRecHitQ_) {
@@ -946,13 +896,12 @@ void QcdLowPtDQM::fillPixels(const Event &iEvent,
   fill1D(hNhitsL3z_, bpix3_.size());
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillPixelClusterInfos(const Event &iEvent, int which) {
   // Get information related to pixel cluster counting methods.
 
   double vz = -999;
 
-  if (clusterVtxName_.size()) {  // get vertex from producer
+  if (!clusterVtxName_.empty()) {  // get vertex from producer
     Handle<reco::VertexCollection> hVertexCollection;
     if (!getProductSafe(clusterVtxName_, hVertexCollection, iEvent)) {
       CP(2) print(2, Form(
@@ -963,7 +912,7 @@ void QcdLowPtDQM::fillPixelClusterInfos(const Event &iEvent, int which) {
     }
 
     const reco::VertexCollection *vertices = hVertexCollection.product();
-    if (!vertices || vertices->size() == 0) return;
+    if (!vertices || vertices->empty()) return;
     reco::VertexCollection::const_iterator vertex = vertices->begin();
     vz = vertex->z();
   } else {  // calculate vertex from clusters
@@ -983,7 +932,6 @@ void QcdLowPtDQM::fillPixelClusterInfos(const Event &iEvent, int which) {
     fillPixelClusterInfos(vz, bpix3_, hClusterYSize3_, hClusterADC3_);
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillPixelClusterInfos(
     const double vz, const std::vector<Pixel> &pix,
     std::vector<MonitorElement *> &hClusterYSize,
@@ -998,7 +946,6 @@ void QcdLowPtDQM::fillPixelClusterInfos(
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillTracklets(const Event &iEvent, int which) {
   // Fill tracklet collections.
 
@@ -1025,7 +972,6 @@ void QcdLowPtDQM::fillTracklets(const Event &iEvent, int which) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillTracklets(std::vector<Tracklet> &tracklets,
                                 const std::vector<Pixel> &pix1,
                                 const std::vector<Pixel> &pix2,
@@ -1070,7 +1016,6 @@ void QcdLowPtDQM::fillTracklets(std::vector<Tracklet> &tracklets,
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::fillTracklets(
     const std::vector<Tracklet> &tracklets, const std::vector<Pixel> &pixels,
     const Vertex &trackletV, const TH3F *AlphaTracklets,
@@ -1082,7 +1027,7 @@ void QcdLowPtDQM::fillTracklets(
 
   if (!AlphaTracklets) return;
 
-  if (tracklets.size() == 0) return;
+  if (tracklets.empty()) return;
 
   // fill events per etabin per trigger bit
   for (size_t i = 0; i < eventpereta.size(); ++i) {
@@ -1096,11 +1041,11 @@ void QcdLowPtDQM::fillTracklets(
   }
 
   // fill tracklet based info
-  TAxis *xa = AlphaTracklets->GetXaxis();
-  int ybin = AlphaTracklets->GetYaxis()->FindFixBin(pixels.size());
-  int zbin = AlphaTracklets->GetZaxis()->FindFixBin(trackletV.z());
-  int tbin = AlphaTracklets->GetBin(0, ybin, zbin);
-  for (size_t k = 0; k < tracklets.size(); ++k) {
+  const TAxis *xa = AlphaTracklets->GetXaxis();
+  int ybin  = AlphaTracklets->GetYaxis()->FindFixBin(pixels.size());
+  int zbin  = AlphaTracklets->GetZaxis()->FindFixBin(trackletV.z());
+  int tbin  = AlphaTracklets->GetBin(0,ybin,zbin);
+  for(size_t k=0; k<tracklets.size(); ++k) {
     const Tracklet &tl(tracklets.at(k));
     fill2D(detaphi, tl.deta(), tl.dphi());
     fill1D(deta, tl.deta());
@@ -1119,7 +1064,6 @@ void QcdLowPtDQM::fillTracklets(
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::reallyPrint(int level, const char *msg) {
   // Print out information dependent on level and verbosity.
 
@@ -1136,7 +1080,6 @@ void QcdLowPtDQM::reallyPrint(int level, const char *msg) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::trackletVertexUnbinned(const Event &iEvent, int which) {
   // Estimate tracklet based z vertex.
 
@@ -1154,7 +1097,6 @@ void QcdLowPtDQM::trackletVertexUnbinned(const Event &iEvent, int which) {
   }
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::trackletVertexUnbinned(std::vector<Pixel> &pix1,
                                          std::vector<Pixel> &pix2,
                                          Vertex &vtx) {
@@ -1219,7 +1161,6 @@ void QcdLowPtDQM::trackletVertexUnbinned(std::vector<Pixel> &pix1,
   vtx.set(mcl, mzv, ms2);
 }
 
-//--------------------------------------------------------------------------------------------------
 double QcdLowPtDQM::vertexZFromClusters(const std::vector<Pixel> &pix) const {
   // Estimate z vertex position from clusters.
 
@@ -1256,14 +1197,12 @@ double QcdLowPtDQM::vertexZFromClusters(const std::vector<Pixel> &pix) const {
   return z_best;
 }
 
-//--------------------------------------------------------------------------------------------------
 void QcdLowPtDQM::yieldAlphaHistogram(int which) {
   // Create alpha histogram. Code created by Yen-Jie and included by hand:
   // Alpha value for 1st + 2nd tracklet calculated from 1.9 M PYTHIA 900 GeV
   // sample produced by Yetkin with CMS official tune.
 
   if (which >= 12) {
-
     const int nEtaBin = 12;
     const int nHitBin = 14;
     const int nVzBin = 10;
@@ -1281,7 +1220,7 @@ void QcdLowPtDQM::yieldAlphaHistogram(int which) {
     AlphaTracklets12_ = new TH3F(
         "hAlphaTracklets12", "Alpha for tracklets12;#eta;#hits;vz [cm]",
         nEtaBin, EtaBins, nHitBin, HitBins, nVzBin, VzBins);
-    AlphaTracklets12_->SetDirectory(0);
+    AlphaTracklets12_->SetDirectory(nullptr);
 
     AlphaTracklets12_->SetBinContent(2, 1, 7, 3.55991);
     AlphaTracklets12_->SetBinContent(2, 1, 8, 2.40439);
@@ -2535,7 +2474,7 @@ void QcdLowPtDQM::yieldAlphaHistogram(int which) {
     AlphaTracklets13_ = new TH3F(
         "hAlphaTracklets13", "Alpha for tracklets13;#eta;#hits;vz [cm]",
         nEtaBin, EtaBins, nHitBin, HitBins, nVzBin, VzBins);
-    AlphaTracklets13_->SetDirectory(0);
+    AlphaTracklets13_->SetDirectory(nullptr);
 
     AlphaTracklets13_->SetBinContent(3, 1, 5, 3.29862);
     AlphaTracklets13_->SetBinContent(3, 1, 6, 2.40246);
@@ -3548,7 +3487,6 @@ void QcdLowPtDQM::yieldAlphaHistogram(int which) {
   }
 
   if (which >= 23) {
-
     const int nEtaBin = 12;
     const int nHitBin = 14;
     const int nVzBin = 10;
@@ -3566,7 +3504,7 @@ void QcdLowPtDQM::yieldAlphaHistogram(int which) {
     AlphaTracklets23_ = new TH3F(
         "hAlphaTracklets23", "Alpha for tracklets23;#eta;#hits;vz [cm]",
         nEtaBin, EtaBins, nHitBin, HitBins, nVzBin, VzBins);
-    AlphaTracklets23_->SetDirectory(0);
+    AlphaTracklets23_->SetDirectory(nullptr);
 
     AlphaTracklets23_->SetBinContent(3, 1, 5, 3.38308);
     AlphaTracklets23_->SetBinContent(3, 1, 6, 2.34772);
@@ -4578,8 +4516,3 @@ void QcdLowPtDQM::yieldAlphaHistogram(int which) {
     AlphaTracklets23_->SetBinContent(10, 14, 6, 0);
   }
 }
-
-// Local Variables:
-// show-trailing-whitespace: t
-// truncate-lines: t
-// End:

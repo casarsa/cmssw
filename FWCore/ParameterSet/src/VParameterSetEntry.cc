@@ -39,8 +39,6 @@ namespace edm {
     }
   }
 
-  VParameterSetEntry::~VParameterSetEntry() {}
-
   void
   VParameterSetEntry::toString(std::string& result) const {
     assert(theIDs_);
@@ -92,7 +90,7 @@ namespace edm {
 
   void VParameterSetEntry::fillVPSet() const {
     if(nullptr == theVPSet_.load()) {
-      std::unique_ptr<std::vector<ParameterSet> > tmp(new std::vector<ParameterSet>);
+      auto tmp = std::make_unique<std::vector<ParameterSet>>();
       tmp->reserve(theIDs_->size());
       for (auto const& theID : *theIDs_) {
         tmp->push_back(getParameterSet(theID));
@@ -112,6 +110,10 @@ namespace edm {
   ParameterSet& VParameterSetEntry::psetInVector(int i) {
     assert(theVPSet_);
     return theVPSet_->at(i);
+  }
+
+  std::vector<ParameterSet>::size_type VParameterSetEntry::size() const {
+    return vpset().size();
   }
 
   void VParameterSetEntry::registerPsetsAndUpdateIDs() {

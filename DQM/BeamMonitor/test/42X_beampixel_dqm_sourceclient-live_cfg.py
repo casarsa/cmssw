@@ -39,7 +39,7 @@ process.load("DQM.Integration.test.FrontierCondition_GT_cfi")
 ### @@@@@@ Comment when running locally @@@@@@ ###
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.load("Configuration.StandardSequences.Services_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 process.load("Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cff")
 process.load("Configuration.StandardSequences.RawToDigi_Data_cff")
 process.load("Configuration.StandardSequences.EndOfProcess_cff")
@@ -83,7 +83,8 @@ if (process.runType.getRunType() == process.runType.pp_run or process.runType.ge
                                                                                               'HLT_ZeroBias*'))
     process.load("Configuration.StandardSequences.Reconstruction_cff") ## pp reco sequence
 
-    process.pixelVertexDQM = cms.EDAnalyzer("Vx3DHLTAnalyzer",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+    process.pixelVertexDQM = DQMEDAnalyzer('Vx3DHLTAnalyzer',
                                             vertexCollection = cms.InputTag("pixelVertices"),
                                             debugMode        = cms.bool(True),
                                             nLumiReset       = cms.uint32(1),
@@ -157,7 +158,7 @@ if (process.runType.getRunType() == process.runType.hi_run):
 
     process.load("Configuration.StandardSequences.ReconstructionHeavyIons_cff") ## HI sequences
 
-    process.pixelVertexDQM = cms.EDAnalyzer("Vx3DHLTAnalyzer",
+    process.pixelVertexDQM = DQMEDAnalyzer('Vx3DHLTAnalyzer',
                                             vertexCollection = cms.InputTag("hiSelectedVertex"),
                                             debugMode        = cms.bool(True),
                                             nLumiReset       = cms.uint32(1),

@@ -3,6 +3,7 @@
 r'''
 cmsRelvalreport.py: a script to run performance tests and produce reports in a automated way.
 '''
+from __future__ import print_function
 
 import glob,re #Used for IgProf Analyse work with IgProf Mem profile dumps
 # Configuration parameters:#############################################################
@@ -27,7 +28,7 @@ valperf=cmssw_base+"/src/Validation/Performance"
 #Set the path depending on the presence of a locally checked out version of PyReleaseValidation
 if os.path.exists(pyrelvallocal):
     RELEASE='CMSSW_BASE'
-    print "Using LOCAL version of Configuration/PyReleaseValidation instead of the RELEASE version"
+    print("Using LOCAL version of Configuration/PyReleaseValidation instead of the RELEASE version")
 elif not os.path.exists(pyrelvallocal):
     RELEASE='CMSSW_RELEASE_BASE'
     
@@ -151,9 +152,9 @@ def logger(message,level=0):
     sys.stdout.flush()
     
     if level==0:
-        print message
+        print(message)
     if level==1 and DEBUG:
-        print message    
+        print(message)    
     
     sys.stdout.flush()
 
@@ -190,7 +191,7 @@ class Candles_file:
             for candle in candles_list:
                 info_dict={}
                 for child in candle.childNodes:# iteration over candle node children
-                    if not child.__dict__.has_key('nodeName'):# if just a text node skip!
+                    if 'nodeName' not in child.__dict__:# if just a text node skip!
                         #print 'CONTINUE!'
                         continue
                     # We pick the info from the node
@@ -300,7 +301,7 @@ class Profile:
         elif self.profiler=='None': #adding this for the case of candle ASCII file non-profiling commands
             return self._profile_None()
         else:
-            raise('No %s profiler found!' %self.profiler)
+            raise 'No %s profiler found!'
     #------------------------------------------------------------------
     def _profile_valgrindfce(self):
         '''
@@ -340,7 +341,7 @@ class Profile:
         elif self.profiler=='IgProf_mem':
             igprof_options+='-mp '
         else:
-            raise ('Unknown IgProf flavour: %s !'%self.profiler)
+            raise 'Unknown IgProf flavour: %s !'
         igprof_options+='-z -o %s' %(self.profile_name)
         
         # If we are using cmsDriver we should use the prefix switch 
@@ -550,7 +551,7 @@ class Profile:
                 if not IgProfDumps:
                     localFiles=os.listdir('.')
                     IgProfDumpProfilesPrevious=re.compile(r"\w+.\d+.gz")
-                    IgProfDumps=filter(lambda x: IgProfDumpProfilesPrevious.search(x),localFiles)
+                    IgProfDumps=[x for x in localFiles if IgProfDumpProfilesPrevious.search(x)]
                 #Now if there are dumps execute the following analyses:
                 if IgProfDumps:
                     IgProfDumps.sort()
@@ -814,7 +815,7 @@ def principal(options):
                 logger('Creating profile for command %d using %s ...' \
                                                 %(commands_counter,profiler))     
                 exit_code=performance_profile.make_profile()
-                print exit_code
+                print(exit_code)
                 logger('The exit code was %s'%exit_code)
                 exitCodeSum=exitCodeSum+exit_code #Add all exit codes into the global exitCodeSum in order to return it on cmsRelvareport.py exit.
                 logger('The exit code sum is %s'%exitCodeSum)
@@ -974,7 +975,7 @@ if __name__=="__main__":
     
     if not options.profile:
         if not os.path.exists(options.profile_name) and options.infile=='':
-            raise('Profile %s does not exist!' %options.profile_name)
+            raise 'Profile %s does not exist!'
         logger("WARNING: No profile will be generated. An existing one will be processed!")
     
     if options.command!='' and options.infile!='':

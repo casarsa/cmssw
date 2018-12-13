@@ -124,7 +124,7 @@ namespace sistrip {
       auto conns = cabling.fedConnections(lFedId);
           
       //construct FEDBuffer
-      std::auto_ptr<sistrip::FEDSpyBuffer> buffer;
+      std::unique_ptr<sistrip::FEDSpyBuffer> buffer;
       try {
 	buffer.reset(new sistrip::FEDSpyBuffer(input.data(),input.size()));
 	if (!buffer->doChecks() && !allowIncompleteEvents_) {
@@ -187,8 +187,9 @@ namespace sistrip {
 	  }
 	  continue;
 	}
-	//determine key from cabling
-	const uint32_t key = SiStripFedKey::fedIndex(lFedId,chan);
+
+	//determine key from cabling	
+	const uint32_t key = ( ( lFedId & sistrip::invalid_ ) << 16 ) | ( chan & sistrip::invalid_ );
 
 	// Start a new channel in the filler
 	dsvFiller.newChannel(key);
@@ -208,7 +209,7 @@ namespace sistrip {
     *aRunRef = lRef;
 
     //create DSV to return
-    std::auto_ptr<RawDigis> pResult = dsvFiller.createDetSetVector();
+    std::unique_ptr<RawDigis> pResult = dsvFiller.createDetSetVector();
     pDigis->swap(*pResult);
 
   } // end of SpyUnpacker::createDigis method.

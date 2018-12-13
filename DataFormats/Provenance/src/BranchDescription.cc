@@ -1,19 +1,19 @@
 #include "DataFormats/Provenance/interface/BranchDescription.h"
-#include "FWCore/Utilities/interface/Exception.h"
+
 #include "FWCore/Utilities/interface/EDMException.h"
+#include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/FriendlyName.h"
+#include "FWCore/Utilities/interface/FunctionWithDict.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
 #include "FWCore/Utilities/interface/WrappedClassName.h"
+
+#include "TDictAttributeMap.h"
 
 #include <cassert>
 #include <ostream>
 #include <sstream>
-#include <cstdlib>
 
-/*----------------------------------------------------------------------
-
-
-----------------------------------------------------------------------*/
+class TClass;
 
 namespace edm {
   BranchDescription::Transients::Transients() :
@@ -21,15 +21,17 @@ namespace edm {
     moduleName_(),
     branchName_(),
     wrappedName_(),
+    wrappedType_(),
+    unwrappedType_(),
+    splitLevel_(),
+    basketSize_(),
     produced_(false),
     onDemand_(false),
     dropped_(false),
     transient_(false),
-    wrappedType_(),
-    unwrappedType_(),
-    splitLevel_(),
-    basketSize_() {
-   }
+    availableOnlyAtEndTransition_(false),
+    isMergeable_(false) {
+  }
 
   void
   BranchDescription::Transients::reset() {
@@ -46,7 +48,7 @@ namespace edm {
     productInstanceName_(),
     branchAliases_(),
     aliasForBranchID_(),
-    transient_() {
+    transient_(){
     // do not call init here! It will result in an exception throw.
   }
 
@@ -61,6 +63,7 @@ namespace edm {
                         ParameterSetID const& parameterSetID,
                         TypeWithDict const& theTypeWithDict,
                         bool produced,
+                        bool availableOnlyAtEndTransition,
                         std::set<std::string> const& aliases) :
       branchType_(branchType),
       moduleLabel_(moduleLabel),
@@ -76,6 +79,7 @@ namespace edm {
     setOnDemand(false);
     transient_.moduleName_ = moduleName;
     transient_.parameterSetID_ = parameterSetID;
+    transient_.availableOnlyAtEndTransition_=availableOnlyAtEndTransition;
     setUnwrappedType(theTypeWithDict);
     init();
   }
@@ -97,6 +101,7 @@ namespace edm {
     setDropped(false);
     setProduced(aliasForBranch.produced());
     setOnDemand(aliasForBranch.onDemand());
+    transient_.availableOnlyAtEndTransition_=aliasForBranch.availableOnlyAtEndTransition();
     transient_.moduleName_ = aliasForBranch.moduleName();
     transient_.parameterSetID_ = aliasForBranch.parameterSetID();
     setUnwrappedType(aliasForBranch.unwrappedType());
@@ -118,10 +123,10 @@ namespace edm {
       << "' contains an underscore ('_'), which is illegal in the name of a product.\n";
     }
 
-    if(moduleLabel_.find(underscore) != std::string::npos) {
-      throw cms::Exception("IllegalCharacter") << "Module label '" << moduleLabel()
-      << "' contains an underscore ('_'), which is illegal in a module label.\n";
-    }
+    // Module labels of non-persistent products are allowed to contain
+    // underscores. For module labels of persistent products, the module
+    // label is checked for underscores in the function initFromDictionary
+    // after we determine whether the product is persistent or not.
 
     if(productInstanceName_.find(underscore) != std::string::npos) {
       throw cms::Exception("IllegalCharacter") << "Product instance name '" << productInstanceName()
@@ -162,52 +167,66 @@ namespace edm {
 
     try {
       setWrappedName(wrappedClassName(fullClassName()));
-      
       // unwrapped type.
       setUnwrappedType(TypeWithDict::byName(fullClassName()));
       if(!bool(unwrappedType())) {
-	setSplitLevel(invalidSplitLevel);
-	setBasketSize(invalidBasketSize);
-	setTransient(false);
-	return;
-      }
-
-
-      setWrappedType(TypeWithDict::byName(wrappedName()));
-      if(!bool(wrappedType())) {
-	setSplitLevel(invalidSplitLevel);
-	setBasketSize(invalidBasketSize);
-	return;
+        setSplitLevel(invalidSplitLevel);
+        setBasketSize(invalidBasketSize);
+        setTransient(false);
+        return;
       }
     } catch( edm::Exception& caughtException) {
       caughtException.addContext(std::string{"While initializing meta data for branch: "}+branchName());
       throw;
     }
-    Reflex::PropertyList wp = Reflex::Type::ByTypeInfo(wrappedType().typeInfo()).Properties();
-    setTransient((wp.HasProperty("persistent") ? wp.PropertyAsString("persistent") == std::string("false") : false));
-    if(transient()) {
-      setSplitLevel(invalidSplitLevel);
-      setBasketSize(invalidBasketSize);
-      return;
+
+    edm::TypeWithDict wrType(TypeWithDict::byName(wrappedName()));
+    try {
+      setWrappedType(wrType);
+      if(!bool(wrappedType())) {
+        setSplitLevel(invalidSplitLevel);
+        setBasketSize(invalidBasketSize);
+        return;
+      }
+    } catch( edm::Exception& caughtException) {
+      caughtException.addContext(std::string{"While initializing meta data for branch: "}+branchName());
+      throw;
     }
-    if(wp.HasProperty("splitLevel")) {
-      setSplitLevel(strtol(wp.PropertyAsString("splitLevel").c_str(), 0, 0));
-      if(splitLevel() < 0) {
+
+    setTransient(false);
+    setSplitLevel(invalidSplitLevel);
+    setBasketSize(invalidBasketSize);
+    TDictAttributeMap* wp = wrappedType().getClass()->GetAttributeMap();
+    if (wp && wp->HasKey("persistent") && !strcmp(wp->GetPropertyAsString("persistent"), "false")) {
+      // Set transient if persistent == "false".
+      setTransient(true);
+      return;
+    } else {
+      // Module labels of persistent products cannot contain underscores,
+      // but for non-persistent products it is allowed because path names
+      // are used as module labels for path status products and there
+      // are many path names that include underscores.
+      char const underscore('_');
+      if(moduleLabel_.find(underscore) != std::string::npos) {
+        throw cms::Exception("IllegalCharacter") << "Module label '" << moduleLabel()
+        << "' contains an underscore ('_'), which is illegal in a module label.\n";
+      }
+    }
+
+    if (wp && wp->HasKey("splitLevel")) {
+      setSplitLevel(strtol(wp->GetPropertyAsString("splitLevel"), nullptr, 0));
+      if (splitLevel() < 0) {
         throw cms::Exception("IllegalSplitLevel") << "' An illegal ROOT split level of " <<
-        splitLevel() << " is specified for class " << wrappedName() << ".'\n";
+          splitLevel() << " is specified for class " << wrappedName() << ".'\n";
       }
       setSplitLevel(splitLevel() + 1); //Compensate for wrapper
-    } else {
-      setSplitLevel(invalidSplitLevel);
     }
-    if(wp.HasProperty("basketSize")) {
-      setBasketSize(strtol(wp.PropertyAsString("basketSize").c_str(), 0, 0));
-      if(basketSize() <= 0) {
+    if (wp && wp->HasKey("basketSize")) {
+      setBasketSize(strtol(wp->GetPropertyAsString("basketSize"), nullptr, 0));
+      if (basketSize() <= 0) {
         throw cms::Exception("IllegalBasketSize") << "' An illegal ROOT basket size of " <<
-        basketSize() << " is specified for class " << wrappedName() << "'.\n";
+          basketSize() << " is specified for class " << wrappedName() << "'.\n";
       }
-    } else {
-      setBasketSize(invalidBasketSize);
     }
   }
 
@@ -336,4 +355,4 @@ namespace edm {
     }
     return differences.str();
   }
-}
+} // namespace edm

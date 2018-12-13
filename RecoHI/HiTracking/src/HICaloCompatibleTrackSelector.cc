@@ -18,10 +18,6 @@
 // Basic inclusion
 #include "RecoHI/HiTracking/interface/HICaloCompatibleTrackSelector.h"
 
-#include "DataFormats/RecoCandidate/interface/TrackAssociation.h"
-#include "SimTracker/Records/interface/TrackAssociatorRecord.h"
-#include "SimTracker/TrackAssociation/interface/TrackAssociatorByHits.h"
-
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
@@ -96,11 +92,11 @@ void HICaloCompatibleTrackSelector::produce( edm::Event& evt, const edm::EventSe
 
   evt.getByToken(srcTracks_,hSrcTrack);
   
-  selTracks_ = auto_ptr<TrackCollection>(new TrackCollection());
+  selTracks_ = std::make_unique<TrackCollection>();
   rTracks_ = evt.getRefBeforePut<TrackCollection>();      
   if (copyExtras_) {
-    selTrackExtras_ = auto_ptr<TrackExtraCollection>(new TrackExtraCollection());
-    selHits_ = auto_ptr<TrackingRecHitCollection>(new TrackingRecHitCollection());
+    selTrackExtras_ = std::make_unique<TrackExtraCollection>();
+    selHits_ = std::make_unique<TrackingRecHitCollection>();
     rHits_ = evt.getRefBeforePut<TrackingRecHitCollection>();
     rTrackExtras_ = evt.getRefBeforePut<TrackExtraCollection>();
   }
@@ -134,7 +130,7 @@ void HICaloCompatibleTrackSelector::produce( edm::Event& evt, const edm::EventSe
     selTracks_->push_back( reco::Track( trk ) ); // clone and store
     
     
-    if(isSelected) selTracks_->back().setQuality(reco::TrackBase::qualityByName(qualityToSet_.c_str()));
+    if(isSelected) selTracks_->back().setQuality(reco::TrackBase::qualityByName(qualityToSet_));
     
         
     if (copyExtras_) {
@@ -148,10 +144,11 @@ void HICaloCompatibleTrackSelector::produce( edm::Event& evt, const edm::EventSe
       TrackExtra & tx = selTrackExtras_->back();
       tx.setResiduals(trk.residuals());
       // TrackingRecHits
+      auto const firstHitIndex = selHits_->size();
       for( trackingRecHit_iterator hit = trk.recHitsBegin(); hit != trk.recHitsEnd(); ++ hit ) {
 	selHits_->push_back( (*hit)->clone() );
-	tx.add( TrackingRecHitRef( rHits_, selHits_->size() - 1) );
       }
+      tx.setHits( rHits_, firstHitIndex, selHits_->size() - firstHitIndex );
     }
     if (copyTrajectories_) {
       trackRefs_[current] = TrackRef(rTracks_, selTracks_->size() - 1);
@@ -165,9 +162,9 @@ void HICaloCompatibleTrackSelector::produce( edm::Event& evt, const edm::EventSe
     Handle< TrajTrackAssociationCollection > hTTAss;
     evt.getByToken(srcTrackTrajs_, hTTAss);
     evt.getByToken(srcTrackTrajAssoc_, hTraj);
-    selTrajs_ = auto_ptr< vector<Trajectory> >(new vector<Trajectory>()); 
+    selTrajs_ = std::make_unique<std::vector<Trajectory>>(); 
     rTrajectories_ = evt.getRefBeforePut< vector<Trajectory> >();
-    selTTAss_ = auto_ptr< TrajTrackAssociationCollection >(new TrajTrackAssociationCollection());
+    selTTAss_ = std::make_unique<TrajTrackAssociationCollection>();
     for (size_t i = 0, n = hTraj->size(); i < n; ++i) {
       Ref< vector<Trajectory> > trajRef(hTraj, i);
       TrajTrackAssociationCollection::const_iterator match = hTTAss->find(trajRef);
@@ -183,14 +180,14 @@ void HICaloCompatibleTrackSelector::produce( edm::Event& evt, const edm::EventSe
   }
   
   static const string emptyString;
-  evt.put(selTracks_);
+  evt.put(std::move(selTracks_));
   if (copyExtras_ ) {
-    evt.put(selTrackExtras_); 
-    evt.put(selHits_);
+    evt.put(std::move(selTrackExtras_)); 
+    evt.put(std::move(selHits_));
   }
   if ( copyTrajectories_ ) {
-    evt.put(selTrajs_);
-    evt.put(selTTAss_);
+    evt.put(std::move(selTrajs_));
+    evt.put(std::move(selTTAss_));
   }
 }
 

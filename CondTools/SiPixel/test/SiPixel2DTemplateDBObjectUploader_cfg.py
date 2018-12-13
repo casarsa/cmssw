@@ -1,3 +1,4 @@
+from __future__ import print_function
 #  Marc Osherson, Test Code for Pixel Template Uploader
 #     Oct 2012
 
@@ -48,13 +49,13 @@ if ( MagFieldValue==3.8 or MagFieldValue==38 ):
 
  			
 else :
-    print 'ERROR... please use values 38 and v3.'
+    print('ERROR... please use values 38 and v3.')
 
 
 template_base = 'SiPixel2DTemplateDBObject' + MagFieldString + 'T'
 #theTemplateBaseString = cms.string(template_base)
 
-print '\nUploading %s%s with record SiPixel2DTemplateDBObjectRcd in file siPixel2DTemplates%sT_IOV5.db\n' % (template_base,version,MagFieldString)
+print('\nUploading %s%s with record SiPixel2DTemplateDBObjectRcd in file siPixel2DTemplates%sT_IOV5.db\n' % (template_base,version,MagFieldString))
 
 process.source = cms.Source("EmptyIOVSource",
                             timetype = cms.string('runnumber'),
@@ -83,7 +84,7 @@ process.PoolDBOutputService = cms.Service("PoolDBOutputService",
 process.uploader = cms.EDAnalyzer("SiPixel2DTemplateDBObjectUploader",
                                   siPixelTemplateCalibrations = files_to_upload,
                                   theTemplateBaseString = cms.string(template_base),
-                                  Version = cms.double("17.0"),
+                                  Version = cms.double(17.0),
                                   MagField = cms.double(MagFieldValue),
                                   templateIds = theTemplateIds
 )

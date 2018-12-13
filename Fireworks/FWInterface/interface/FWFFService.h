@@ -35,7 +35,7 @@ class FWFFService : public CmsShowMainBase
 {
 public:
    FWFFService(const edm::ParameterSet&, edm::ActivityRegistry&);
-   virtual ~FWFFService();
+   ~FWFFService() override;
 
    // ---------- const member functions ---------------------
 
@@ -55,20 +55,20 @@ public:
    TEveMagField* getMagField();
    void          setupFieldForPropagator(TEveTrackPropagator* prop);
 
-   virtual void checkPosition();
-   virtual void stopPlaying() {}
-   virtual void autoLoadNewEvent() {}
+   void checkPosition() override;
+   void stopPlaying() override {}
+   void autoLoadNewEvent() override {}
 
-   void quit();
+   void quit() override;
 private:
-   FWFFService(const FWFFService&);                  // stop default
-   const FWFFService& operator=(const FWFFService&); // stop default
+   FWFFService(const FWFFService&) = delete;                  // stop default
+   const FWFFService& operator=(const FWFFService&) = delete; // stop default
 
    // ---------- member data --------------------------------
    
-   std::auto_ptr<FWFFNavigator>        m_navigator;
-   std::auto_ptr<FWFFMetadataManager>  m_metadataManager;
-   std::auto_ptr<fireworks::Context>   m_context;
+   std::unique_ptr<FWFFNavigator>        m_navigator;
+   std::unique_ptr<FWFFMetadataManager>  m_metadataManager;
+   std::unique_ptr<fireworks::Context>   m_context;
 
    FWFFHelper    m_appHelper;
    TEveManager  *m_EveManager;

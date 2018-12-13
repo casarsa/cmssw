@@ -1,3 +1,4 @@
+from __future__ import print_function
 #!/usr/bin/env cmsRun
 
 import FWCore.ParameterSet.Config as cms
@@ -13,23 +14,23 @@ from RecoTauTag.TauTagTools.MVASteering_cfi import *
 
 # Make sure we are only dealing w/ one algorithm...
 if len(myTauAlgorithms) > 1:
-   raise RuntimeError, "ERROR: more than one tau algorithm is defined in MVASteering.py; this feature should be used only for algorithm evaluation.  \
-         Please modify it so that it only includeds the algorithm on which the TaNC is to be used."
+   raise RuntimeError("ERROR: more than one tau algorithm is defined in MVASteering.py; this feature should be used only for algorithm evaluation.  \
+         Please modify it so that it only includeds the algorithm on which the TaNC is to be used.")
 
 algorithm = myTauAlgorithms[0]
 myconnect   = cms.string('sqlite_file:TancLocal.db')  #or frontier, etc
 mytag       = cms.string('TauNeuralClassifier_v2')
 mytimetype  = cms.untracked.string('runnumber')
 
-print ""
-print "***************************************************"
-print "******  Upload Tau Neural Classifier to DB   ******"
-print "***************************************************"
-print "*  Using the %s algorithm                         " % algorithm
-print "*  DB tag:       %s                               " % mytag.value()
-print "*  Database:     %s                               " % myconnect.value()
-print "*  Timetype:     %s                               " % mytimetype.value()
-print "* ----------------------------------------------- "
+print("")
+print("***************************************************")
+print("******  Upload Tau Neural Classifier to DB   ******")
+print("***************************************************")
+print("*  Using the %s algorithm                         " % algorithm)
+print("*  DB tag:       %s                               " % mytag.value())
+print("*  Database:     %s                               " % myconnect.value())
+print("*  Timetype:     %s                               " % mytimetype.value())
+print("* ----------------------------------------------- ")
 
 
 process = cms.Process("TaNCCondUpload")

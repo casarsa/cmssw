@@ -23,14 +23,14 @@ class BufferedBoostIODBWriter : public edm::EDAnalyzer
 {
 public:
     explicit BufferedBoostIODBWriter(const edm::ParameterSet&);
-    virtual ~BufferedBoostIODBWriter() {}
+    ~BufferedBoostIODBWriter() override {}
 
 private:
-    BufferedBoostIODBWriter();
-    BufferedBoostIODBWriter(const BufferedBoostIODBWriter&);
-    BufferedBoostIODBWriter& operator=(const BufferedBoostIODBWriter&);
+    BufferedBoostIODBWriter() = delete;
+    BufferedBoostIODBWriter(const BufferedBoostIODBWriter&) = delete;
+    BufferedBoostIODBWriter& operator=(const BufferedBoostIODBWriter&) = delete;
 
-    virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
+    void analyze(const edm::Event&, const edm::EventSetup&) override;
 
     std::string inputFile;
     std::string record;
@@ -45,7 +45,7 @@ BufferedBoostIODBWriter::BufferedBoostIODBWriter(const edm::ParameterSet& ps)
 void BufferedBoostIODBWriter::analyze(const edm::Event& iEvent,
                                       const edm::EventSetup& iSetup)
 {
-    std::auto_ptr<OOTPileupCorrectionBuffer> fcp;
+    std::unique_ptr<OOTPileupCorrectionBuffer> fcp;
 
     {
         std::ifstream input(inputFile.c_str(), std::ios_base::binary);
@@ -59,7 +59,7 @@ void BufferedBoostIODBWriter::analyze(const edm::Event& iEvent,
                 << "Failed to stat file \"" << inputFile << '"' << std::endl;
 
         const std::size_t len = st.st_size;
-        fcp = std::auto_ptr<OOTPileupCorrectionBuffer>(
+        fcp = std::unique_ptr<OOTPileupCorrectionBuffer>(
             new OOTPileupCorrectionBuffer(len));
         assert(fcp->length() == len);
         if (len)

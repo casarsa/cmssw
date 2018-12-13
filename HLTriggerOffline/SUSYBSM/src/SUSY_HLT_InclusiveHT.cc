@@ -39,11 +39,6 @@ void SUSY_HLT_InclusiveHT::dqmBeginRun(edm::Run const &, edm::EventSetup const &
   bookHistos(ibooker_);
 }
 
-void SUSY_HLT_InclusiveHT::beginLuminosityBlock(edm::LuminosityBlock const& lumiSeg,
-  edm::EventSetup const& context)
-{
-   edm::LogInfo("SUSY_HLT_InclusiveHT") << "SUSY_HLT_InclusiveHT::beginLuminosityBlock" << std::endl;
-}
 
 void SUSY_HLT_InclusiveHT::analyze(edm::Event const& e, edm::EventSetup const& eSetup){
   edm::LogInfo("SUSY_HLT_InclusiveHT") << "SUSY_HLT_InclusiveHT::analyze" << std::endl;
@@ -118,11 +113,11 @@ void SUSY_HLT_InclusiveHT::analyze(edm::Event const& e, edm::EventSetup const& e
   const edm::TriggerNames& trigNames = e.triggerNames(*hltresults);
   unsigned int numTriggers = trigNames.size();
   for( unsigned int hltIndex=0; hltIndex<numTriggers; ++hltIndex ){
-    if (trigNames.triggerName(hltIndex)==triggerPath_ && hltresults->wasrun(hltIndex) && hltresults->accept(hltIndex)) hasFired = true;
-    if (trigNames.triggerName(hltIndex)==triggerPathAuxiliaryForHadronic_ && hltresults->wasrun(hltIndex) && hltresults->accept(hltIndex)) hasFiredAuxiliaryForHadronicLeg = true;
+    if (trigNames.triggerName(hltIndex).find(triggerPath_) != std::string::npos && hltresults->wasrun(hltIndex) && hltresults->accept(hltIndex)) hasFired = true;
+    if (trigNames.triggerName(hltIndex).find(triggerPathAuxiliaryForHadronic_) != std::string::npos && hltresults->wasrun(hltIndex) && hltresults->accept(hltIndex)) hasFiredAuxiliaryForHadronicLeg = true;
   }
 
-  if(hasFiredAuxiliaryForHadronicLeg) {
+  if(hasFiredAuxiliaryForHadronicLeg || !e.isRealData()) {
     float caloHT = 0.0;
     float pfHT = 0.0;
     for (reco::PFJetCollection::const_iterator i_pfjet = pfJetCollection->begin(); i_pfjet != pfJetCollection->end(); ++i_pfjet){
@@ -162,10 +157,6 @@ void SUSY_HLT_InclusiveHT::analyze(edm::Event const& e, edm::EventSetup const& e
 }
 
 
-void SUSY_HLT_InclusiveHT::endLuminosityBlock(edm::LuminosityBlock const& lumiSeg, edm::EventSetup const& eSetup)
-{
-  edm::LogInfo("SUSY_HLT_InclusiveHT") << "SUSY_HLT_InclusiveHT::endLuminosityBlock" << std::endl;
-}
 
 
 void SUSY_HLT_InclusiveHT::endRun(edm::Run const& run, edm::EventSetup const& eSetup)

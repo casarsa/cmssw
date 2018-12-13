@@ -10,6 +10,7 @@
 #include <string>
 
 #include "EventFilter/SiStripRawToDigi/interface/SiStripFEDBufferGenerator.h"
+#include "WarningSummary.h"
 
 class SiStripFedCabling;
 class FEDRawDataCollection;
@@ -29,19 +30,34 @@ namespace sistrip {
     
   public: // ----- public interface -----
     
-    DigiToRaw( FEDReadoutMode, bool use_fed_key );
+    DigiToRaw(FEDReadoutMode mode, uint8_t packetCode, bool use_fed_key);
     ~DigiToRaw();
     
+    //digi to raw with default headers
     void createFedBuffers( edm::Event&, 
 			   edm::ESHandle<SiStripFedCabling>& cabling,
 			   edm::Handle< edm::DetSetVector<SiStripDigi> >& digis,
-			   std::auto_ptr<FEDRawDataCollection>& buffers );
+			   std::unique_ptr<FEDRawDataCollection>& buffers );
     void createFedBuffers( edm::Event&, 
 			   edm::ESHandle<SiStripFedCabling>& cabling,
 			   edm::Handle< edm::DetSetVector<SiStripRawDigi> >& digis,
-			   std::auto_ptr<FEDRawDataCollection>& buffers);
+			   std::unique_ptr<FEDRawDataCollection>& buffers);
+
+    //with input raw data for copying header   
+    void createFedBuffers( edm::Event&, 
+			   edm::ESHandle<SiStripFedCabling>& cabling,
+			   edm::Handle<FEDRawDataCollection> & rawbuffers,
+			   edm::Handle< edm::DetSetVector<SiStripDigi> >& digis,
+			   std::unique_ptr<FEDRawDataCollection>& buffers );
+    void createFedBuffers( edm::Event&, 
+			   edm::ESHandle<SiStripFedCabling>& cabling,
+			   edm::Handle<FEDRawDataCollection> & rawbuffers,
+			   edm::Handle< edm::DetSetVector<SiStripRawDigi> >& digis,
+			   std::unique_ptr<FEDRawDataCollection>& buffers);
     
     inline void fedReadoutMode( FEDReadoutMode mode ) { mode_ = mode; }
+
+    void printWarningSummary() const { warnings_.printSummary(); }
 
   private: // ----- private data members -----
     
@@ -49,15 +65,28 @@ namespace sistrip {
     void createFedBuffers_( edm::Event&, 
 			    edm::ESHandle<SiStripFedCabling>& cabling,
 			    edm::Handle< edm::DetSetVector<Digi_t> >& digis,
-			    std::auto_ptr<FEDRawDataCollection>& buffers,
+			    std::unique_ptr<FEDRawDataCollection>& buffers,
 			    bool zeroSuppressed);
+
+    template<class Digi_t>
+    void createFedBuffers_( edm::Event&, 
+			    edm::ESHandle<SiStripFedCabling>& cabling,
+			    edm::Handle<FEDRawDataCollection> & rawbuffers,
+			    edm::Handle< edm::DetSetVector<Digi_t> >& digis,
+			    std::unique_ptr<FEDRawDataCollection>& buffers,
+			    bool zeroSuppressed);
+
+
+
     uint16_t STRIP(const edm::DetSet<SiStripDigi>::const_iterator& it, const edm::DetSet<SiStripDigi>::const_iterator& begin) const;
     uint16_t STRIP(const edm::DetSet<SiStripRawDigi>::const_iterator& it, const edm::DetSet<SiStripRawDigi>::const_iterator& begin) const;
     
     FEDReadoutMode mode_;
+    uint8_t packetCode_;
     bool useFedKey_;
     FEDBufferGenerator bufferGenerator_;
-    
+
+    WarningSummary warnings_;
   };
   
 }

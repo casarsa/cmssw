@@ -20,7 +20,7 @@ process.MessageLogger = cms.Service("MessageLogger",
     destinations = cms.untracked.vstring('cout')
 )
 
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 process.GlobalTag.globaltag = "GLOBALTAGTEMPLATE"
 
@@ -59,7 +59,8 @@ process.eventInfoProvider = cms.EDFilter("EventCoordinatesSource",
     eventInfoFolder = cms.untracked.string('EventInfo/')
 )
 
-process.DTkFactValidation = cms.EDAnalyzer("DTCalibValidation",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.DTkFactValidation = DQMEDAnalyzer('DTCalibValidation',
     # Write the histos on file
     OutputMEsInRootFile = cms.bool(True),
     # Lable to retrieve 2D segments from the event

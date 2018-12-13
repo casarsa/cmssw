@@ -11,7 +11,6 @@
  *
  */
 
-#include <boost/foreach.hpp>
 #include <memory>
 
 #include "FWCore/Framework/interface/EDFilter.h"
@@ -52,7 +51,7 @@ template<typename T>
 class RecoTauDiscriminatorRefSelectorImpl : public edm::EDFilter {
   public:
     explicit RecoTauDiscriminatorRefSelectorImpl(const edm::ParameterSet &pset);
-    ~RecoTauDiscriminatorRefSelectorImpl() {}
+    ~RecoTauDiscriminatorRefSelectorImpl() override {}
     bool filter(edm::Event &evt, const edm::EventSetup &es) override;
   private:
     typedef typename T::OutputType OutputType;
@@ -85,18 +84,16 @@ bool RecoTauDiscriminatorRefSelectorImpl<T>::filter(edm::Event& evt,
   edm::Handle<reco::PFTauDiscriminator> disc;
   evt.getByLabel(discriminatorSrc_, disc);
 
-//  std::auto_ptr<reco::PFTauRefVector> output(
-//      new reco::PFTauRefVector(inputRefs.id()));
-  //std::auto_ptr<OutputType> output(
-  //    new OutputType(inputRefs.id()));
-  std::auto_ptr<OutputType> output(new OutputType);
+//  auto output = std::make_unique<reco::PFTauRefVector>(inputRefs.id());
+  //auto output = std::make_unique<OutputType>(inputRefs.id());
+  auto output = std::make_unique<OutputType>();
 
-  BOOST_FOREACH(reco::PFTauRef ref, inputRefs) {
+  for(const auto& ref : inputRefs) {
     if ( (*disc)[ref] > cut_ )
       output->push_back(T::make(ref));
   }
   size_t selected = output->size();
-  evt.put(output);
+  evt.put(std::move(output));
   return (!filter_ || selected);
 }
 

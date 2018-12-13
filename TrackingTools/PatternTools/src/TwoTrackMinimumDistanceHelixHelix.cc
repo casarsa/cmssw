@@ -3,35 +3,12 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Utilities/interface/isFinite.h"
 
 using namespace std;
 
-namespace {
-  inline GlobalPoint operator - ( const GlobalPoint & a, const GlobalPoint & b ){
-    return GlobalPoint ( a.basicVector() - b.basicVector() );
-  }
-
-  inline GlobalPoint operator + ( const GlobalPoint & a, const GlobalPoint & b ){
-    return GlobalPoint ( a.basicVector() + b.basicVector() );
-  }
-
-  inline GlobalPoint operator / ( const GlobalPoint & a, const double b ){
-    return GlobalPoint ( a.basicVector() / b );
-  }
-
-  inline GlobalPoint operator * ( const GlobalPoint & a, const float b ){
-    return GlobalPoint ( a.basicVector() * b );
-  }
-
-  inline GlobalPoint operator * ( const float b , const GlobalPoint & a ){
-    return GlobalPoint ( a.basicVector() * b );
-  }
-
-  inline double square ( const double s ) { return s*s; }
-}
-
 TwoTrackMinimumDistanceHelixHelix::TwoTrackMinimumDistanceHelixHelix():
-theH(0), theG(0), pointsUpdated(false), themaxjump(20),thesingjacI(1./0.1), themaxiter(4)
+theH(nullptr), theG(nullptr), pointsUpdated(false), themaxjump(20),thesingjacI(1./0.1), themaxiter(4)
 { }
 
 TwoTrackMinimumDistanceHelixHelix::~TwoTrackMinimumDistanceHelixHelix() {}
@@ -98,7 +75,7 @@ bool TwoTrackMinimumDistanceHelixHelix::updateCoeffs(
   return false;
 }
 
-bool TwoTrackMinimumDistanceHelixHelix::oneIteration(double & dH, double & dG ) const {
+bool TwoTrackMinimumDistanceHelixHelix::oneIteration(double & dH, double & dG ) {
   thesinpH=sin(thepH);
   thecospH=cos(thepH);
   thesinpG=sin(thepG);
@@ -147,7 +124,10 @@ bool TwoTrackMinimumDistanceHelixHelix::calculate(
   theH= &H;
   bool retval=false;
   
-  if ( updateCoeffs ( theG->position(), theH->position() ) ) return true;
+  if ( updateCoeffs ( theG->position(), theH->position() ) ){
+    finalPoints();
+    return true;
+  }
   
   thepG = thepG0;
   thepH = thepH0;
@@ -156,16 +136,20 @@ bool TwoTrackMinimumDistanceHelixHelix::calculate(
   double pH=0; double pG=0;
   do {
     retval=oneIteration ( pG, pH );
-    if ( std::isinf(pG) || std::isinf(pH) ) retval=true;
+    if ( edm::isNotFinite(pG) || edm::isNotFinite(pH) ) retval=true;
     if ( counter++>themaxiter ) retval=true;
   } while ( (!retval) && ( fabs(pG) > qual || fabs(pH) > qual ));
   if ( fabs ( theg * ( thepG - thepG0 ) ) > themaxjump ) retval=true;
   if ( fabs ( theh * ( thepH - thepH0 ) ) > themaxjump ) retval=true;
+
+  finalPoints();
+
   return retval;
 }
 
 
-void TwoTrackMinimumDistanceHelixHelix::finalPoints() const {
+void TwoTrackMinimumDistanceHelixHelix::finalPoints() {
+  if (pointsUpdated) return;
   GlobalVector tmpG( sin(thepG) - thesinpG0,
 		   - cos(thepG) + thecospG0,
 		   thetanlambdaG * ( thepG- thepG0 ) 

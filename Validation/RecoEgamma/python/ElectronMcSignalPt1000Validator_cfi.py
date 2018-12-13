@@ -21,10 +21,12 @@ electronMcSignalHistosCfg = cms.PSet(
   Nbinmee = cms.int32(100), Meemin = cms.double(0.0), Meemax = cms.double(150.),
   Nbinhoe = cms.int32(100), Hoemin = cms.double(0.0), Hoemax = cms.double(0.5),
   Nbinpoptrue = cms.int32(75), Poptruemin = cms.double(0.0), Poptruemax = cms.double(1.5),
-  Nbinerror = cms.int32(30), Energyerrormax = cms.double(150.0)
+  Nbinerror = cms.int32(30), Energyerrormax = cms.double(150.0),
+  EfficiencyFlag = cms.bool(True), StatOverflowFlag = cms.bool(False)
 )
 
-electronMcSignalValidator = cms.EDAnalyzer("ElectronMcSignalValidator",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+electronMcSignalValidator = DQMEDAnalyzer('ElectronMcSignalValidator',
 
   Verbosity = cms.untracked.int32(0),
   FinalStep = cms.string("AtRunEnd"),
@@ -38,6 +40,9 @@ electronMcSignalValidator = cms.EDAnalyzer("ElectronMcSignalValidator",
   electronCoreCollection = cms.InputTag("gedGsfElectronCores"),
   electronTrackCollection = cms.InputTag("electronGsfTracks"),
   electronSeedCollection = cms.InputTag("electronMergedSeeds"),
+  # ajout 09/02/2015
+  offlinePrimaryVertices = cms.InputTag("offlinePrimaryVertices"),
+  # fin ajout
   
   beamSpot = cms.InputTag("offlineBeamSpot"),
   readAOD = cms.bool(False),

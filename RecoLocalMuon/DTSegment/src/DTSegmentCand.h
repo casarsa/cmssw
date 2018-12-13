@@ -96,6 +96,7 @@ class DTSegmentCand{
     virtual void setDirection(LocalVector& dir) { theDirection = dir; }
 
     /// add hits to the hit list.
+    virtual void add(AssPoint newHit) ;
     virtual void add(std::shared_ptr<DTHitPairForFit> hit, DTEnums::DTCellSide code) ;
 
     /// remove hit from the candidate
@@ -119,9 +120,9 @@ class DTSegmentCand{
 
     /// number of different layers with hits
     virtual int nLayers() const ;
-    
+
     /// the used hits
-    virtual AssPointCont hits() const { return theHits;}
+    virtual const AssPointCont& hits() const { return theHits;}
 
     /// convert this DTSegmentCand into a DTRecSegment2D
     //  DTSLRecSegment2D* convert() const;
@@ -131,8 +132,7 @@ class DTSegmentCand{
     /// convert this DTSegmentCand into a DTChamberRecSegment2D
     operator DTChamberRecSegment2D*() const;
 
-    struct AssPointLessZ : 
-      public std::binary_function<const AssPoint&, const AssPoint&, bool> {
+    struct AssPointLessZ {
         public:
           bool operator()(const AssPoint& pt1, 
                           const AssPoint& pt2) const ; 

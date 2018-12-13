@@ -1,5 +1,7 @@
 #include <iostream>
 #include <algorithm> 
+#include <map>
+#include <utility>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
@@ -107,22 +109,36 @@ GenLumiInfoProduct::~GenLumiInfoProduct()
 
 bool GenLumiInfoProduct::mergeProduct(GenLumiInfoProduct const &other)
 {
-  if ( (*this) != other)
-    {
+  std::map<int, ProcessInfo> processes;
+  
+  for(unsigned int i = 0; i < getProcessInfos().size(); i++) {
+    int id = getProcessInfos()[i].process();
+    ProcessInfo &x = processes[id];
+    x=getProcessInfos()[i];
+  }
+  
+  // the two GenLuminInfoProducts may not have the same number
+  // of processes
+  for(unsigned int i = 0; i < other.getProcessInfos().size(); i++) {
+    int id = other.getProcessInfos()[i].process();
+    ProcessInfo &x = processes[id];
+    if(x.lheXSec().value()>0)
+      x.addOthers(other.getProcessInfos()[i]);
+    else 
+      x = other.getProcessInfos()[i];
+  }
 
-      edm::LogWarning("GenLumiInfoProduct|ProductsNotMergeable")
-	<< "You are merging runs with different cross-sections"
-	"The resulting cross-section will not be consistent." << std::endl;
-
-      return false;
-    }
-  for(unsigned int i=0; i < internalProcesses_.size(); i++)
-    {
-      internalProcesses_[i].addOthers(other.getProcessInfos()[i]);
-      
-    }
-    
+  internalProcesses_.resize(processes.size());
+  unsigned int i = 0;
+  for(std::map<int, ProcessInfo>::const_iterator iter = processes.begin();
+      iter != processes.end(); ++iter, i++) 
+	internalProcesses_[i]=iter->second;
   return true;
+}
+
+void GenLumiInfoProduct::swap(GenLumiInfoProduct& other) {
+  std::swap(hepidwtup_, other.hepidwtup_);
+  internalProcesses_.swap(other.internalProcesses_);
 }
 
 bool GenLumiInfoProduct::isProductEqual(GenLumiInfoProduct const &other) const
@@ -130,14 +146,4 @@ bool GenLumiInfoProduct::isProductEqual(GenLumiInfoProduct const &other) const
   return ((*this) == other);
 }
 
-
-bool GenLumiInfoProduct::samePhysics(GenLumiInfoProduct const &other) const
-{
-
-  unsigned int lhssize=getProcessInfos().size();
-  unsigned int rhssize=other.getProcessInfos().size();  
-  return ( (getHEPIDWTUP() == other.getHEPIDWTUP()) &&
-	   (lhssize == rhssize));
-
-}
 

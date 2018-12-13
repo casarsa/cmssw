@@ -18,7 +18,6 @@
 
 // system include files
 #include <memory>
-#include <functional>
 #include <unistd.h>
 
 
@@ -56,7 +55,7 @@
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DQMServices/Core/interface/MonitorElement.h"
 
-
+#include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 // Trigger Headers
 
 
@@ -65,7 +64,7 @@
 // class declaration
 //
 
-class L1TCompare : public edm::EDAnalyzer {
+class L1TCompare : public DQMEDAnalyzer {
 
 public:
 
@@ -73,25 +72,18 @@ public:
   L1TCompare(const edm::ParameterSet& ps);
 
 // Destructor
- virtual ~L1TCompare();
+ ~L1TCompare() override;
 
 protected:
 // Analyze
- void analyze(const edm::Event& e, const edm::EventSetup& c);
-
-// BeginJob
- void beginJob(void);
+ void analyze(const edm::Event& e, const edm::EventSetup& c) override;
 
 // BeginRun
- void beginRun(edm::Run const& iRun, edm::EventSetup const& iSetup);
-
-
-// EndJob
- void endJob(void);
+  void bookHistograms(DQMStore::IBooker &ibooker, edm::Run const&, edm::EventSetup const&) override;
+  void dqmBeginRun(edm::Run const&, edm::EventSetup const&) override;
 
 private:
   // ----------member data ---------------------------
-  DQMStore * dbe;
 
   // ++ RCT-GCT
   // - iso
@@ -142,29 +134,24 @@ private:
   };
   typedef std::vector<L1TCompare::RctObject> RctObjectCollection;
 
-  // functor for sorting the above collection based on rank.
+  // function for sorting the above collection based on rank.
   // note it's then reverse-sorted (low to high) so you have to use
   // the rbegin() and rend() and reverse_iterators.
-  class RctObjectComp: public std::binary_function<L1TCompare::RctObject, 
-						   L1TCompare::RctObject, bool>
+  static bool rctObjectComp(const RctObject &a, const RctObject &b)
   {
-  public:
-    bool operator()(const RctObject &a, const RctObject &b) const
-    {
-      // for equal rank I don't know what the appropriate sorting is.
-      if ( a.rank_ == b.rank_ ) {
-	if ( a.eta_ == b.eta_ ) {
-	  return a.phi_ < b.phi_;
-	}
-	else {
-	  return a.eta_ < b.eta_;
-	}
+    // for equal rank I don't know what the appropriate sorting is.
+    if ( a.rank_ == b.rank_ ) {
+      if ( a.eta_ == b.eta_ ) {
+        return a.phi_ < b.phi_;
       }
       else {
-	return a.rank_ < b.rank_;
+        return a.eta_ < b.eta_;
       }
     }
-  };
+    else {
+      return a.rank_ < b.rank_;
+    }
+  }
 
 
 };

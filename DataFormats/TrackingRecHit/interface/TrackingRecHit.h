@@ -12,9 +12,6 @@
 
 
 #include "FWCore/Utilities/interface/GCC11Compatibility.h"
-#if !defined(__CINT__) && !defined(__MAKECINT__) && !defined(__REFLEX__)
-#define NO_DICT
-#endif
 
 #include<vector>
 #include<memory>
@@ -26,7 +23,7 @@ class KfComponentsHolder;
 class TrackingRecHit {
 public:
 
-#ifdef NO_DICT
+#ifndef __GCCXML__
    using      RecHitPointer = std::shared_ptr<TrackingRecHit const>;  // requires to much editing
    using ConstRecHitPointer = std::shared_ptr<TrackingRecHit const>;   
 #else
@@ -50,7 +47,7 @@ public:
    *   bad      = there were many bad strips within the ellipse (in Tracker)
    *            = hit is compatible with the trajectory, but chi2 is too large (in Muon System)
    */
-  enum Type { valid = 0, missing = 1, inactive = 2, bad = 3, missing_inner = 4, missing_outer = 5};
+  enum Type { valid = 0, missing = 1, inactive = 2, bad = 3, missing_inner = 4, missing_outer = 5, inactive_inner = 6, inactive_outer = 7};
   static const int typeMask = 0xf;  // mask for the above
   static const int rttiShift = 24; // shift amount to get the rtti
  
@@ -75,7 +72,7 @@ public:
 
   
   virtual TrackingRecHit * clone() const = 0;
-#ifdef NO_DICT
+#ifndef __GCCXML__
   virtual RecHitPointer cloneSH() const { return RecHitPointer(clone());}
   // clone and add the geom (ready for refit)
   RecHitPointer cloneForFit(const GeomDet & idet) const {
@@ -105,7 +102,7 @@ public:
   virtual std::vector<TrackingRecHit*> recHits() = 0;
   virtual void recHitsV(std::vector<TrackingRecHit*> & );
 
-#ifdef NO_DICT
+#ifndef __GCCXML__
   virtual ConstRecHitContainer transientHits() const {
     ConstRecHitContainer result;
     std::vector<const TrackingRecHit*> hits;
@@ -170,12 +167,12 @@ public:
 private:
   friend class  TkCloner;
   // double dispatch
-  virtual TrackingRecHit * clone(TkCloner const&, TrajectoryStateOnSurface const&) const {
+  virtual TrackingRecHit * clone_(TkCloner const&, TrajectoryStateOnSurface const&) const {
     assert("clone"==nullptr);
     return clone(); // default
   }
-#ifdef NO_DICT
-  virtual  RecHitPointer cloneSH(TkCloner const&, TrajectoryStateOnSurface const&) const {
+#ifndef __GCCXML__
+  virtual  RecHitPointer cloneSH_(TkCloner const&, TrajectoryStateOnSurface const&) const {
     assert("cloneSH"==nullptr);
     return cloneSH(); // default
   }

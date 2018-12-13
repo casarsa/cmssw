@@ -36,8 +36,8 @@ class ZMuMuIsolationAnalyzer : public edm::EDAnalyzer {
 public:
   ZMuMuIsolationAnalyzer(const edm::ParameterSet& pset);
 private:
-  virtual void analyze(const edm::Event& event, const edm::EventSetup& setup) override;
-  virtual void endJob() override;
+  void analyze(const edm::Event& event, const edm::EventSetup& setup) override;
+  void endJob() override;
   EDGetTokenT<CandidateView> srcToken;
   double dRVeto;
   double dRTrk, dREcal, dRHcal;
@@ -62,7 +62,7 @@ private:
   template<typename T>
   MuTag muTag(const T & mu) const;
   void Deposits(const pat::IsoDeposit* isodep, double dR_max,  TH1F* hist);
-  void histo(const TH1F* hist, const char* cx, const char* cy) const;
+  void histo(TH1F* hist, const char* cx, const char* cy) const;
 };
 
 template<typename T>
@@ -78,7 +78,7 @@ ZMuMuIsolationAnalyzer::MuTag ZMuMuIsolationAnalyzer::muTag(const T& mu) const {
  return muFromOther;
   }
   const Candidate * moth1 = p->mother();
-  if(moth1 == 0) {
+  if(moth1 == nullptr) {
     return muFromOther;
     //cout<<"no mother "<<endl;
   }
@@ -88,7 +88,7 @@ ZMuMuIsolationAnalyzer::MuTag ZMuMuIsolationAnalyzer::muTag(const T& mu) const {
     //cout<<"mother is not a muon"<<endl;
   }
   const Candidate * moth2 = moth1->mother();
-  if(moth2 == 0) {
+  if(moth2 == nullptr) {
     return muFromOther;
     //cout<<"no mother "<<endl;
 }
@@ -114,7 +114,7 @@ void ZMuMuIsolationAnalyzer::Deposits(const pat::IsoDeposit* isodep,double dR_ma
   }
 }
 
-void ZMuMuIsolationAnalyzer::histo(const TH1F* hist, const char* cx, const char*cy) const{
+void ZMuMuIsolationAnalyzer::histo(TH1F* hist, const char* cx, const char*cy) const{
   hist->GetXaxis()->SetTitle(cx);
   hist->GetYaxis()->SetTitle(cy);
   hist->GetXaxis()->SetTitleOffset(1);

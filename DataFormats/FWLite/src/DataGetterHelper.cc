@@ -29,6 +29,7 @@
 
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/Utilities/interface/FunctionWithDict.h"
 #include "FWCore/Utilities/interface/TypeID.h"
 #include "FWCore/Utilities/interface/TypeWithDict.h"
 #include "FWCore/Utilities/interface/WrappedClassName.h"
@@ -43,6 +44,7 @@ namespace fwlite {
     //
     // empty object used to signal that the branch requested was not found
     static internal::Data branchNotFound;
+    static char kEmptyString[1] = {0};
 
     //
     // constructors and destructor
@@ -51,17 +53,19 @@ namespace fwlite {
                                        std::shared_ptr<HistoryGetterBase> historyGetter,
                                        std::shared_ptr<BranchMapReader> branchMap,
                                        std::shared_ptr<edm::EDProductGetter> getter,
-                                       bool useCache):
+                                       bool useCache, std::function<void (TBranch const&)> baFunc):
         branchMap_(branchMap),
         historyGetter_(historyGetter),
         getter_(getter),
-        tcTrained_(false)
+        tcTrained_(false),
+        tcUse_(useCache),
+        branchAccessFunc_(baFunc)
     {
-        if(0==tree) {
+        if(nullptr == tree) {
             throw cms::Exception("NoTree")<<"The TTree pointer passed to the constructor was null";
         }
         tree_ = tree;
-        if (useCache) {
+        if (tcUse_) {
             tree_->SetCacheSize();
         }
     }
@@ -110,45 +114,42 @@ namespace fwlite {
     }
 
     void
-    DataGetterHelper::getBranchData(edm::EDProductGetter* iGetter,
+    DataGetterHelper::getBranchData(edm::EDProductGetter const* iGetter,
                     Long64_t eventEntry,
                     internal::Data& iData) const
     {
         GetterOperate op(iGetter);
 
-#if 0
-        // I'm not sure why this is still here. It would fail to
-        // compile for 3 reasons if switched on ...
+        ////WORK AROUND FOR ROOT!!
+        ////Create a new instance so that we can clear any cache the object uses
+        ////this slows the code down
+        //edm::ObjectWithDict obj = iData.obj_;
+        //iData.obj_ = iData.obj_.construct();
+        //iData.pObj_ = iData.obj_.address();
+        //iData.branch_->SetAddress(&(iData.pObj_));
+        ////If a REF to this was requested in the past, we might as well do the work now
+        //if(nullptr != iData.pProd_) {
+        //    iData.pProd_ = iData.obj_.address();
+        //}
+        //obj.destruct();
+        ////END OF WORK AROUND
 
-        //WORK AROUND FOR ROOT!!
-        //Create a new instance so that we can clear any cache the object uses
-        //this slows the code down
-        edm::ObjectWithDict obj = iData.obj_;
-        iData.obj_ = iData.obj_.construct();
-        iData.pObj_ = iData.obj_.address();
-        iData.branch_->SetAddress(&(iData.pObj_));
-        //If a REF to this was requested in the past, we might as well do the work now
-        if(0!=iData.pProd_) {
-            iData.pProd_ = iData.obj_.address();
-        }
-        obj.destruct();
-        //END OF WORK AROUND
-#endif
+        if (tcUse_) {
+            TTreeCache* tcache = dynamic_cast<TTreeCache*> (branchMap_->getFile()->GetCacheRead());
 
-        TTreeCache* tcache = dynamic_cast<TTreeCache*> (branchMap_->getFile()->GetCacheRead());
-
-        if (0 == tcache) {
-            iData.branch_->GetEntry(eventEntry);
-        } else {
-            if (!tcTrained_) {
-                tcache->SetLearnEntries(100);
-                tcache->SetEntryRange(0, tree_->GetEntries());
-                tcTrained_ = true;
+            if (nullptr != tcache) {
+                if (!tcTrained_) {
+                    tcache->SetLearnEntries(100);
+                    tcache->SetEntryRange(0, tree_->GetEntries());
+                    tcTrained_ = true;
+                }
+                tree_->LoadTree(eventEntry);
             }
-            tree_->LoadTree(eventEntry);
-            iData.branch_->GetEntry(eventEntry);
-       }
-       iData.lastProduct_=eventEntry;
+        }
+        branchAccessFunc_(*iData.branch_);
+        iData.branch_->GetEntry(eventEntry);
+
+        iData.lastProduct_=eventEntry;
     }
 
     internal::Data&
@@ -171,12 +172,12 @@ namespace fwlite {
 
             //if we have to lookup the process label, remember it and register the product again
             std::string foundProcessLabel;
-            TBranch* branch = 0;
+            TBranch* branch = nullptr;
             std::shared_ptr<internal::Data> theData;
 
-            if (0==iProcessLabel || iProcessLabel==key.kEmpty() ||
+            if (nullptr == iProcessLabel || iProcessLabel == key.kEmpty() ||
                 strlen(iProcessLabel)==0) {
-                std::string const* lastLabel=0;
+                std::string const* lastLabel = nullptr;
                 //have to search in reverse order since newest are on the bottom
                 const edm::ProcessHistory& h = DataGetterHelper::history();
                 for (edm::ProcessHistory::const_reverse_iterator iproc = h.rbegin(), eproc = h.rend();
@@ -185,15 +186,15 @@ namespace fwlite {
 
                     lastLabel = &(iproc->processName());
                     branch=findBranch(tree_,name,iproc->processName());
-                    if(0!=branch) {
+                    if(nullptr != branch) {
                     break;
                     }
                 }
-                if(0==branch) {
+                if(nullptr == branch) {
                     return branchNotFound;
                 }
                 //do we already have this one?
-                if(0!=lastLabel) {
+                if(nullptr != lastLabel) {
                     internal::DataKey fullKey(type,iModuleLabel,iProductInstanceLabel,lastLabel->c_str());
                     itFind = data_.find(fullKey);
                     if(itFind != data_.end()) {
@@ -207,7 +208,7 @@ namespace fwlite {
             } else {
                 //we have all the pieces
                 branch = findBranch(tree_,name,key.process());
-                if(0==branch){
+                if(nullptr == branch){
                     return branchNotFound;
                 }
             }
@@ -218,23 +219,23 @@ namespace fwlite {
             std::strncpy(newModule,iModuleLabel,moduleLabelLen);
             labels_.push_back(newModule);
 
-            char* newProduct = const_cast<char*>(key.product());
-            if(newProduct[0] != 0) {
-                size_t newProductLen = strlen(newProduct)+1; 
+            char* newProduct = kEmptyString;
+            if(key.product()[0] != 0) {
+                size_t newProductLen = strlen(key.product())+1; 
                 newProduct = new char[newProductLen];
                 std::strncpy(newProduct,key.product(),newProductLen);
                 labels_.push_back(newProduct);
             }
-            char* newProcess = const_cast<char*>(key.process());
-            if(newProcess[0]!=0) {
-                size_t newProcessLen = strlen(newProcess)+1; 
+            char* newProcess = kEmptyString;
+            if(key.process()[0]!=0) {
+                size_t newProcessLen = strlen(key.process())+1; 
                 newProcess = new char[newProcessLen];
                 std::strncpy(newProcess,key.process(),newProcessLen);
                 labels_.push_back(newProcess);
             }
             internal::DataKey newKey(edm::TypeID(iInfo),newModule,newProduct,newProcess);
 
-            if(0 == theData.get()) {
+            if(nullptr == theData.get()) {
                 //We do not already have this data as another key
 
                 //create an instance of the object to be used as a buffer
@@ -259,7 +260,7 @@ namespace fwlite {
             }
             itFind = data_.insert(std::make_pair(newKey, theData)).first;
 
-            if(foundProcessLabel.size()) {
+            if(!foundProcessLabel.empty()) {
                 //also remember it with the process label
                 newProcess = new char[foundProcessLabel.size()+1];
                 std::strcpy(newProcess,foundProcessLabel.c_str());
@@ -281,7 +282,7 @@ namespace fwlite {
         internal::Data& theData =
             DataGetterHelper::getBranchDataFor(iInfo, iModuleLabel, iProductInstanceLabel, iProcessLabel);
 
-        if (0 != theData.branch_) {
+        if (nullptr != theData.branch_) {
             return std::string(theData.branch_->GetName());
         }
         return std::string("");
@@ -301,7 +302,7 @@ namespace fwlite {
         internal::Data& theData =
             DataGetterHelper::getBranchDataFor(iInfo, iModuleLabel, iProductInstanceLabel, iProcessLabel);
 
-        if (0 != theData.branch_) {
+        if (nullptr != theData.branch_) {
             if(eventEntry != theData.lastProduct_) {
                 //haven't gotten the data for this event
                 getBranchData(getter_.get(), eventEntry, theData);
@@ -329,7 +330,7 @@ namespace fwlite {
       //Only the product instance label may be empty
       char const* pIL = bDesc.productInstanceName().c_str();
       if(pIL[0] == 0) {
-        pIL = 0;
+        pIL = nullptr;
       }
       internal::DataKey k(type,
                           bDesc.moduleLabel().c_str(),

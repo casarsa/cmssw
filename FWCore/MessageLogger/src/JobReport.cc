@@ -23,8 +23,7 @@
 
 // The part of tinyxml used in JobReport was reviewed and
 // determined to be threadsafe.
-#include "FWCore/Utilities/interface/tinyxml.h"
-
+#include "tinyxml2.h"
 #include <fstream>
 #include <iomanip>
 #include <ostream>
@@ -36,23 +35,24 @@ namespace edm {
    * If something outside these classes requires access to the
    * same formatting then we need to refactor it into a common library
    */
+
   template <typename S, typename T>
   S& formatFile(T const& f, S& os) {
-
+    tinyxml2::XMLDocument doc;
     if(f.fileHasBeenClosed) {
       os << "\n<State  Value=\"closed\"/>";
     } else {
       os << "\n<State  Value=\"open\"/>";
     }
-
-    os << "\n<LFN>" << TiXmlText(f.logicalFileName) << "</LFN>";
-    os << "\n<PFN>" << TiXmlText(f.physicalFileName) << "</PFN>";
-    os << "\n<Catalog>" << TiXmlText(f.catalog) << "</Catalog>";
-    os << "\n<ModuleLabel>" << TiXmlText(f.moduleLabel) << "</ModuleLabel>";
+    os << "\n<LFN>" << doc.NewText(f.logicalFileName.c_str())->Value() << "</LFN>";
+    os << "\n<PFN>" << doc.NewText(f.physicalFileName.c_str())->Value() << "</PFN>";
+    os << "\n<Catalog>" << doc.NewText(f.catalog.c_str())->Value() << "</Catalog>";
+    os << "\n<ModuleLabel>" << doc.NewText(f.moduleLabel.c_str())->Value() << "</ModuleLabel>";
     os << "\n<GUID>" << f.guid << "</GUID>";
     os << "\n<Branches>";
     for(auto const& branch : f.branchNames) {
-      os << "\n  <Branch>" << TiXmlText(branch) << "</Branch>";
+      os << "\n  <Branch>" << doc.NewText(branch.c_str())->Value() << "</Branch>";
+      doc.DeleteChildren();
     }
     os << "\n</Branches>";
     return os;
@@ -64,11 +64,11 @@ namespace edm {
    */
   template <typename S>
   S& print(S& os, JobReport::InputFile const& f) {
-
+    tinyxml2::XMLDocument doc;
     os << "\n<InputFile>";
     formatFile(f, os);
     os << "\n<InputType>" << f.inputType << "</InputType>";
-    os << "\n<InputSourceClass>" << TiXmlText(f.inputSourceClassName)
+    os << "\n<InputSourceClass>" << doc.NewText(f.inputSourceClassName.c_str())->Value()
        << "</InputSourceClass>";
     os << "\n<EventsRead>" << f.numEventsRead << "</EventsRead>";
     return os;
@@ -76,18 +76,19 @@ namespace edm {
 
   template <typename S>
   S& print(S& os, JobReport::OutputFile const& f) {
+    tinyxml2::XMLDocument doc;
     formatFile(f, os);
     os << "\n<OutputModuleClass>"
-       << TiXmlText(f.outputModuleClassName)
+       << doc.NewText(f.outputModuleClassName.c_str())->Value()
        << "</OutputModuleClass>";
     os << "\n<TotalEvents>"
        << f.numEventsWritten
        << "</TotalEvents>\n";
     os << "\n<DataType>"
-       << TiXmlText(f.dataType)
+       << doc.NewText(f.dataType.c_str())->Value()
        << "</DataType>\n";
     os << "\n<BranchHash>"
-       << TiXmlText(f.branchHash)
+       << doc.NewText(f.branchHash.c_str())->Value()
        << "</BranchHash>\n";
     return os;
   }
@@ -99,8 +100,13 @@ namespace edm {
        << rep.runNumber
        << "\">\n";
 
-    for(auto il : rep.lumiSections) {
-      os << "   <LumiSection ID=\"" << il << "\"/>\n";
+    for(auto const& il : rep.lumiSectionsToNEvents) {
+      if(std::numeric_limits<unsigned long>::max() == il.second) {
+        os << "   <LumiSection ID=\"" << il.first << "\"/>\n";
+        
+      } else {
+        os << "   <LumiSection ID=\"" << il.first << "\" NEvents=\""<<il.second<< "\"/>\n";
+      }
     }
     os << "</Run>\n";
     return os;
@@ -218,6 +224,7 @@ namespace edm {
    *
    */
   void JobReport::JobReportImpl::writeOutputFile(JobReport::OutputFile const& f) {
+    tinyxml2::XMLDocument doc;
     if(ost_) {
       *ost_ << "\n<File>";
       *ost_ << f;
@@ -232,18 +239,20 @@ namespace edm {
       for(auto token : f.contributingInputs) {
         JobReport::InputFile inpFile = inputFiles_.at(token);
         *ost_ << "\n<Input>";
-        *ost_ << "\n  <LFN>" << TiXmlText(inpFile.logicalFileName) << "</LFN>";
-        *ost_ << "\n  <PFN>" << TiXmlText(inpFile.physicalFileName) << "</PFN>";
+        *ost_ << "\n  <LFN>" << doc.NewText(inpFile.logicalFileName.c_str())->Value() << "</LFN>";
+        *ost_ << "\n  <PFN>" << doc.NewText(inpFile.physicalFileName.c_str())->Value() << "</PFN>";
         *ost_ << "\n  <FastCopying>" << findOrDefault(f.fastCopyingInputs, inpFile.physicalFileName) << "</FastCopying>";
         *ost_ << "\n</Input>";
+        doc.DeleteChildren();
       }
       for(auto token : f.contributingInputsSecSource) {
         JobReport::InputFile inpFile = inputFilesSecSource_.at(token);
         *ost_ << "\n<Input>";
-        *ost_ << "\n  <LFN>" << TiXmlText(inpFile.logicalFileName) << "</LFN>";
-        *ost_ << "\n  <PFN>" << TiXmlText(inpFile.physicalFileName) << "</PFN>";
+        *ost_ << "\n  <LFN>" << doc.NewText(inpFile.logicalFileName.c_str())->Value() << "</LFN>";
+        *ost_ << "\n  <PFN>" << doc.NewText(inpFile.physicalFileName.c_str())->Value() << "</PFN>";
         *ost_ << "\n  <FastCopying>" << findOrDefault(f.fastCopyingInputs, inpFile.physicalFileName) << "</FastCopying>";
         *ost_ << "\n</Input>";
+        doc.DeleteChildren();
       }
       *ost_ << "\n</Inputs>";
       *ost_ << "\n</File>\n";
@@ -273,7 +282,7 @@ namespace edm {
   }
 
   void JobReport::JobReportImpl::associateRun(JobReport::Token token, unsigned int runNumber) {
-    std::map<RunNumber, RunReport>& theMap = outputFiles_.at(token).runReports;
+    auto& theMap = outputFiles_.at(token).runReports;
     std::map<RunNumber, RunReport>::iterator iter(theMap.lower_bound(runNumber));
     if(iter == theMap.end() || runNumber < iter->first) {    // not found
       theMap.emplace_hint(iter, runNumber, JobReport::RunReport{ runNumber, {}});  // insert it
@@ -292,13 +301,13 @@ namespace edm {
     }
   }
 
-  void JobReport::JobReportImpl::associateLumiSection(JobReport::Token token, unsigned int runNumber, unsigned int lumiSect) {
-    std::map<RunNumber, RunReport>& theMap = outputFiles_.at(token).runReports;
+  void JobReport::JobReportImpl::associateLumiSection(JobReport::Token token, unsigned int runNumber, unsigned int lumiSect, unsigned long nEvents) {
+    auto& theMap = outputFiles_.at(token).runReports;
     std::map<RunNumber, RunReport>::iterator iter(theMap.lower_bound(runNumber));
     if(iter == theMap.end() || runNumber < iter->first) {    // not found
-      theMap.emplace_hint(iter, runNumber, JobReport::RunReport{ runNumber, {lumiSect}});  // insert it
+      theMap.emplace_hint(iter, runNumber, JobReport::RunReport{ runNumber, {{{lumiSect,nEvents}}}});  // insert it
     } else {
-      iter->second.lumiSections.insert(lumiSect);
+      iter->second.lumiSectionsToNEvents[lumiSect]+=nEvents;
     }
   }
 
@@ -308,9 +317,9 @@ namespace edm {
         std::map<RunNumber, RunReport>& theMap = inputFile.runReports;
         std::map<RunNumber, RunReport>::iterator iter(theMap.lower_bound(runNumber));
         if(iter == theMap.end() || runNumber < iter->first) {    // not found
-          theMap.emplace_hint(iter, runNumber, JobReport::RunReport{ runNumber, {lumiSect}});  // insert it
+          theMap.emplace_hint(iter, runNumber, JobReport::RunReport{ runNumber, {{lumiSect,std::numeric_limits<unsigned long>::max()}}});  // insert it
         } else {
-          iter->second.lumiSections.insert(lumiSect);
+          iter->second.lumiSectionsToNEvents[lumiSect]=std::numeric_limits<unsigned long>::max();
         }
       }
     }
@@ -324,7 +333,7 @@ namespace edm {
   }
 
     JobReport::JobReport() :
-      impl_(new JobReportImpl(0)) {
+      impl_(new JobReportImpl(nullptr)) {
     }
 
     JobReport::JobReport(std::ostream* iOstream) : impl_(new JobReportImpl(iOstream)) {
@@ -332,62 +341,6 @@ namespace edm {
         *(impl_->ost_) << "<FrameworkJobReport>\n";
       }
     }
-
-  namespace {
-    void
-    toFileName(std::string const& jobReportFile, unsigned int childIndex, unsigned int numberOfChildren, std::ostringstream& ofilename) {
-      char filler = ofilename.fill();
-      unsigned int numberOfDigitsInIndex = 0U;
-      while (numberOfChildren != 0) {
-        ++numberOfDigitsInIndex;
-        numberOfChildren /= 10;
-      }
-      if(numberOfDigitsInIndex == 0) {
-        numberOfDigitsInIndex = 3; // Protect against zero numberOfChildren
-      }
-      std::string::size_type offset = jobReportFile.rfind('.');
-      if(offset == std::string::npos) {
-        ofilename << jobReportFile;
-        ofilename << '_' << std::setw(numberOfDigitsInIndex) << std::setfill('0') << childIndex << std::setfill(filler);
-      } else {
-        ofilename << jobReportFile.substr(0, offset);
-        ofilename << '_' << std::setw(numberOfDigitsInIndex) << std::setfill('0') << childIndex << std::setfill(filler);
-        ofilename << jobReportFile.substr(offset);
-      }
-    }
-  }
-
-  void
-  JobReport::parentBeforeFork(std::string const& jobReportFile, unsigned int numberOfChildren) {
-    if(impl_->ost_) {
-      *(impl_->ost_) << "<ChildProcessFiles>\n";
-      for(unsigned int i = 0; i < numberOfChildren; ++i) {
-        std::ostringstream ofilename;
-        toFileName(jobReportFile, i, numberOfChildren, ofilename);
-        *(impl_->ost_) << "  <ChildProcessFile>" << ofilename.str() << "</ChildProcessFile>\n";
-      }
-      *(impl_->ost_) << "</ChildProcessFiles>\n";
-      *(impl_->ost_) << "</FrameworkJobReport>\n";
-      std::ofstream* p = dynamic_cast<std::ofstream *>(impl_->ost_);
-      if(p) {
-        p->close();
-      }
-    }
-  }
-
-  void
-  JobReport::parentAfterFork(std::string const& /*jobReportFile*/) {
-  }
-
-  void
-  JobReport::childAfterFork(std::string const& jobReportFile, unsigned int childIndex, unsigned int numberOfChildren) {
-    std::ofstream* p = dynamic_cast<std::ofstream*>(impl_->ost_);
-    if(!p) return;
-    std::ostringstream ofilename;
-    toFileName(jobReportFile, childIndex, numberOfChildren, ofilename);
-    p->open(ofilename.str().c_str());
-    *p << "<FrameworkJobReport>\n";
-  }
 
   JobReport::Token
   JobReport::inputFileOpened(std::string const& physicalFileName,
@@ -405,9 +358,9 @@ namespace edm {
 
     if (inputType == "mixingFiles") {
       theInputType = InputType::SecondarySource;
-      impl_->inputFilesSecSource_.push_back(InputFile());
-      newFile = &impl_->inputFilesSecSource_.back();
-      newToken = impl_->inputFilesSecSource_.size() - 1;
+      auto itr = impl_->inputFilesSecSource_.push_back(InputFile());
+      newFile = &(*itr);
+      newToken = itr - impl_->inputFilesSecSource_.begin();
     } else {
       if (inputType == "secondaryFiles") {
         theInputType = InputType::SecondaryFile;
@@ -473,8 +426,8 @@ namespace edm {
                               std::string const& dataType,
                               std::string const& branchHash,
                               std::vector<std::string> const& branchNames) {
-    impl_->outputFiles_.emplace_back();
-    JobReport::OutputFile& r = impl_->outputFiles_.back();
+    auto itr = impl_->outputFiles_.emplace_back();
+    JobReport::OutputFile& r = *itr;
 
     r.logicalFileName       = logicalFileName;
     r.physicalFileName      = physicalFileName;
@@ -500,7 +453,7 @@ namespace edm {
         r.contributingInputsSecSource.push_back(i);
       }
     }
-    return impl_->outputFiles_.size()-1;
+    return itr - impl_->outputFiles_.begin();
   }
 
   void
@@ -536,8 +489,8 @@ namespace edm {
   }
 
   void
-  JobReport::reportLumiSection(JobReport::Token token, unsigned int run, unsigned int lumiSectId) {
-    impl_->associateLumiSection(token, run, lumiSectId);
+  JobReport::reportLumiSection(JobReport::Token token, unsigned int run, unsigned int lumiSectId, unsigned long nEvents) {
+    impl_->associateLumiSection(token, run, lumiSectId,nEvents);
   }
 
   void
@@ -557,12 +510,13 @@ namespace edm {
 
   void
   JobReport::reportAnalysisFile(std::string const& fileName, std::map<std::string, std::string> const& fileData) {
+    tinyxml2::XMLDocument doc;
     if(impl_->ost_) {
       std::ostream& msg = *(impl_->ost_);
       {
         std::lock_guard<std::mutex> lock(write_mutex);
         msg << "<AnalysisFile>\n"
-            << "  <FileName>" << TiXmlText(fileName) << "</FileName>\n";
+            << "  <FileName>" << doc.NewText(fileName.c_str())->Value() << "</FileName>\n";
 
         typedef std::map<std::string, std::string>::const_iterator const_iterator;
         for(const_iterator pos = fileData.begin(), posEnd = fileData.end(); pos != posEnd; ++pos) {
@@ -598,12 +552,15 @@ namespace edm {
                                std::string const& lfn) {
     if(impl_->ost_) {
       std::ostream& msg = *(impl_->ost_);
-      TiXmlElement skipped("SkippedFile");
-      skipped.SetAttribute("Pfn", pfn);
-      skipped.SetAttribute("Lfn", lfn);
+      tinyxml2::XMLDocument doc;
+      tinyxml2::XMLPrinter printer;
+      tinyxml2::XMLElement * skipped = doc.NewElement("SkippedFile");
+      skipped->SetAttribute("Pfn", pfn.c_str());
+      skipped->SetAttribute("Lfn", lfn.c_str());
       {
         std::lock_guard<std::mutex> lock(write_mutex);
-        msg << skipped << "\n";
+        skipped->Accept(&printer);
+        msg << printer.CStr() ;
         msg << std::flush;
       }
     }
@@ -613,12 +570,15 @@ namespace edm {
   JobReport::reportFallbackAttempt(std::string const& pfn, std::string const& lfn, std::string const& err) {
     if(impl_->ost_) {
       std::ostream& msg = *(impl_->ost_);
-      TiXmlElement fallback("FallbackAttempt");
-      fallback.SetAttribute("Pfn", pfn);
-      fallback.SetAttribute("Lfn", lfn);
+      tinyxml2::XMLDocument doc;
+      tinyxml2::XMLPrinter printer;
+      tinyxml2::XMLElement * fallback = doc.NewElement("FallbackAttempt");
+      fallback->SetAttribute("Pfn", pfn.c_str());
+      fallback->SetAttribute("Lfn", lfn.c_str());
       {
         std::lock_guard<std::mutex> lock(write_mutex);
-        msg << fallback << "\n";
+        fallback->Accept(&printer);
+        msg << printer.CStr() ;
         msg << "<![CDATA[\n" << err << "\n]]>\n";
         msg << std::flush;
       }
@@ -663,26 +623,34 @@ namespace edm {
     if(impl_->ost_) {
       std::ostream& ost = *(impl_->ost_);
       ost << "<ReadBranches>\n";
+      tinyxml2::XMLDocument doc;
+      tinyxml2::XMLPrinter printer;
       for(auto const& iBranch : impl_->readBranches_) {
-        TiXmlElement branch("Branch");
-        branch.SetAttribute("Name", iBranch.first);
-        branch.SetAttribute("ReadCount", iBranch.second);
-        ost << branch << "\n";
+        tinyxml2::XMLElement * branch = doc.NewElement("Branch");
+        branch->SetAttribute("Name", iBranch.first.c_str());
+        branch->SetAttribute("ReadCount", int64_t(iBranch.second));
+        branch->Accept(&printer);
+        ost << printer.CStr();
+        printer.ClearBuffer();
       }
       for(auto const& iBranch : impl_->readBranchesSecFile_) {
-        TiXmlElement branch("Branch");
-        branch.SetAttribute("Name", iBranch.first);
-        branch.SetAttribute("ReadCount", iBranch.second);
-        ost << branch << "\n";
+        tinyxml2::XMLElement * branch = doc.NewElement("Branch");
+        branch->SetAttribute("Name", iBranch.first.c_str());
+        branch->SetAttribute("ReadCount", int64_t(iBranch.second));
+        branch->Accept(&printer);
+        ost << printer.CStr();
+        printer.ClearBuffer();
       }
       ost << "</ReadBranches>\n";
       if(!impl_->readBranchesSecSource_.empty()) {
         ost << "<SecondarySourceReadBranches>\n";
         for(auto const& iBranch : impl_->readBranchesSecSource_) {
-          TiXmlElement branch("Branch");
-          branch.SetAttribute("Name", iBranch.first);
-          branch.SetAttribute("ReadCount", iBranch.second.value().load());
-          ost << branch << "\n";
+          tinyxml2::XMLElement * branch = doc.NewElement("Branch");
+          branch->SetAttribute("Name", iBranch.first.c_str());
+          branch->SetAttribute("ReadCount", int64_t(iBranch.second.value().load()));
+          branch->Accept(&printer);
+          ost << printer.CStr();
+          printer.ClearBuffer();
         }
         ost << "</SecondarySourceReadBranches>\n";
       }
@@ -717,12 +685,13 @@ namespace edm {
   }
 
   void JobReport::reportRandomStateFile(std::string const& name) {
+    tinyxml2::XMLDocument doc;
     if(impl_->ost_) {
       std::ostream& msg = *(impl_->ost_);
       {
         std::lock_guard<std::mutex> lock(write_mutex);
         msg << "<RandomServiceStateFile>\n"
-            << TiXmlText(name) << "\n"
+            << doc.NewText(name.c_str())->Value() << "\n"
             <<  "</RandomServiceStateFile>\n";
         msg << std::flush;
       }
@@ -777,25 +746,23 @@ namespace edm {
   JobReport::dumpFiles(void) {
     std::ostringstream msg;
 
-    typedef std::vector<JobReport::OutputFile>::iterator iterator;
-
-    for(iterator f = impl_->outputFiles_.begin(), fEnd = impl_->outputFiles_.end(); f != fEnd; ++f) {
+    tinyxml2::XMLDocument doc;
+    for(auto const& f :impl_->outputFiles_) {
 
       msg << "\n<File>";
-      msg << *f;
+      msg << f;
 
       msg << "\n<LumiSections>";
       msg << "\n<Inputs>";
       typedef std::vector<JobReport::Token>::iterator iterator;
-      for(iterator iInput = f->contributingInputs.begin(),
-          iInputEnd = f->contributingInputs.end();
-          iInput != iInputEnd; ++iInput) {
-        JobReport::InputFile inpFile = impl_->inputFiles_[*iInput];
+      for(auto const& iInput : f.contributingInputs) {
+        auto const& inpFile = impl_->inputFiles_[iInput];
         msg << "\n<Input>";
-        msg << "\n  <LFN>" << TiXmlText(inpFile.logicalFileName) << "</LFN>";
-        msg << "\n  <PFN>" << TiXmlText(inpFile.physicalFileName) << "</PFN>";
-        msg << "\n  <FastCopying>" << findOrDefault(f->fastCopyingInputs, inpFile.physicalFileName) << "</FastCopying>";
+        msg << "\n  <LFN>" << doc.NewText(inpFile.logicalFileName.c_str())->Value() << "</LFN>";
+        msg << "\n  <PFN>" << doc.NewText(inpFile.physicalFileName.c_str())->Value() << "</PFN>";
+        msg << "\n  <FastCopying>" << findOrDefault(f.fastCopyingInputs, inpFile.physicalFileName) << "</FastCopying>";
         msg << "\n</Input>";
+        doc.DeleteChildren();
       }
       msg << "\n</Inputs>";
       msg << "\n</File>";

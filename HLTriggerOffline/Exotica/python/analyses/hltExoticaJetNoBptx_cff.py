@@ -2,9 +2,12 @@ import FWCore.ParameterSet.Config as cms
 
 JetNoBptxPSet = cms.PSet(
     hltPathsToCheck = cms.vstring(
-        "HLT_JetE50_NoBPTX3BX_NoHalo_v" # Run2 proposal AND Run1 (frozenHLT)
+        "HLT_UncorrectedJetE30_NoBPTX_v", # 2017 proposal
+        "HLT_UncorrectedJetE30_NoBPTX3BX_v",
+        "HLT_UncorrectedJetE60_NoBPTX3BX_v",
+        "HLT_UncorrectedJetE70_NoBPTX3BX_v",
         ),
-    recCaloJetLabel    = cms.InputTag("ak5CaloJets"),
+    recCaloJetLabel    = cms.InputTag("ak4CaloJets"),
 
     # -- Analysis specific cuts
     minCandidates = cms.uint32(1),

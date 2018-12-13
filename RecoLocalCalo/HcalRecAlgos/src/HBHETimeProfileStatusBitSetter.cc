@@ -1,9 +1,9 @@
 #include "RecoLocalCalo/HcalRecAlgos/interface/HBHETimeProfileStatusBitSetter.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "RecoLocalCalo/HcalRecAlgos/interface/HcalCaloFlagLabels.h"
+#include "DataFormats/METReco/interface/HcalCaloFlagLabels.h"
 
 #include <algorithm> // for "max"
-#include <math.h>
+#include <cmath>
 #include <TH1.h>
 #include <TF1.h>
 
@@ -47,19 +47,24 @@ HBHETimeProfileStatusBitSetter::HBHETimeProfileStatusBitSetter(double R1Min, dou
 HBHETimeProfileStatusBitSetter::~HBHETimeProfileStatusBitSetter(){}
 
 
+namespace {
+  bool compareDigiEnergy(const HBHEDataFrame& x, const HBHEDataFrame& y)
+  {
+    double totalX = 0;
+    double totalY = 0;
+    for(int i=0; i!=x.size(); totalX += x.sample(i++).nominal_fC());
+    for(int i=0; i!=y.size(); totalY += y.sample(i++).nominal_fC());
 
-
-
-
-
-
+    return totalX > totalY;
+  }
+}
 
 void HBHETimeProfileStatusBitSetter::hbheSetTimeFlagsFromDigi(HBHERecHitCollection * hbhe, const std::vector<HBHEDataFrame>& udigi, const std::vector<int>& RecHitIndex)
 {
   
   bool Bits[4]={false, false, false, false};
-  std::vector<HBHEDataFrame> digi = const_cast<std::vector<HBHEDataFrame>&>(udigi);
-  std::sort(digi.begin(), digi.end(), compare_digi_energy()); // sort digis according to energies
+  std::vector<HBHEDataFrame> digi(udigi);
+  std::sort(digi.begin(), digi.end(), compareDigiEnergy); // sort digis according to energies
   std::vector<double> PulseShape; // store fC values for each time slice
   int DigiSize=0;
   //  int LeadingEta=0;
@@ -84,7 +89,7 @@ void HBHETimeProfileStatusBitSetter::hbheSetTimeFlagsFromDigi(HBHERecHitCollecti
 
 
     
-  if(RecHitIndex.size()>0)
+  if(!RecHitIndex.empty())
     {
       double FracInLeader=-1;
       //double Slope=0; // not currently used

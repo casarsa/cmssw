@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import optparse
 import re
@@ -21,10 +22,10 @@ if __name__ == '__main__':
     # required parameters
     (options, args) = parser.parse_args()
     if len (args) != 1:
-        raise RuntimeError, "Must provide exactly one input file"
+        raise RuntimeError("Must provide exactly one input file")
 
     if options.min and options.max and options.min > options.max:
-        raise RuntimeError, "Minimum value (%d) is greater than maximum value (%d)" % (options.min, options.max)
+        raise RuntimeError("Minimum value (%d) is greater than maximum value (%d)" % (options.min, options.max))
 
     commaRE = re.compile (r',')
     runsToRemove = []
@@ -45,4 +46,4 @@ if __name__ == '__main__':
     if options.output:
         alphaList.writeJSON (options.output)
     else:
-        print alphaList
+        print(alphaList)

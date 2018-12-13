@@ -1,3 +1,4 @@
+from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 
 maxevents=10
@@ -69,9 +70,9 @@ process.output = cms.OutputModule("PoolOutputModule",
 #                                                    RecHitFlags = cms.vstring('HFPET','HFS9S1'),
 #                                                    ChannelStatus = cms.vstring('')))
 
-print "STARTING SL:"
+print("STARTING SL:")
 for i in process.hcalRecAlgos.SeverityLevels:
-        print i
+        print(i)
         
 
 
@@ -82,28 +83,28 @@ for i in range(len(process.hcalRecAlgos.SeverityLevels)):  # loop over each seve
     severitylevels.append(process.hcalRecAlgos.SeverityLevels[i].Level.value())  # store severity value
     flagvec=process.hcalRecAlgos.SeverityLevels[i].RecHitFlags.value()  # Get vector of rechit flags for this severity level
     flaglevel=process.hcalRecAlgos.SeverityLevels[i].Level.value()
-    if "UserDefinedBit0" in flagvec and flaglevel<>10:  # remove HFLongShort from its default position
+    if "UserDefinedBit0" in flagvec and flaglevel!=10:  # remove HFLongShort from its default position
         flagvec.remove("UserDefinedBit0")
         process.hcalRecAlgos.SeverityLevels[i].RecHitFlags=flagvec
-        print "Removed 'UserDefinedBit0' from severity level %i"%(process.hcalRecAlgos.SeverityLevels[i].Level.value())
+        print("Removed 'UserDefinedBit0' from severity level %i"%(process.hcalRecAlgos.SeverityLevels[i].Level.value()))
     if (flaglevel==NewSevLevel):  # Set UserDefinedBit0 severity to 10, which will exclude such rechits from CaloTower
-        print "FOUND LEVEL %i!"%NewSevLevel
+        print("FOUND LEVEL %i!"%NewSevLevel)
         if "UserDefinedBit0" not in flagvec:
-            if (flagvec<>['']):
+            if (flagvec!=['']):
                 flagvec.append("UserDefinedBit0")
             else:
                 flagvec=["UserDefinedBit0"]
             process.hcalRecAlgos.SeverityLevels[i].RecHitFlags=flagvec
             AddedFlag=True
 if (AddedFlag==False):
-    print "Found no Severity Level = %i; Adding it now"%NewSevLevel
+    print("Found no Severity Level = %i; Adding it now"%NewSevLevel)
     process.hcalRecAlgos.SeverityLevels.append(cms.PSet(Level=cms.int32(NewSevLevel),
                                                         RecHitFlags=cms.vstring("UserDefinedBit0"),
                                                         ChannelStatus=cms.vstring("")))
 
-print "New Severity Levels:"
+print("New Severity Levels:")
 for i in process.hcalRecAlgos.SeverityLevels:
-    print i
+    print(i)
 
 #print process.hbhereco.firstSample, "  FIRST"
 

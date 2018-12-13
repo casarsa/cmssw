@@ -42,10 +42,10 @@
 
 #include <iostream>
 #include <iomanip>
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 #include <sstream>
-#include <math.h>
+#include <cmath>
 
 
 /** 
@@ -101,11 +101,12 @@ void TrackingOfflineDQM::beginRun(edm::Run const& run, edm::EventSetup const& eS
 
   int nFEDs = 0;
   int nPixelFEDs = 0;
-  edm::eventsetup::EventSetupRecordKey recordKey(edm::eventsetup::EventSetupRecordKey::TypeTag::findType("RunInfoRcd"));
-  if( eSetup.find( recordKey ) != 0) {
+
+  if(auto runInfoRec = eSetup.tryToGet<RunInfoRcd>()) {
 
     edm::ESHandle<RunInfo> sumFED;
-    eSetup.get<RunInfoRcd>().get(sumFED);    
+    runInfoRec->get(sumFED);
+
     if ( sumFED.isValid() ) {
 
       const int siStripFedIdMin = FEDNumbering::MINSiStripFEDID;

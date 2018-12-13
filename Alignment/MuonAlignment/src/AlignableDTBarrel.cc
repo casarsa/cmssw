@@ -6,10 +6,11 @@
  */
  
 
+#include <memory>
+
 #include "Alignment/MuonAlignment/interface/AlignableDTBarrel.h"
 #include "CondFormats/Alignment/interface/Alignments.h" 
-#include "CondFormats/Alignment/interface/AlignmentErrors.h" 
-#include "CondFormats/Alignment/interface/AlignmentSorter.h" 
+#include "CondFormats/Alignment/interface/AlignmentErrorsExtended.h" 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 
@@ -20,19 +21,17 @@ AlignableDTBarrel::AlignableDTBarrel( const std::vector<AlignableDTWheel*>& dtWh
 
   theDTWheels.insert( theDTWheels.end(), dtWheels.begin(), dtWheels.end() );
 
+  // maintain also list of components
+  for (const auto& wheel: dtWheels) {
+    const auto mother = wheel->mother();
+    this->addComponent(wheel); // components will be deleted by dtor of AlignableComposite
+    wheel->setMother(mother); // restore previous behaviour where mother is not set
+  }
+
   setSurface( computeSurface() );
-   
+  compConstraintType_ = Alignable::CompConstraintType::POSITION_Z;
 }
-      
 
-/// Clean delete of the vector and its elements
-AlignableDTBarrel::~AlignableDTBarrel() 
-{
-  for ( std::vector<AlignableDTWheel*>::iterator iter = theDTWheels.begin(); 
-	iter != theDTWheels.end(); iter++)
-    delete *iter;
-
-}
 
 /// Return AlignableBarrelLayer at given index
 AlignableDTWheel &AlignableDTBarrel::wheel(int i) 
@@ -109,46 +108,37 @@ void AlignableDTBarrel::dump( void ) const
 //__________________________________________________________________________________________________
 Alignments* AlignableDTBarrel::alignments( void ) const
 {
-
-  std::vector<Alignable*> comp = this->components();
   Alignments* m_alignments = new Alignments();
-  // Add components recursively
-  for ( std::vector<Alignable*>::iterator i=comp.begin(); i!=comp.end(); i++ )
-    {
-      Alignments* tmpAlignments = (*i)->alignments();
-      std::copy( tmpAlignments->m_align.begin(), tmpAlignments->m_align.end(), 
-				 std::back_inserter(m_alignments->m_align) );
-	  delete tmpAlignments;
-    }
 
-  std::sort( m_alignments->m_align.begin(), m_alignments->m_align.end(), 
-			 lessAlignmentDetId<AlignTransform>() );
+  // Add components recursively
+  for (const auto& i: this->components()) {
+    std::unique_ptr<Alignments> tmpAlignments{i->alignments()};
+    std::copy(tmpAlignments->m_align.begin(), tmpAlignments->m_align.end(),
+              std::back_inserter(m_alignments->m_align));
+  }
+
+  // sort by rawId
+  std::sort( m_alignments->m_align.begin(), m_alignments->m_align.end());
 
   return m_alignments;
-
 }
 
 //__________________________________________________________________________________________________
-AlignmentErrors* AlignableDTBarrel::alignmentErrors( void ) const
+AlignmentErrorsExtended* AlignableDTBarrel::alignmentErrors( void ) const
 {
-
-  std::vector<Alignable*> comp = this->components();
-  AlignmentErrors* m_alignmentErrors = new AlignmentErrors();
+  AlignmentErrorsExtended* m_alignmentErrors = new AlignmentErrorsExtended();
 
   // Add components recursively
-  for ( std::vector<Alignable*>::iterator i=comp.begin(); i!=comp.end(); i++ )
-    {
-	  AlignmentErrors* tmpAlignmentErrors = (*i)->alignmentErrors();
-      std::copy( tmpAlignmentErrors->m_alignError.begin(), tmpAlignmentErrors->m_alignError.end(), 
-				 std::back_inserter(m_alignmentErrors->m_alignError) );
-	  delete tmpAlignmentErrors;
-    }
+  for (const auto& i: this->components()) {
+    std::unique_ptr<AlignmentErrorsExtended> tmpAlignmentErrorsExtended{i->alignmentErrors()};
+    std::copy(tmpAlignmentErrorsExtended->m_alignError.begin(), tmpAlignmentErrorsExtended->m_alignError.end(),
+              std::back_inserter(m_alignmentErrors->m_alignError));
+  }
 
-  std::sort( m_alignmentErrors->m_alignError.begin(), m_alignmentErrors->m_alignError.end(), 
-			 lessAlignmentDetId<AlignTransformError>() );
+  // sort by rawId
+  std::sort( m_alignmentErrors->m_alignError.begin(), m_alignmentErrors->m_alignError.end());
 
   return m_alignmentErrors;
-
 }
 
 

@@ -63,12 +63,12 @@
 class TestCorrection : public edm::EDAnalyzer, MuScleFitBase {
 public:
   explicit TestCorrection(const edm::ParameterSet&);
-  ~TestCorrection();
+  ~TestCorrection() override;
 
 private:
   virtual void initialize(const edm::EventSetup&);
-  virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-  virtual void endJob() override {};
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
+  void endJob() override {};
   template<typename T>
   std::vector<MuScleFitMuon> fillMuonCollection( const std::vector<T>& tracks )
   {
@@ -123,9 +123,9 @@ private:
 
   int eventCounter_;
 
-  std::auto_ptr<MomentumScaleCorrector> corrector_;
-  std::auto_ptr<ResolutionFunction> resolution_;
-  std::auto_ptr<BackgroundFunction> background_;
+  std::unique_ptr<MomentumScaleCorrector> corrector_;
+  std::unique_ptr<ResolutionFunction> resolution_;
+  std::unique_ptr<BackgroundFunction> background_;
 
   edm::EDGetTokenT<reco::MuonCollection> glbMuonsToken_;
   edm::EDGetTokenT<reco::TrackCollection> saMuonsToken_;

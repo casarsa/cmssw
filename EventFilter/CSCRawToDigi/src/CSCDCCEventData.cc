@@ -25,7 +25,7 @@ CSCDCCEventData::CSCDCCEventData(int sourceId, int nDDUs, int bx, int l1a)
   theDDUData.reserve(nDDUs);
 } 
 
-CSCDCCEventData::CSCDCCEventData(unsigned short *buf, CSCDCCExaminer* examiner)
+CSCDCCEventData::CSCDCCEventData(const uint16_t *buf, CSCDCCExaminer* examiner)
 {
   unpack_data(buf, examiner);
 }
@@ -35,7 +35,7 @@ CSCDCCEventData::~CSCDCCEventData()
 }
 
 
-void CSCDCCEventData::unpack_data(unsigned short *buf, CSCDCCExaminer* examiner) 
+void CSCDCCEventData::unpack_data(const uint16_t *buf, CSCDCCExaminer* examiner) 
 {
  
 /*
@@ -52,7 +52,7 @@ void CSCDCCEventData::unpack_data(unsigned short *buf, CSCDCCExaminer* examiner)
   // decode DCC header (128 bits)
   if (debug) 
     LogTrace ("CSCDCCEventData|CSCRawToDigi") << "unpacking dcc header...";
-  memcpy(&theDCCHeader, buf, theDCCHeader.sizeInWords()*2);
+  theDCCHeader.setFromBuffer(buf);
   //theDCCHeader = CSCDCCHeader(buf); // direct unpacking instead of bitfields
   buf += theDCCHeader.sizeInWords();
 
@@ -87,9 +87,10 @@ void CSCDCCEventData::unpack_data(unsigned short *buf, CSCDCCExaminer* examiner)
 	    
   //decode dcc trailer (128 bits)
   if (debug) LogTrace ("CSCDCCEventData|CSCRawToDigi") <<"decoding DCC trailer";
-  memcpy(&theDCCTrailer, buf, theDCCTrailer.sizeInWords()*2);
+  theDCCTrailer.setFromBuffer(buf);
   if (debug) LogTrace("CSCDCCEventData|CSCRawToDigi") << "checking DDU Trailer" << theDCCTrailer.check(); 
-  buf += theDCCTrailer.sizeInWords();
+ 
+  // buf += theDCCTrailer.sizeInWords(); /* =VB= Commented out to please static analyzer */ 
 
   //std::cout << " DCC Size: " << std::dec << theSizeInWords << std::endl;
   //std::cout << "LastBuf: "  << std::hex << inputBuf[theSizeInWords-4] << std::endl;

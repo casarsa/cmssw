@@ -19,7 +19,6 @@
 
 // system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
@@ -41,15 +40,15 @@
 class RCTConfigProducers : public edm::ESProducer {
 public:
   RCTConfigProducers(const edm::ParameterSet&);
-  ~RCTConfigProducers();
+  ~RCTConfigProducers() override;
   
-  //typedef boost::shared_ptr<L1RCTParameters> ReturnType;
-  //typedef edm::ESProducts< boost::shared_ptr<L1RCTParameters>, boost::shared_ptr<L1RCTChannelMask> > ReturnType;
+  //typedef std::shared_ptr<L1RCTParameters> ReturnType;
+  //typedef edm::ESProducts< std::shared_ptr<L1RCTParameters>, std::shared_ptr<L1RCTChannelMask> > ReturnType;
   
   //ReturnType produce(const L1RCTParametersRcd&);
-  boost::shared_ptr<L1RCTParameters> produceL1RCTParameters(const L1RCTParametersRcd&);
-  boost::shared_ptr<L1RCTChannelMask> produceL1RCTChannelMask(const L1RCTChannelMaskRcd&);
-  boost::shared_ptr<L1RCTNoisyChannelMask> produceL1RCTNoisyChannelMask(const L1RCTNoisyChannelMaskRcd&);
+  std::unique_ptr<L1RCTParameters> produceL1RCTParameters(const L1RCTParametersRcd&);
+  std::unique_ptr<L1RCTChannelMask> produceL1RCTChannelMask(const L1RCTChannelMaskRcd&);
+  std::unique_ptr<L1RCTNoisyChannelMask> produceL1RCTNoisyChannelMask(const L1RCTNoisyChannelMaskRcd&);
 
 private:
   // ----------member data ---------------------------
@@ -173,32 +172,22 @@ RCTConfigProducers::~RCTConfigProducers()
 
 // ------------ method called to produce the data  ------------
 //RCTConfigProducers::ReturnType
-boost::shared_ptr<L1RCTParameters>
+std::unique_ptr<L1RCTParameters>
 RCTConfigProducers::produceL1RCTParameters(const L1RCTParametersRcd& iRecord)
 {
-   using namespace edm::es;
-   boost::shared_ptr<L1RCTParameters> pL1RCTParameters =
-     boost::shared_ptr<L1RCTParameters>( new L1RCTParameters( rctParameters ) ) ;
-   return pL1RCTParameters ;
-   //return products( pL1RCTParameters, pL1RCTChannelMask );
+   return std::make_unique<L1RCTParameters>( rctParameters ) ;
 }
 
-boost::shared_ptr<L1RCTChannelMask>
+std::unique_ptr<L1RCTChannelMask>
 RCTConfigProducers::produceL1RCTChannelMask(const L1RCTChannelMaskRcd& iRecord)
 {
-  using namespace edm::es;
-   boost::shared_ptr<L1RCTChannelMask> pL1RCTChannelMask =
-     boost::shared_ptr<L1RCTChannelMask>( new L1RCTChannelMask( rctChannelMask ) ) ;
-   return pL1RCTChannelMask ;
+   return std::make_unique<L1RCTChannelMask>( rctChannelMask ) ;
 }
 
-boost::shared_ptr<L1RCTNoisyChannelMask>
+std::unique_ptr<L1RCTNoisyChannelMask>
 RCTConfigProducers::produceL1RCTNoisyChannelMask(const L1RCTNoisyChannelMaskRcd& iRecord)
 {
-  using namespace edm::es;
-   boost::shared_ptr<L1RCTNoisyChannelMask> pL1RCTChannelMask =
-     boost::shared_ptr<L1RCTNoisyChannelMask>( new L1RCTNoisyChannelMask( rctNoisyChannelMask ) ) ;
-   return pL1RCTChannelMask ;
+   return std::make_unique<L1RCTNoisyChannelMask>( rctNoisyChannelMask ) ;
 }
 
 

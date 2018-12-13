@@ -54,7 +54,7 @@ class FFTJetPileupProcessor : public FFTJetInterface
 {
 public:
     explicit FFTJetPileupProcessor(const edm::ParameterSet&);
-    ~FFTJetPileupProcessor();
+    ~FFTJetPileupProcessor() override;
 
 protected:
     // methods
@@ -63,28 +63,28 @@ protected:
     void endJob() override ;
 
 private:
-    FFTJetPileupProcessor();
-    FFTJetPileupProcessor(const FFTJetPileupProcessor&);
-    FFTJetPileupProcessor& operator=(const FFTJetPileupProcessor&);
+    FFTJetPileupProcessor() = delete;
+    FFTJetPileupProcessor(const FFTJetPileupProcessor&) = delete;
+    FFTJetPileupProcessor& operator=(const FFTJetPileupProcessor&) = delete;
 
     void buildKernelConvolver(const edm::ParameterSet&);
     void mixExtraGrid();
     void loadFlatteningFactors(const edm::EventSetup& iSetup);
 
     // The FFT engine
-    std::auto_ptr<MyFFTEngine> engine;
+    std::unique_ptr<MyFFTEngine> engine;
 
     // The pattern recognition kernel(s)
-    std::auto_ptr<fftjet::AbsFrequencyKernel> kernel2d;
+    std::unique_ptr<fftjet::AbsFrequencyKernel> kernel2d;
 
     // The kernel convolver
-    std::auto_ptr<fftjet::AbsConvolverBase<Real> > convolver;
+    std::unique_ptr<fftjet::AbsConvolverBase<Real> > convolver;
 
     // Storage for convolved energy flow
-    std::auto_ptr<fftjet::Grid2d<fftjetcms::Real> > convolvedFlow;
+    std::unique_ptr<fftjet::Grid2d<fftjetcms::Real> > convolvedFlow;
 
     // Filtering scales
-    std::auto_ptr<fftjet::EquidistantInLogSpace> filterScales;
+    std::unique_ptr<fftjet::EquidistantInLogSpace> filterScales;
 
     // Eta-dependent factors to use for flattening the distribution
     // _after_ the filtering
@@ -144,7 +144,7 @@ FFTJetPileupProcessor::FFTJetPileupProcessor(const edm::ParameterSet& ps)
     checkConfig(energyFlow, "invalid discretization grid");
 
     // Copy of the grid which will be used for convolutions
-    convolvedFlow = std::auto_ptr<fftjet::Grid2d<fftjetcms::Real> >(
+    convolvedFlow = std::unique_ptr<fftjet::Grid2d<fftjetcms::Real> >(
         new fftjet::Grid2d<fftjetcms::Real>(*energyFlow));
 
     // Make sure the size of flattening factors is appropriate
@@ -170,7 +170,7 @@ FFTJetPileupProcessor::FFTJetPileupProcessor(const edm::ParameterSet& ps)
         throw cms::Exception("FFTJetBadConfig")
             << "invalid filter scales" << std::endl;
 
-    filterScales = std::auto_ptr<fftjet::EquidistantInLogSpace>(
+    filterScales = std::unique_ptr<fftjet::EquidistantInLogSpace>(
         new fftjet::EquidistantInLogSpace(minScale, maxScale, nScales));
 
     percentileData.resize(nScales*nPercentiles);
@@ -200,17 +200,17 @@ void FFTJetPileupProcessor::buildKernelConvolver(const edm::ParameterSet& ps)
     kernelEtaScale *= (2.0*M_PI/(energyFlow->etaMax() - energyFlow->etaMin()));
 
     // Build the FFT engine
-    engine = std::auto_ptr<MyFFTEngine>(
+    engine = std::unique_ptr<MyFFTEngine>(
         new MyFFTEngine(energyFlow->nEta(), energyFlow->nPhi()));
 
     // 2d kernel
-    kernel2d = std::auto_ptr<fftjet::AbsFrequencyKernel>(
+    kernel2d = std::unique_ptr<fftjet::AbsFrequencyKernel>(
         new fftjet::DiscreteGauss2d(
             kernelEtaScale, kernelPhiScale,
             energyFlow->nEta(), energyFlow->nPhi()));
 
     // 2d convolver
-    convolver = std::auto_ptr<fftjet::AbsConvolverBase<Real> >(
+    convolver = std::unique_ptr<fftjet::AbsConvolverBase<Real> >(
         new fftjet::FrequencyKernelConvolver<Real,Complex>(
             engine.get(), kernel2d.get(),
             convolverMinBin, convolverMaxBin));
@@ -290,15 +290,11 @@ void FFTJetPileupProcessor::produce(
 
     // Convert percentile data into a more convenient storable object
     // and put it into the event record
-    std::auto_ptr<reco::DiscretizedEnergyFlow> pTable(
-        new reco::DiscretizedEnergyFlow(
+    iEvent.put(std::make_unique<reco::DiscretizedEnergyFlow>(
             &percentileData[0], "FFTJetPileupProcessor",
-            -0.5, nScales-0.5, 0.0, nScales, nPercentiles));
-    iEvent.put(pTable, outputLabel);
+            -0.5, nScales-0.5, 0.0, nScales, nPercentiles), outputLabel);
 
-    std::auto_ptr<std::pair<double,double> > etSum(
-        new std::pair<double,double>(densityBeforeMixing, densityAfterMixing));
-    iEvent.put(etSum, outputLabel);
+    iEvent.put(std::make_unique<std::pair<double,double>>(densityBeforeMixing, densityAfterMixing), outputLabel);
 }
 
 
@@ -318,7 +314,7 @@ void FFTJetPileupProcessor::mixExtraGrid()
                 << externalGridFiles[currentFileNum] << std::endl;
     }
 
-    const fftjet::Grid2d<float>* g = 0;
+    const fftjet::Grid2d<float>* g = nullptr;
     const unsigned maxFail = 100U;
     unsigned nEnergyRejected = 0;
 
@@ -327,7 +323,7 @@ void FFTJetPileupProcessor::mixExtraGrid()
         g = fftjet::Grid2d<float>::read(gridStream);
 
         // If we can't read the grid, we need to switch to another file
-        for (unsigned ntries=0; ntries<nFiles && g == 0; ++ntries)
+        for (unsigned ntries=0; ntries<nFiles && g == nullptr; ++ntries)
         {
             gridStream.close();
             currentFileNum = (currentFileNum + 1U) % nFiles;
@@ -345,7 +341,7 @@ void FFTJetPileupProcessor::mixExtraGrid()
             if (g->sum() > externalGridMaxEnergy)
             {
                 delete g;
-                g = 0;
+                g = nullptr;
                 if (++nEnergyRejected >= maxFail)
                     throw cms::Exception("FFTJetBadConfig")
                         << "ERROR in FFTJetPileupProcessor::mixExtraGrid():"

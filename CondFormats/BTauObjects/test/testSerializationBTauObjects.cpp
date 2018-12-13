@@ -1,6 +1,6 @@
 #include "CondFormats/Serialization/interface/Test.h"
 
-#include "../src/headers.h"
+#include "CondFormats/BTauObjects/src/headers.h"
 
 int main()
 {
@@ -16,6 +16,10 @@ int main()
     testSerialization<std::vector<CombinedSVCalibration::Entry>>();
     testSerialization<std::vector<CombinedTauTagCalibration::Entry>>();
     testSerialization<std::vector<TrackProbabilityCalibration::Entry>>();
+
+    testSerialization<BTagEntry>();
+    testSerialization<BTagEntry::Parameters>();
+    testSerialization<BTagCalibration>();
 
     return 0;
 }

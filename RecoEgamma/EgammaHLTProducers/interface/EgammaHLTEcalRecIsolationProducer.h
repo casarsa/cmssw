@@ -18,7 +18,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -31,19 +31,17 @@ namespace edm {
   class ConfigurationDescriptions;
 }
 
-class EgammaHLTEcalRecIsolationProducer : public edm::EDProducer {
+class EgammaHLTEcalRecIsolationProducer : public edm::global::EDProducer<> {
  public:
   explicit EgammaHLTEcalRecIsolationProducer(const edm::ParameterSet&);
-  ~EgammaHLTEcalRecIsolationProducer();
-  virtual void produce(edm::Event&, const edm::EventSetup&);
+  ~EgammaHLTEcalRecIsolationProducer() override;
+  void produce(edm::StreamID sid, edm::Event&, const edm::EventSetup&) const override;
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
  private:
   edm::EDGetTokenT<reco::RecoEcalCandidateCollection> recoEcalCandidateProducer_;
   edm::EDGetTokenT<EcalRecHitCollection> ecalBarrelRecHitProducer_;
   edm::EDGetTokenT<EcalRecHitCollection> ecalEndcapRecHitProducer_;
-  //edm::InputTag ecalBarrelRecHitCollection_;
-  //edm::InputTag ecalEndcapRecHitCollection_;
   edm::EDGetTokenT<double> rhoProducer_;
 
   double egIsoPtMinBarrel_; //minimum Et noise cut

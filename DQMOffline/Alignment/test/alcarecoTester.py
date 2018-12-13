@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import os
 import sys
 import ConfigParser
@@ -114,7 +115,7 @@ class Sample:
       scriptFile = open( scriptPath, "w" )
       scriptFile.write( scriptTemplate%repMap )
       scriptFile.close()
-      os.chmod(scriptPath, 0755)
+      os.chmod(scriptPath, 0o755)
       return scriptPath
    
    def createDQMExtract(self, path):
@@ -167,12 +168,12 @@ def getCommandOutput2(command):
     data = child.read()
     err = child.close()
     if err:
-        raise RuntimeError, '%s failed w/ exit code %d' % (command, err)
+        raise RuntimeError('%s failed w/ exit code %d' % (command, err))
     return data
  
 def runJob(jobName, script, config):
    jobMode = config.get("general","jobMode")
-   print "> Testing "+jobName
+   print("> Testing "+jobName)
    if jobMode == "interactive":
        getCommandOutput2( script )
    if jobMode.split(",")[0] == "lxBatch":

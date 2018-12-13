@@ -13,52 +13,50 @@
 
 #include "L1Trigger/L1TCalorimeter/interface/PUSubtractionMethods.h"
 #include "L1Trigger/L1TCalorimeter/interface/legacyGtHelper.h"
+#include "L1Trigger/L1TCalorimeter/interface/HardwareSortingMethods.h"
 
-l1t::Stage1Layer2SingleTrackHI::Stage1Layer2SingleTrackHI(CaloParamsStage1* params) : params_(params) {}
 
-l1t::Stage1Layer2SingleTrackHI::~Stage1Layer2SingleTrackHI(){};
+l1t::Stage1Layer2SingleTrackHI::Stage1Layer2SingleTrackHI(CaloParamsHelper const* params) : params_(params) {}
 
-void findRegions(const std::vector<l1t::CaloRegion> * sr, std::vector<l1t::Tau> * t);
+void findRegions(const std::vector<l1t::CaloRegion> * sr, std::vector<l1t::Tau> * t, const int etaMask);
 
 void l1t::Stage1Layer2SingleTrackHI::processEvent(const std::vector<l1t::CaloEmCand> & clusters,
 						  const std::vector<l1t::CaloRegion> & regions,
-						  const std::vector<l1t::Jet> * jets,
+						  std::vector<l1t::Tau> * isoTaus,
 						  std::vector<l1t::Tau> * taus)
 {
-  std::vector<l1t::CaloRegion> *subRegions = new std::vector<l1t::CaloRegion>();
-  std::vector<l1t::Tau> *preGtTaus = new std::vector<l1t::Tau>();
+  int etaMask = params_->tauRegionMask();
 
-  HICaloRingSubtraction(regions, subRegions);
-  findRegions(subRegions, preGtTaus);
-  TauToGtScales(params_, preGtTaus, taus);
+  std::vector<l1t::CaloRegion> subRegions;
+  std::vector<l1t::Tau> preGtEtaTaus;
+  std::vector<l1t::Tau> preGtTaus;
+  std::vector<l1t::Tau> unsortedTaus;
 
-  delete subRegions;
-  delete preGtTaus;
+
+  HICaloRingSubtraction(regions, &subRegions, params_);
+  findRegions(&subRegions, &preGtTaus, etaMask);
+  TauToGtPtScales(params_, &preGtTaus, &unsortedTaus);
+  SortTaus(&unsortedTaus, &preGtEtaTaus);
+  //SortTaus(preGtTaus, unsortedTaus);
+  //TauToGtPtScales(params_, unsortedTaus, preGtEtaTaus);
+  TauToGtEtaScales(params_, &preGtEtaTaus, taus);
+
+  isoTaus->resize(4);
+  //taus->resize(4);
+
 }
 
-void findRegions(const std::vector<l1t::CaloRegion> * sr, std::vector<l1t::Tau> * t)
+void findRegions(const std::vector<l1t::CaloRegion> * sr, std::vector<l1t::Tau> * t, const int etaMask)
 {
-  int regionETMax = 0;
-  int regionETMaxEta = -1;
-  int regionETMaxPhi = -1;
-
   for(std::vector<l1t::CaloRegion>::const_iterator region = sr->begin(); region != sr->end(); region++)
   {
-    int regionET = region->hwPt();
-    if((region->hwEta() < 4) || (region->hwEta() > 17)) continue;
-    if (regionET > regionETMax)
-    {
-      regionETMax = regionET;
-      regionETMaxEta = region->hwEta();
-      regionETMaxPhi = region->hwPhi();
-    }
-  }
+    int tauEta = region->hwEta();
+    if(tauEta < 4 || tauEta > 17) continue; // taus CANNOT be in the forward region
+    if((etaMask & (1<<tauEta))>>tauEta) continue;
 
-  ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > TauLorentz(0,0,0,0);
-  l1t::Tau taucand(*&TauLorentz,regionETMax,regionETMaxEta,regionETMaxPhi);
+    ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<double> > TauLorentz(0,0,0,0);
+    l1t::Tau taucand(*&TauLorentz,region->hwPt(),region->hwEta(),region->hwPhi());
 
-  //don't push a taucand we didn't actually find
-  if(taucand.hwPt() > 0)
     t->push_back(taucand);
-
+  }
 }

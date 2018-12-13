@@ -50,7 +50,7 @@ class CmsShowMainBase
 {
 public:
    CmsShowMainBase();
-   virtual ~CmsShowMainBase();
+   virtual ~CmsShowMainBase() noexcept(false);
 
    FWModelChangeManager       *changeManager() {return m_changeManager.get(); }
    FWColorManager             *colorManager() { return  m_colorManager.get(); }
@@ -80,7 +80,10 @@ public:
 
    void writeToConfigFile(const std::string &config);
    void writeToCurrentConfigFile();
+   void writePartialToConfigFile();
    void reloadConfiguration(const std::string &config);
+   void partialWriteToConfigFile(const std::string &config);
+   void partialLoadConfiguration(const std::string &config);
    void setupConfiguration();
    
    void registerPhysicsObject(const FWPhysicsObjectDesc&iItem);
@@ -92,7 +95,10 @@ public:
    const std::string &geometryFilename(void) { return m_geometryFilename; }
    FWGeometry& getGeom() { return m_geom; }
 
-   void setSimGeometryFilename(const std::string &filename) {m_simGeometryFilename = filename; }
+   void setSimGeometryFilename(const std::string &filename, const std::string &geoname) {
+     m_simGeometryFilename = filename;
+     m_TGeoName = geoname;
+   }
    
    // Event navigation.
    void doFirstEvent();
@@ -114,18 +120,20 @@ public:
    void playForward();
    void playBackward();
    bool isPlaying() const { return m_isPlaying; }
-   void setIsPlaying(bool value) { m_isPlaying = value; }
-   virtual void stopPlaying() = 0;
+
+   virtual void checkKeyBindingsOnPLayEventsStateChanged() {}
+   virtual void stopPlaying();
    virtual void autoLoadNewEvent() = 0;
 
    void setPlayLoop();
    void unsetPlayLoop();
 
    void setAutoSaveAllViewsFormat(const std::string& fmt) { m_autoSaveAllViewsFormat = fmt; }
+   void setAutoSaveAllViewsHeight(int x) { m_autoSaveAllViewsHeight = x; }
 
    class SignalTimer : public TTimer {
    public:
-      virtual Bool_t Notify() {
+      Bool_t Notify() override {
          timeout_();
          return true;
       }
@@ -136,22 +144,23 @@ protected:
    void eventChangedSlot();
    virtual void eventChangedImp();
    void sendVersionInfo();
+   fireworks::Context* context() { return m_contextPtr; }
 
 private:
    // The base class is responsible for the destruction of fwlite / FF
    // agnostic managers.
-   std::auto_ptr<FWModelChangeManager>   m_changeManager;
-   std::auto_ptr<FWColorManager>         m_colorManager;
-   std::auto_ptr<FWConfigurationManager> m_configurationManager;
-   std::auto_ptr<FWEventItemsManager>    m_eiManager;
-   std::auto_ptr<FWGUIManager>           m_guiManager;
-   std::auto_ptr<FWSelectionManager>     m_selectionManager;
-   std::auto_ptr<CmsShowTaskExecutor>    m_startupTasks;
-   std::auto_ptr<FWViewManagerManager>   m_viewManager;
+   std::unique_ptr<FWModelChangeManager>   m_changeManager;
+   std::unique_ptr<FWColorManager>         m_colorManager;
+   std::unique_ptr<FWConfigurationManager> m_configurationManager;
+   std::unique_ptr<FWEventItemsManager>    m_eiManager;
+   std::unique_ptr<FWGUIManager>           m_guiManager;
+   std::unique_ptr<FWSelectionManager>     m_selectionManager;
+   std::unique_ptr<CmsShowTaskExecutor>    m_startupTasks;
+   std::unique_ptr<FWViewManagerManager>   m_viewManager;
 
   
 
-   std::auto_ptr<SignalTimer>                 m_autoLoadTimer;
+   std::unique_ptr<SignalTimer>                 m_autoLoadTimer;
    
    // These are actually set by the concrete implementation via the setup 
    // method.
@@ -163,6 +172,7 @@ private:
    void unsetPlayLoopImp();
    
    std::string                           m_autoSaveAllViewsFormat;
+   int                                   m_autoSaveAllViewsHeight;
    bool                                  m_autoLoadTimerRunning;             
    bool                                  m_forward;
    bool                                  m_isPlaying;
@@ -172,6 +182,7 @@ private:
    std::string                           m_geometryFilename;
    FWGeometry                            m_geom;
    std::string                           m_simGeometryFilename;
+   std::string                           m_TGeoName;
 };
 
 #endif

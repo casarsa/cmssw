@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 VERSION='1.00'
 import os,sys,time
 import optparse
@@ -6,6 +7,7 @@ from RecoLuminosity.LumiDB import pileupParser
 from RecoLuminosity.LumiDB import selectionParser
 from math import exp
 from math import sqrt
+import six
 
 def parseInputFile(inputfilename):
     '''
@@ -127,9 +129,9 @@ def fillPileupHistogram (lumiInfo, calcOption, hist, minbXsec, Nbins):
                 hist.Fill (val, prob * LSintLumi)
                 
             if 1.0-totalProb > 0.01:
-                print "Significant probability density outside of your histogram"
-                print "Consider using a higher value of --maxPileupBin"
-                print "Mean %f, RMS %f, Integrated probability %f" % (AveNumInt,RMSInt,totalProb)
+                print("Significant probability density outside of your histogram")
+                print("Consider using a higher value of --maxPileupBin")
+                print("Mean %f, RMS %f, Integrated probability %f" % (AveNumInt,RMSInt,totalProb))
             #    hist.Fill (val, (1 - totalProb) * LSintLumi)
         else:
             hist.Fill(AveNumInt,LSintLumi)
@@ -147,8 +149,8 @@ def fillPileupHistogram (lumiInfo, calcOption, hist, minbXsec, Nbins):
                 hist.Fill (val, prob * LSintLumi * RMSWeight)
 
         if 1.0-totalProb > 0.01:
-            print "Significant probability density outside of your histogram"
-            print "Consider using a higher value of --maxPileupBin"
+            print("Significant probability density outside of your histogram")
+            print("Consider using a higher value of --maxPileupBin")
 
 
     return hist
@@ -208,26 +210,26 @@ if __name__ == '__main__':
     # parse arguments
     try:
         (options, args) = parser.parse_args()
-    except Exception , e:
-        print e
+    except Exception as e:
+        print(e)
     if not args:
         parser.print_usage()
         sys.exit()
     if len (args) != 1:
         parser.print_usage()
-        raise RuntimeError, "Exactly one output file must be given"
+        raise RuntimeError("Exactly one output file must be given")
     output = args[0]
     
 #    options=parser.parse_args()
 
     if options.verbose:
-        print 'General configuration'
-        print '\toutputfile: ',options.outputfile
-        print '\tAction: ',options.calcMode, 'luminosity distribution will be calculated'
-        print '\tinput selection file: ',options.inputfile
-        print '\tMinBiasXsec: ',options.minBiasXsec
-        print '\tmaxPileupBin: ',options.maxPileupBin
-        print '\tnumPileupBins: ',options.numPileupBins
+        print('General configuration')
+        print('\toutputfile: ',options.outputfile)
+        print('\tAction: ',options.calcMode, 'luminosity distribution will be calculated')
+        print('\tinput selection file: ',options.inputfile)
+        print('\tMinBiasXsec: ',options.minBiasXsec)
+        print('\tmaxPileupBin: ',options.maxPileupBin)
+        print('\tnumPileupBins: ',options.numPileupBins)
 
     import ROOT 
     pileupHist = ROOT.TH1D (options.pileupHistName,options.pileupHistName,
@@ -249,7 +251,7 @@ if __name__ == '__main__':
         # now, we have to find the information for the input runs and LumiSections 
         # in the Lumi/Pileup list. First, loop over inputs
 
-        for (run, lslist) in sorted (inputRange.iteritems() ):
+        for (run, lslist) in sorted (six.iteritems(inputRange)):
             # now, look for matching run, then match lumi sections
             # print "searching for run %d" % (run)
             if run in inputPileupRange.keys():
@@ -264,11 +266,11 @@ if __name__ == '__main__':
                         fillPileupHistogram (lumiInfo, options.calcMode,
                                 pileupHist, options.minBiasXsec, nbins)
                     else: # trouble
-                        print "Run %d, LumiSection %d not found in Lumi/Pileup input file. Check your files!" \
-                                % (run,LSnumber)
+                        print("Run %d, LumiSection %d not found in Lumi/Pileup input file. Check your files!" \
+                                % (run,LSnumber))
 
             else:  # trouble
-                print "Run %d not found in Lumi/Pileup input file.  Check your files!" % (run)
+                print("Run %d not found in Lumi/Pileup input file.  Check your files!" % (run))
 
 
 
@@ -277,8 +279,7 @@ if __name__ == '__main__':
 
         histFile = ROOT.TFile.Open (output, 'recreate')
         if not histFile:
-            raise RuntimeError, \
-                 "Could not open '%s' as an output root file" % output
+            raise RuntimeError("Could not open '%s' as an output root file" % output)
         pileupHist.Write()
         #for hist in histList:
         #    hist.Write()
@@ -286,5 +287,5 @@ if __name__ == '__main__':
         sys.exit()
 
     else:
-        print "must specify a pileup calculation mode via --calcMode true or --calcMode observed"
+        print("must specify a pileup calculation mode via --calcMode true or --calcMode observed")
         sys.exit()

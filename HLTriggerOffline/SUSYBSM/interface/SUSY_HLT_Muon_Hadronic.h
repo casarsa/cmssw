@@ -40,15 +40,13 @@ class SUSY_HLT_Muon_Hadronic: public DQMEDAnalyzer{
 
   public:
   SUSY_HLT_Muon_Hadronic(const edm::ParameterSet& ps);
-  virtual ~SUSY_HLT_Muon_Hadronic();
+  ~SUSY_HLT_Muon_Hadronic() override;
 
   protected:
   void dqmBeginRun(edm::Run const &, edm::EventSetup const &) override;
   void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &) override;
-  void analyze(edm::Event const& e, edm::EventSetup const& eSetup);
-  void beginLuminosityBlock(edm::LuminosityBlock const& lumi, edm::EventSetup const& eSetup) ;
-  void endLuminosityBlock(edm::LuminosityBlock const& lumi, edm::EventSetup const& eSetup);
-  void endRun(edm::Run const& run, edm::EventSetup const& eSetup);
+  void analyze(edm::Event const& e, edm::EventSetup const& eSetup) override;
+  void endRun(edm::Run const& run, edm::EventSetup const& eSetup) override;
 
   private:
   //histos booking function
@@ -57,7 +55,6 @@ class SUSY_HLT_Muon_Hadronic: public DQMEDAnalyzer{
   //variables from config file
   edm::EDGetTokenT<reco::MuonCollection> theMuonCollection_;
   edm::EDGetTokenT<reco::PFMETCollection> thePfMETCollection_;
-  edm::EDGetTokenT<reco::CaloMETCollection> theCaloMETCollection_;
   edm::EDGetTokenT<reco::PFJetCollection> thePfJetCollection_;
   edm::EDGetTokenT<reco::CaloJetCollection> theCaloJetCollection_;
   edm::EDGetTokenT<edm::TriggerResults> triggerResults_;
@@ -71,9 +68,13 @@ class SUSY_HLT_Muon_Hadronic: public DQMEDAnalyzer{
   std::string triggerPathAuxiliaryForMuon_;
   std::string triggerPathAuxiliaryForHadronic_;
   edm::InputTag triggerFilter_;
+  double ptMuonOffline_;
+  double etaMuonOffline_;
+  double HTOffline_;
+  double METOffline_;
   double ptThrJet_;
   double etaThrJet_;
-  
+ 
   // Histograms
   MonitorElement* h_triggerMuPt;
   MonitorElement* h_triggerMuEta;
@@ -86,5 +87,10 @@ class SUSY_HLT_Muon_Hadronic: public DQMEDAnalyzer{
   MonitorElement* h_MuTurnOn_den;
 
 };
+
+
+struct Lepton {
+  float pt, phi, eta;
+};  
 
 #endif

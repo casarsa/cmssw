@@ -40,11 +40,11 @@
 class  AlCaRecoTriggerBitsRcdRead : public edm::EDAnalyzer {
 public:
   explicit  AlCaRecoTriggerBitsRcdRead(const edm::ParameterSet &cfg);
-  ~AlCaRecoTriggerBitsRcdRead() {}
+  ~AlCaRecoTriggerBitsRcdRead() override {}
   
-  virtual void analyze(const edm::Event &evt, const edm::EventSetup &evtSetup) override {}
-  virtual void beginRun(const edm::Run &run, const edm::EventSetup &evtSetup) override;
-  virtual void endJob() override;
+  void analyze(const edm::Event &evt, const edm::EventSetup &evtSetup) override {}
+  void beginRun(const edm::Run &run, const edm::EventSetup &evtSetup) override;
+  void endJob() override;
 
   
 private:
@@ -62,7 +62,7 @@ private:
   edm::RunNumber_t firstRun_; 
   edm::RunNumber_t lastRun_;
   AlCaRecoTriggerBits lastTriggerBits_;
-  std::auto_ptr<std::ofstream> output_;
+  std::unique_ptr<std::ofstream> output_;
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -82,7 +82,7 @@ AlCaRecoTriggerBitsRcdRead::AlCaRecoTriggerBitsRcdRead(const edm::ParameterSet& 
   case kPython: fileName += ".py";    break;
   case kTwiki:  fileName += ".twiki"; break;
   }
-  if (fileName.size()) {
+  if (!fileName.empty()) {
     output_.reset(new std::ofstream(fileName.c_str()));
     if (!output_->good()) {
       edm::LogError("IOproblem") << "Could not open output file " << fileName << ".";

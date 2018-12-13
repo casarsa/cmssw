@@ -1,55 +1,48 @@
-#ifndef DD_DDErrorDetection_h
-#define DD_DDErrorDetection_h
+#ifndef DETECTOR_DESCRIPTION_DD_ERROR_DETECTION_H
+#define DETECTOR_DESCRIPTION_DD_ERROR_DETECTION_H
 
+#include "DetectorDescription/Core/interface/DDCompactView.h"
 #include <map>
+#include <ostream>
 #include <set>
 #include <string>
+#include <utility>
+#include <vector>
 
+#include "DetectorDescription/Core/interface/Singleton.h"
 #include "DetectorDescription/Core/interface/DDLogicalPart.h"
 #include "DetectorDescription/Core/interface/DDMaterial.h"
 #include "DetectorDescription/Core/interface/DDSolid.h"
-#include "DetectorDescription/Core/interface/DDTransform.h"
 #include "DetectorDescription/Core/interface/DDSpecifics.h"
-#include <DetectorDescription/Core/interface/DDCompactView.h>
+#include "DetectorDescription/Core/interface/DDTransform.h"
 
-//=================
-#include "DetectorDescription/Base/interface/Singleton.h"
-typedef DDI::Singleton<std::map<std::string,std::set<DDLogicalPart> > > lp_err;
-typedef DDI::Singleton<std::map<std::string,std::set<DDMaterial> > >    ma_err;
-typedef DDI::Singleton<std::map<std::string,std::set<DDSolid> > >       so_err;
-typedef DDI::Singleton<std::map<std::string,std::set<DDRotation> > >    ro_err;
-typedef DDI::Singleton<std::map<std::string,std::set<DDSpecifics> > >   sp_err;
+class DDCompactView;
+class DDLogicalPart;
+class DDMaterial;
+class DDName;
+class DDRotation;
+class DDSolid;
+class DDSpecifics;
 
-//==================
-//*********************************************************************************************************************************
+using lp_err = DDI::Singleton<std::map<std::string,std::set<DDLogicalPart>>>;
+using ma_err = DDI::Singleton<std::map<std::string,std::set<DDMaterial>>>;
+using so_err = DDI::Singleton<std::map<std::string,std::set<DDSolid>>>;
+using ro_err = DDI::Singleton<std::map<std::string,std::set<DDRotation>>>;
+using sp_err = DDI::Singleton<std::map<std::string,std::set<DDSpecifics>>>;
 
-typedef std::map<std::string, std::set<std::string> > ns_type;
-typedef std::map<std::string, std::set<DDName> > ns_nm_type;
+using ns_type = std::map<std::string, std::set<std::string>>;
+using ns_nm_type = std::map<std::string, std::set<DDName>>;
 
-//*********************************************************************************************************************************
-
-
-
-template<class T> std::ostream & operator<<(std::ostream & o, const std::set<T> & v)
+template<class T> std::ostream & operator<<( std::ostream & o, const std::set<T> & v )
 {
-  typename std::set<T>::const_iterator it(v.begin()), ed(v.end());
+  typename std::set<T>::const_iterator it( v.begin()), ed( v.end());
   for(; it != ed; ++it) {
     o << it->ddname() << ' ';
   }
   return o;
 }
 
-/*
-ostream & operator<<(ostream & o, const std::set<DDLogicalPart> & v)
-{
-  std::set<DDLogicalPart>::const_iterator it(v.begin()), ed(v.end());
-  for(; it != ed; ++it) {
-    o << it->ddname().name() << ' ';
-  }
-  return o;
-}
-*/
-template<class T> std::ostream & operator<<(std::ostream & o, const std::map<std::string, std::set<T> > & m) {
+template<class T> std::ostream & operator<<( std::ostream & o, const std::map<std::string, std::set<T> > & m ) {
   typedef typename std::map<std::string, std::set<T> >::const_iterator c_it;
   c_it it(m.begin()), ed(m.end());
   for (; it != ed; ++it) {
@@ -134,7 +127,7 @@ public:
 
   void nix();
   
-  const std::vector<std::pair<std::string,DDName> > &  ma();
+  const std::vector<std::pair<std::string,std::string> > &  ma();
 
   void report(const DDCompactView& cpv, std::ostream & o); 
 

@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <sstream>
+#include <unistd.h>
 
 namespace fffnaming {
 
@@ -20,6 +21,13 @@ namespace fffnaming {
     std::stringstream ss;
     runLumiPrefixFill(ss,run,ls);
     ss << "_EoLS.jsn";
+    return ss.str();
+  }
+
+  inline std::string bolsFileName(const unsigned int run, const unsigned int ls) {
+    std::stringstream ss;
+    runLumiPrefixFill(ss,run,ls);
+    ss << "_BoLS.jsn";
     return ss.str();
   }
 
@@ -150,20 +158,20 @@ namespace fffnaming {
     std::stringstream ss;
     runLumiPrefixFill(ss,run,ls);
     ss << "_";
-    if (typePrefix.size())
+    if (!typePrefix.empty())
       ss << typePrefix;
     if (typeWidth)
       ss << std::setfill('0') << std::setw(typeWidth);
     ss << typeSuffix;
-    if (instanceSuffix.size()) {
+    if (!instanceSuffix.empty()) {
       ss << "_";
-      if (instancePrefix.size())
+      if (!instancePrefix.empty())
         ss << instancePrefix;
       if (instanceWidth)
         ss << std::setfill('0') << std::setw(instanceWidth);
       ss << instanceSuffix;
     }
-    if (fileExtension.size())
+    if (!fileExtension.empty())
       ss << "." << fileExtension;
     return ss.str();
   }

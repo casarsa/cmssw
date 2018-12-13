@@ -40,6 +40,7 @@ DigiSimLinkAlgorithm::DigiSimLinkAlgorithm(const edm::ParameterSet& conf):
   cmnRMStid                 = conf_.getParameter<double>("cmnRMStid");
   cmnRMStec                 = conf_.getParameter<double>("cmnRMStec");
   pedOffset                 = (unsigned int)conf_.getParameter<double>("PedestalsOffset");
+  PreMixing_                = conf_.getParameter<bool>("PreMixingMode");
   if (peakMode) {
     tofCut=theTOFCutForPeak;
     LogDebug("StripDigiInfo")<<"APVs running in peak mode (poor time resolution)";
@@ -51,7 +52,7 @@ DigiSimLinkAlgorithm::DigiSimLinkAlgorithm(const edm::ParameterSet& conf):
   theSiHitDigitizer = new SiHitDigitizer(conf_);
   theDigiSimLinkPileUpSignals = new DigiSimLinkPileUpSignals();
   theSiNoiseAdder = new SiGaussianTailNoiseAdder(theThreshold);
-  theSiDigitalConverter = new SiTrivialDigitalConverter(theElectronPerADC);
+  theSiDigitalConverter = new SiTrivialDigitalConverter(theElectronPerADC, PreMixing_);
   theSiZeroSuppress = new SiStripFedZeroSuppression(theFedAlgo);
 }
 
@@ -129,7 +130,7 @@ void DigiSimLinkAlgorithm::run(edm::DetSet<SiStripDigi>& outdigi,
 		  if(APVSaturationFromHIP&&!zeroSuppression){
 		    int pdg_id = ((*simHitIter).first)->particleType();
 			particle = pdt->particle(pdg_id);
-			if(particle != NULL){
+			if(particle != nullptr){
 				float charge = particle->charge();
 				bool isHadron = particle->isHadron();
 			    if(charge!=0 && isHadron){

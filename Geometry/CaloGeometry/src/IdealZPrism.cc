@@ -1,5 +1,5 @@
 #include "Geometry/CaloGeometry/interface/IdealZPrism.h"
-#include <math.h>
+#include <cmath>
 
 typedef IdealZPrism::CCGFloat CCGFloat ;
 typedef IdealZPrism::Pt3D     Pt3D     ;
@@ -9,23 +9,42 @@ IdealZPrism::IdealZPrism()
   : CaloCellGeometry()
 {}
 
+namespace {
+
+  // magic numbers determined by ParticleFlow
+  constexpr float  EMDepthCorrection  = 22.;
+  constexpr float  HADDepthCorrection = 25.;
+
+  GlobalPoint correct(GlobalPoint const & ori, IdealZPrism::DEPTH depth) {
+    if (depth==IdealZPrism::None) return ori;
+    float zcorr = depth==IdealZPrism::EM ?EMDepthCorrection :  HADDepthCorrection;
+    if (ori.z()<0) zcorr = -zcorr;
+    return ori + GlobalVector(0.,0.,zcorr);
+  }
+}
+
 IdealZPrism::IdealZPrism( const IdealZPrism& idzp ) 
   : CaloCellGeometry( idzp )
 {
-  *this = idzp ;
+  if (idzp.forPF()) m_geoForPF.reset(new IdealZPrism(*idzp.forPF()));
 }
 
 IdealZPrism& 
 IdealZPrism::operator=( const IdealZPrism& idzp ) 
 {
-  if( &idzp != this ) CaloCellGeometry::operator=( idzp ) ;
+  if( &idzp != this ) {
+     CaloCellGeometry::operator=( idzp ) ;
+     if (idzp.forPF()) m_geoForPF.reset(new IdealZPrism(*idzp.forPF()));
+  }
   return *this ;
 }
 
 IdealZPrism::IdealZPrism( const GlobalPoint& faceCenter , 
 			  CornersMgr*  mgr              ,
-			  const CCGFloat*    parm         )
-  : CaloCellGeometry ( faceCenter, mgr, parm )   
+			  const CCGFloat*    parm       ,
+			  IdealZPrism::DEPTH depth)
+  : CaloCellGeometry ( faceCenter, mgr, parm ),
+    m_geoForPF(depth==None ? nullptr : new IdealZPrism(correct(faceCenter,depth), mgr, parm, None ))
 {initSpan();}
 
 IdealZPrism::~IdealZPrism() 
@@ -34,31 +53,31 @@ IdealZPrism::~IdealZPrism()
 CCGFloat 
 IdealZPrism::dEta() const 
 {
-   return param()[0] ;
+   return param()[IdealZPrism::k_dEta] ;
 }
 
 CCGFloat 
 IdealZPrism::dPhi() const 
 { 
-   return param()[1] ;
+   return param()[IdealZPrism::k_dPhi] ;
 }
 
 CCGFloat 
 IdealZPrism::dz()   const 
 { 
-   return param()[2] ;
+   return param()[IdealZPrism::k_dZ] ;
 }
 
 CCGFloat 
 IdealZPrism::eta()  const 
 {
-   return param()[3] ; 
+   return param()[IdealZPrism::k_Eta] ; 
 }
 
 CCGFloat 
 IdealZPrism::z()    const 
 { 
-   return param()[4] ;
+   return param()[IdealZPrism::k_Z] ;
 }
 
 void 
@@ -105,13 +124,13 @@ IdealZPrism::localCorners( Pt3DVec&        lc  ,
 			   Pt3D&           ref   )
 {
    assert( 8 == lc.size() ) ;
-   assert( 0 != pv ) ;
+   assert( nullptr != pv ) ;
    
-   const CCGFloat dEta ( pv[0] ) ;
-   const CCGFloat dPhi ( pv[1] ) ;
-   const CCGFloat dz   ( pv[2] ) ;
-   const CCGFloat eta  ( pv[3] ) ;
-   const CCGFloat z    ( pv[4] ) ;
+   const CCGFloat dEta ( pv[IdealZPrism::k_dEta] ) ;
+   const CCGFloat dPhi ( pv[IdealZPrism::k_dPhi] ) ;
+   const CCGFloat dz   ( pv[IdealZPrism::k_dZ] ) ;
+   const CCGFloat eta  ( pv[IdealZPrism::k_Eta] ) ;
+   const CCGFloat z    ( pv[IdealZPrism::k_Z] ) ;
    
    std::vector<GlobalPoint> gc ( 8, GlobalPoint(0,0,0) ) ;
    

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import optparse
 import re
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     # required parameters
     (options, args) = parser.parse_args()
     if not len (args):
-        raise RuntimeError, "Must provide at least one input file"
+        raise RuntimeError("Must provide at least one input file")
 
     minMaxRE = re.compile (r'(\S+):(\d+)-(\d*)')
 
@@ -42,7 +43,7 @@ if __name__ == '__main__':
             except:
                 pass
             if maxRun and minRun > maxRun:
-                raise RuntimeError, "Minimum value (%d) is greater than maximum value (%d) for file '%s'" % (minRun, maxRun, filename)
+                raise RuntimeError("Minimum value (%d) is greater than maximum value (%d) for file '%s'" % (minRun, maxRun, filename))
         localList = LumiList (filename = filename)
         filterRuns (localList, minRun, maxRun)
         finalList = finalList | localList
@@ -50,4 +51,4 @@ if __name__ == '__main__':
     if options.output:
         finalList.writeJSON (options.output)
     else:
-        print finalList
+        print(finalList)

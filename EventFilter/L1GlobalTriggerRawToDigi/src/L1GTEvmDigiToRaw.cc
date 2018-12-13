@@ -79,24 +79,7 @@ L1GTEvmDigiToRaw::L1GTEvmDigiToRaw(const edm::ParameterSet& pSet) :
 
 }
 
-// destructor
-L1GTEvmDigiToRaw::~L1GTEvmDigiToRaw()
-{
-
-    // empty now
-
-}
-
 // member functions
-
-// beginning of job stuff
-void L1GTEvmDigiToRaw::beginJob()
-{
-
-    // empty now
-
-}
-
 
 // method called to produce the data
 void L1GTEvmDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
@@ -104,7 +87,7 @@ void L1GTEvmDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetu
 
     // define new FEDRawDataCollection
     // it contains ALL FEDs in an event
-    std::auto_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
+    std::unique_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
 
     FEDRawData& gtRawData = allFedRawData->FEDData(m_evmGtFedId);
 
@@ -150,7 +133,7 @@ void L1GTEvmDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetu
                 << "\nQuit packing this event" << std::endl;
 
         // put the raw data in the event
-        iEvent.put(allFedRawData);
+        iEvent.put(std::move(allFedRawData));
 
         return;
     }
@@ -445,7 +428,7 @@ void L1GTEvmDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetu
 
     // put the raw data in the event
 
-    iEvent.put(allFedRawData);
+    iEvent.put(std::move(allFedRawData));
 
 
 }
@@ -731,12 +714,6 @@ void L1GTEvmDigiToRaw::packTrailer(unsigned char* ptrGt,
 
 }
 
-//
-void L1GTEvmDigiToRaw::endJob()
-{
-
-    // empty now
-}
 
 
 // static class members

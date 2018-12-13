@@ -40,12 +40,12 @@ ESDaqInfoTask::ESDaqInfoTask(const ParameterSet& ps) {
    ESFedRangeMin_ = ps.getUntrackedParameter<int>("ESFedRangeMin", 520);
    ESFedRangeMax_ = ps.getUntrackedParameter<int>("ESFedRangeMax", 575);
 
-   meESDaqFraction_ = 0;
-   meESDaqActiveMap_ = 0;
-   meESDaqError_ = 0;
+   meESDaqFraction_ = nullptr;
+   meESDaqActiveMap_ = nullptr;
+   meESDaqError_ = nullptr;
 
    for (int i = 0; i < 56; i++) {
-      meESDaqActive_[i] = 0;
+      meESDaqActive_[i] = nullptr;
    }
 
    if (ps.exists("esMapping")){
@@ -53,7 +53,7 @@ ESDaqInfoTask::ESDaqInfoTask(const ParameterSet& ps) {
       es_mapping_ = new ESElectronicsMapper(esMap);
    }else{
       edm::LogError("ESDaqInfoTask")<<"preshower mapping pointer not initialized. Temporary.";
-      es_mapping_=0;
+      es_mapping_=nullptr;
    }
 
 
@@ -130,12 +130,10 @@ void ESDaqInfoTask::beginLuminosityBlock(const edm::LuminosityBlock& lumiBlock, 
      if ( meESDaqError_ ) meESDaqError_->setBinContent(i, 0.0);
    }
    
-   edm::eventsetup::EventSetupRecordKey recordKey(edm::eventsetup::EventSetupRecordKey::TypeTag::findType("RunInfoRcd"));
-
-   if( iSetup.find( recordKey ) ) {
+   if(auto runInfoRec = iSetup.tryToGet<RunInfoRcd>()) {
 
       edm::ESHandle<RunInfo> sumFED;
-      iSetup.get<RunInfoRcd>().get(sumFED);    
+      runInfoRec->get(sumFED);
 
       std::vector<int> FedsInIds= sumFED->m_fed_in;   
 
@@ -183,9 +181,6 @@ void ESDaqInfoTask::beginLuminosityBlock(const edm::LuminosityBlock& lumiBlock, 
 
 }
 
-void ESDaqInfoTask::endLuminosityBlock(const edm::LuminosityBlock&  lumiBlock, const  edm::EventSetup& iSetup) {
-
-}
 
 void ESDaqInfoTask::reset(void) {
 

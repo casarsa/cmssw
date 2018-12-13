@@ -22,12 +22,12 @@ process.prefer("VolumeBasedMagneticFieldESProducer")
 #-------------------------------------------------
 # CMS Geometry
 #-------------------------------------------------
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 #-------------------------------------------------
 # TkDetMap for TkHistoMap
 #-------------------------------------------------
-process.TkDetMap = cms.Service("TkDetMap")
+process.load("CalibTracker.SiStripCommon.TkDetMapESProducer_cfi")
 process.SiStripDetInfoFileReader = cms.Service("SiStripDetInfoFileReader")
 
 #-------------------------------------------------

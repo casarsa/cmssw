@@ -1,6 +1,6 @@
 #include "PhysicsTools/PatExamples/interface/AnalysisTasksAnalyzerBTag.h"
 #include "PhysicsTools/PatExamples/interface/AnalysisTasksAnalyzerJEC.h"
-#include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
+#include "FWCore/ParameterSetReader/interface/ParameterSetReader.h"
 #include "PhysicsTools/UtilAlgos/interface/FWLiteAnalyzerWrapper.h"
 
 typedef fwlite::AnalyzerWrapper<AnalysisTasksAnalyzerBTag> WrappedFWLiteAnalysisTasksAnalyzerBTag;
@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 {
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
-  AutoLibraryLoader::enable();
+  FWLiteEnabler::enable();
 
   // only allow one argument for this simple example which should be the
   // the python cfg file

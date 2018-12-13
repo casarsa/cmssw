@@ -12,7 +12,7 @@
 
 // user include files
 #include "FWCore/ServiceRegistry/interface/ServiceRegistry.h"
-#include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
+#include "FWCore/ParameterSetReader/interface/ParameterSetReader.h"
 
 // system include files
 
@@ -78,12 +78,12 @@ namespace edm {
 
    ServiceToken
    ServiceRegistry::createServicesFromConfig(std::string const& config) {
-      std::shared_ptr<ParameterSet> params;
+      std::unique_ptr<ParameterSet> params;
       makeParameterSets(config, params);
 
-      std::auto_ptr<std::vector<ParameterSet> > serviceSets = params->popVParameterSet(std::string("services"));
+      auto serviceSets = params->popVParameterSet(std::string("services"));
       //create the services
-      return ServiceToken(ServiceRegistry::createSet(*serviceSets));
+      return ServiceToken(ServiceRegistry::createSet(serviceSets));
    }
 
    ServiceToken 

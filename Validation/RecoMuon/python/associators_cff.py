@@ -1,575 +1,245 @@
 import FWCore.ParameterSet.Config as cms
 
-#Track selector
+# TrackingParticle selectors
 from Validation.RecoMuon.selectors_cff import *
+# reco::Track selectors 
+from Validation.RecoMuon.track_selectors_cff import *
 
-#TrackAssociation
-from SimTracker.TrackAssociation.TrackAssociatorByChi2_cfi import *
-import SimTracker.TrackAssociation.quickTrackAssociatorByHits_cfi
-import SimTracker.TrackAssociation.TrackAssociatorByPosition_cfi
+# quickTrackAssociatorByHits on probeTracks used as monitor wrt MuonAssociatorByHits
+import SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi
+trackAssociatorByHits = SimTracker.TrackAssociatorProducers.quickTrackAssociatorByHits_cfi.quickTrackAssociatorByHits.clone()
 
-TrackAssociatorByHits = SimTracker.TrackAssociation.quickTrackAssociatorByHits_cfi.quickTrackAssociatorByHits.clone( ComponentName = 'TrackAssociatorByHits' )
-
-OnlineTrackAssociatorByHits = SimTracker.TrackAssociation.quickTrackAssociatorByHits_cfi.quickTrackAssociatorByHits.clone()
-OnlineTrackAssociatorByHits.ComponentName = 'OnlineTrackAssociatorByHits'
-OnlineTrackAssociatorByHits.UseGrouped = cms.bool(False)
-OnlineTrackAssociatorByHits.UseSplitting = cms.bool(False)
-OnlineTrackAssociatorByHits.ThreeHitTracksAreSpecial = False
-
-TrackAssociatorByPosDeltaR = SimTracker.TrackAssociation.TrackAssociatorByPosition_cfi.TrackAssociatorByPosition.clone()
-TrackAssociatorByPosDeltaR.ComponentName = 'TrackAssociatorByDeltaR'
-TrackAssociatorByPosDeltaR.method = cms.string('momdr')
-TrackAssociatorByPosDeltaR.QCut = cms.double(0.5)
-TrackAssociatorByPosDeltaR.ConsiderAllSimHits = cms.bool(True)
-
-#
-# Configuration for Muon track extractor
-#
-
-import SimMuon.MCTruth.MuonTrackProducer_cfi
-extractedGlobalMuons = SimMuon.MCTruth.MuonTrackProducer_cfi.muonTrackProducer.clone()
-extractedGlobalMuons.selectionTags = ('AllGlobalMuons',)
-extractedGlobalMuons.trackType = "globalTrack"
-extractedMuonTracks_seq = cms.Sequence( extractedGlobalMuons )
-
-#
-# Configuration for Seed track extractor
-#
-
-import SimMuon.MCTruth.SeedToTrackProducer_cfi
-seedsOfSTAmuons = SimMuon.MCTruth.SeedToTrackProducer_cfi.SeedToTrackProducer.clone()
-seedsOfSTAmuons.L2seedsCollection = cms.InputTag("ancientMuonSeed")
-seedsOfSTAmuons_seq = cms.Sequence( seedsOfSTAmuons )
-
-seedsOfDisplacedSTAmuons = SimMuon.MCTruth.SeedToTrackProducer_cfi.SeedToTrackProducer.clone()
-seedsOfDisplacedSTAmuons.L2seedsCollection = cms.InputTag("displacedMuonSeeds")
-seedsOfDisplacedSTAmuons_seq = cms.Sequence( seedsOfDisplacedSTAmuons )
-
-# select probe tracks
-import PhysicsTools.RecoAlgos.recoTrackSelector_cfi
-probeTracks = PhysicsTools.RecoAlgos.recoTrackSelector_cfi.recoTrackSelector.clone()
-probeTracks.quality = cms.vstring('highPurity')
-probeTracks.tip = cms.double(3.5)
-probeTracks.lip = cms.double(30.)
-probeTracks.ptMin = cms.double(4.0)
-probeTracks.minRapidity = cms.double(-2.4)
-probeTracks.maxRapidity = cms.double(2.4)
-probeTracks_seq = cms.Sequence( probeTracks )
-
-#
-# Associators for Full Sim + Reco:
-#
-
-tpToTkmuTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
+from SimTracker.TrackAssociation.trackingParticleRecoTrackAsssociation_cfi import trackingParticleRecoTrackAsssociation as _trackingParticleRecoTrackAsssociation
+tpToTkmuTrackAssociation = _trackingParticleRecoTrackAsssociation.clone(
+    associator = cms.InputTag('trackAssociatorByHits'),
 #    label_tr = cms.InputTag('generalTracks')
     label_tr = cms.InputTag('probeTracks')
 )
 
-tpToStaTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneMuons','')
-)
-
-tpToStaUpdTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneMuons','UpdatedAtVtx')
-)
-
-tpToGlbTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('extractedGlobalMuons')
-)
-
-tpToStaSETTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneSETMuons','')
-)
-
-tpToStaSETUpdTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneSETMuons','UpdatedAtVtx')
-)
-
-tpToGlbSETTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('globalSETMuons')
-)
-
-tpToTevFirstTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','firstHit')
-)
-
-tpToTevPickyTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','picky')
-)
-tpToTevDytTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','dyt')
-)
-
-tpToL2TrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL2Muons','')
-)
-
-tpToL2UpdTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL2Muons','UpdatedAtVtx')
-)
-
-tpToL3TrackAssociation = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3Muons')
-)
-
-tpToL3TkTrackTrackAssociation = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('OnlineTrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix','MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3TkTracksFromL2','')
-)
-
-tpToL3L2TrackTrackAssociation = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('OnlineTrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix','MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3Muons:L2Seeded')
-)
-
-
-
-#MuonAssociation
+#
+# MuonAssociatorByHits used for all track collections
+#
 import SimMuon.MCTruth.MuonAssociatorByHits_cfi
+MABH = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
+# DEFAULTS ###################################
+#    EfficiencyCut_track = cms.double(0.),
+#    PurityCut_track = cms.double(0.),
+#    EfficiencyCut_muon = cms.double(0.),
+#    PurityCut_muon = cms.double(0.),
+#    includeZeroHitMuons = cms.bool(True),
+#    acceptOneStubMatchings = cms.bool(False),
+##############################################
+MABH.EfficiencyCut_track = 0.5
+MABH.PurityCut_track = 0.75
+MABH.EfficiencyCut_muon = 0.5
+MABH.PurityCut_muon = 0.75
+MABH.includeZeroHitMuons = False
+#
+MABHhlt = MABH.clone()
+MABHhlt.EfficiencyCut_track = 0. # backup solution as UseGrouped/UseSplitting are always assumed to be true
+MABHhlt.DTrechitTag = 'hltDt1DRecHits'
+MABHhlt.ignoreMissingTrackCollection = True
+################################################
 
-tpToTkMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaSeedAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaUpdMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToGlbMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaRefitMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaRefitUpdMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToDisplacedStaSeedAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToDisplacedStaMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaSETMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaSETUpdMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToGlbSETMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToTevFirstMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToTevPickyMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToTevDytMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToL3TkMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToL2MuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToL2UpdMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToL3MuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-
-tpToTkMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToTkMuonAssociation = MABH.clone()
 #tpToTkMuonAssociation.tracksTag = 'generalTracks'
-tpToTkMuonAssociation.tracksTag = 'probeTracks'
+tpToTkMuonAssociation.tracksTag ='probeTracks'
 tpToTkMuonAssociation.UseTracker = True
 tpToTkMuonAssociation.UseMuon = False
 
-tpToStaSeedAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToStaSeedAssociation = MABH.clone()
 tpToStaSeedAssociation.tracksTag = 'seedsOfSTAmuons'
 tpToStaSeedAssociation.UseTracker = False
 tpToStaSeedAssociation.UseMuon = True
+tpToStaSeedAssociation.EfficiencyCut_muon = 0.
 
-
-tpToStaMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToStaMuonAssociation = MABH.clone()
 tpToStaMuonAssociation.tracksTag = 'standAloneMuons'
 tpToStaMuonAssociation.UseTracker = False
 tpToStaMuonAssociation.UseMuon = True
 
-tpToStaUpdMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToStaUpdMuonAssociation = MABH.clone()
 tpToStaUpdMuonAssociation.tracksTag = 'standAloneMuons:UpdatedAtVtx'
 tpToStaUpdMuonAssociation.UseTracker = False
 tpToStaUpdMuonAssociation.UseMuon = True
 
-tpToGlbMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToGlbMuonAssociation.tracksTag = 'extractedGlobalMuons'
+tpToGlbMuonAssociation = MABH.clone()
+tpToGlbMuonAssociation.tracksTag = 'globalMuons'
 tpToGlbMuonAssociation.UseTracker = True
 tpToGlbMuonAssociation.UseMuon = True
 
-tpToStaRefitMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToStaRefitMuonAssociation = MABH.clone()
 tpToStaRefitMuonAssociation.tracksTag = 'refittedStandAloneMuons'
 tpToStaRefitMuonAssociation.UseTracker = False
 tpToStaRefitMuonAssociation.UseMuon = True
 
-tpToStaRefitUpdMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToStaRefitUpdMuonAssociation = MABH.clone()
 tpToStaRefitUpdMuonAssociation.tracksTag = 'refittedStandAloneMuons:UpdatedAtVtx'
 tpToStaRefitUpdMuonAssociation.UseTracker = False
 tpToStaRefitUpdMuonAssociation.UseMuon = True
 
-tpToDisplacedStaSeedAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToDisplacedTrkMuonAssociation = MABH.clone()
+tpToDisplacedTrkMuonAssociation.tracksTag = 'displacedTracks'
+tpToDisplacedTrkMuonAssociation.UseTracker = True
+tpToDisplacedTrkMuonAssociation.UseMuon = False
+
+tpToDisplacedStaSeedAssociation = MABH.clone()
 tpToDisplacedStaSeedAssociation.tracksTag = 'seedsOfDisplacedSTAmuons'
 tpToDisplacedStaSeedAssociation.UseTracker = False
 tpToDisplacedStaSeedAssociation.UseMuon = True
+tpToDisplacedStaSeedAssociation.EfficiencyCut_muon = 0.
 
-tpToDisplacedStaMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToDisplacedStaMuonAssociation = MABH.clone()
 tpToDisplacedStaMuonAssociation.tracksTag = 'displacedStandAloneMuons'
 tpToDisplacedStaMuonAssociation.UseTracker = False
 tpToDisplacedStaMuonAssociation.UseMuon = True
 
-tpToStaSETMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToStaSETMuonAssociation.tracksTag = 'standAloneSETMuons'
-tpToStaSETMuonAssociation.UseTracker = False
-tpToStaSETMuonAssociation.UseMuon = True
+tpToDisplacedGlbMuonAssociation = MABH.clone()
+tpToDisplacedGlbMuonAssociation.tracksTag = 'displacedGlobalMuons'
+tpToDisplacedGlbMuonAssociation.UseTracker = True
+tpToDisplacedGlbMuonAssociation.UseMuon = True
 
-tpToStaSETUpdMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToStaSETUpdMuonAssociation.tracksTag = 'standAloneSETMuons:UpdatedAtVtx'
-tpToStaSETUpdMuonAssociation.UseTracker = False
-tpToStaSETUpdMuonAssociation.UseMuon = True
-
-tpToGlbSETMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToGlbSETMuonAssociation.tracksTag = 'globalSETMuons'
-tpToGlbSETMuonAssociation.UseTracker = True
-tpToGlbSETMuonAssociation.UseMuon = True
-
-tpToTevFirstMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToTevFirstMuonAssociation = MABH.clone()
 tpToTevFirstMuonAssociation.tracksTag = 'tevMuons:firstHit'
 tpToTevFirstMuonAssociation.UseTracker = True
 tpToTevFirstMuonAssociation.UseMuon = True
+tpToTevFirstMuonAssociation.EfficiencyCut_muon = 0.
 
-tpToTevPickyMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToTevPickyMuonAssociation = MABH.clone()
 tpToTevPickyMuonAssociation.tracksTag = 'tevMuons:picky'
 tpToTevPickyMuonAssociation.UseTracker = True
 tpToTevPickyMuonAssociation.UseMuon = True
+tpToTevPickyMuonAssociation.EfficiencyCut_muon = 0.
 
-tpToTevDytMuonAssociation.tpTag = 'mix:MergedTrackTruth'
+tpToTevDytMuonAssociation = MABH.clone()
 tpToTevDytMuonAssociation.tracksTag = 'tevMuons:dyt'
 tpToTevDytMuonAssociation.UseTracker = True
 tpToTevDytMuonAssociation.UseMuon = True
+tpToTevDytMuonAssociation.EfficiencyCut_muon = 0.
 
-tpToL3TkMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToL3TkMuonAssociation.tracksTag = 'hltL3TkTracksFromL2'
-tpToL3TkMuonAssociation.DTrechitTag = 'hltDt1DRecHits'
+tpToME0MuonMuonAssociation = MABH.clone()
+tpToME0MuonMuonAssociation.tracksTag = 'extractMe0Muons'
+tpToME0MuonMuonAssociation.UseTracker = True
+tpToME0MuonMuonAssociation.UseMuon = False
+
+tpToGEMMuonMuonAssociation = MABH.clone()
+tpToGEMMuonMuonAssociation.tracksTag = 'extractGemMuons'
+tpToGEMMuonMuonAssociation.UseTracker = True
+tpToGEMMuonMuonAssociation.UseMuon = False
+
+tpToL3TkMuonAssociation = MABHhlt.clone()
+tpToL3TkMuonAssociation.tracksTag = 'hltIterL3MuonMerged'
 tpToL3TkMuonAssociation.UseTracker = True
 tpToL3TkMuonAssociation.UseMuon = False
-tpToL3TkMuonAssociation.ignoreMissingTrackCollection = True
-tpToL3TkMuonAssociation.UseSplitting = False
-tpToL3TkMuonAssociation.UseGrouped = False
 
-tpToL2MuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToL2MuonAssociation.tracksTag = 'hltL2Muons'
-tpToL2MuonAssociation.DTrechitTag = 'hltDt1DRecHits'
-tpToL2MuonAssociation.UseTracker = False
-tpToL2MuonAssociation.UseMuon = True
-tpToL2MuonAssociation.ignoreMissingTrackCollection = True
+tpToL3OITkMuonAssociation = MABHhlt.clone()
+tpToL3OITkMuonAssociation.tracksTag = 'hltIterL3OIMuonTrackSelectionHighPurity'
+tpToL3OITkMuonAssociation.UseTracker = True
+tpToL3OITkMuonAssociation.UseMuon = False
 
-tpToL2UpdMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToL2UpdMuonAssociation.tracksTag = 'hltL2Muons:UpdatedAtVtx'
-tpToL2UpdMuonAssociation.DTrechitTag = 'hltDt1DRecHits'
-tpToL2UpdMuonAssociation.UseTracker = False
-tpToL2UpdMuonAssociation.UseMuon = True
-tpToL2UpdMuonAssociation.ignoreMissingTrackCollection = True
+tpToL3FromL1TkMuonAssociation = MABHhlt.clone()
+tpToL3FromL1TkMuonAssociation.tracksTag = 'hltIterL3MuonAndMuonFromL1Merged'
+tpToL3FromL1TkMuonAssociation.UseTracker = True
+tpToL3FromL1TkMuonAssociation.UseMuon = False
 
-tpToL3MuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToL3MuonAssociation.tracksTag = 'hltL3Muons'
-tpToL3MuonAssociation.DTrechitTag = 'hltDt1DRecHits'
+tpToL3MuonAssociation = MABHhlt.clone()
+tpToL3MuonAssociation.tracksTag = 'hltIterL3Muons'
 tpToL3MuonAssociation.UseTracker = True
 tpToL3MuonAssociation.UseMuon = True
-tpToL3MuonAssociation.ignoreMissingTrackCollection = True
-tpToL3MuonAssociation.UseSplitting = False
-tpToL3MuonAssociation.UseGrouped = False
+
+tpToL3GlbMuonAssociation = MABHhlt.clone()
+tpToL3GlbMuonAssociation.tracksTag = 'hltIterL3GlbMuon'
+tpToL3GlbMuonAssociation.UseTracker = True
+tpToL3GlbMuonAssociation.UseMuon = True
+
+tpToL3NoIDMuonAssociation = MABHhlt.clone()
+tpToL3NoIDMuonAssociation.tracksTag = 'hltIterL3MuonsNoID'
+tpToL3NoIDMuonAssociation.UseTracker = True
+tpToL3NoIDMuonAssociation.UseMuon = True
+
 
 #
-# Associators for cosmics:
+# COSMICS reco
 #
+# 2-legs cosmics reco: simhits can be twice the reconstructed ones in any single leg
+# (Quality cut have to be set at 0.25, purity cuts can stay at default value 0.75)
+# T.B.D. upper and lower leg should be analyzed separately 
+#
+tpToTkCosmicSelMuonAssociation = MABH.clone()
+tpToTkCosmicSelMuonAssociation.tracksTag = 'ctfWithMaterialTracksP5LHCNavigation'
+tpToTkCosmicSelMuonAssociation.UseTracker = True
+tpToTkCosmicSelMuonAssociation.UseMuon = False
+tpToTkCosmicSelMuonAssociation.EfficiencyCut_track = 0.25
 
-tpToTkCosmicTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('ctfWithMaterialTracksP5LHCNavigation')
-)
+tpToStaCosmicSelMuonAssociation = MABH.clone()
+tpToStaCosmicSelMuonAssociation.tracksTag = 'cosmicMuons'
+tpToStaCosmicSelMuonAssociation.UseTracker = False
+tpToStaCosmicSelMuonAssociation.UseMuon = True
+tpToStaCosmicSelMuonAssociation.EfficiencyCut_muon = 0.25
 
-tpToStaCosmicTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('cosmicMuons')
-)
+tpToGlbCosmicSelMuonAssociation = MABH.clone()
+tpToGlbCosmicSelMuonAssociation.tracksTag = 'globalCosmicMuons'
+tpToGlbCosmicSelMuonAssociation.UseTracker = True
+tpToGlbCosmicSelMuonAssociation.UseMuon = True
+tpToGlbCosmicSelMuonAssociation.EfficiencyCut_track = 0.25
+tpToGlbCosmicSelMuonAssociation.EfficiencyCut_muon = 0.25
 
-tpToGlbCosmicTrackAssociation = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('globalCosmicMuons')
-)
+# 1-leg cosmics reco
+tpToTkCosmic1LegSelMuonAssociation = MABH.clone()
+tpToTkCosmic1LegSelMuonAssociation.tracksTag = 'ctfWithMaterialTracksP5'
+tpToTkCosmic1LegSelMuonAssociation.UseTracker = True
+tpToTkCosmic1LegSelMuonAssociation.UseMuon = False
 
-tpToTkCosmicMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToStaCosmicMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-tpToGlbCosmicMuonAssociation = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
+tpToStaCosmic1LegSelMuonAssociation = MABH.clone()
+tpToStaCosmic1LegSelMuonAssociation.tracksTag = 'cosmicMuons1Leg'
+tpToStaCosmic1LegSelMuonAssociation.UseTracker = False
+tpToStaCosmic1LegSelMuonAssociation.UseMuon = True
 
-tpToTkCosmicMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToTkCosmicMuonAssociation.tracksTag = 'ctfWithMaterialTracksP5LHCNavigation'
-tpToTkCosmicMuonAssociation.UseTracker = True
-tpToTkCosmicMuonAssociation.UseMuon = False
-
-tpToStaCosmicMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToStaCosmicMuonAssociation.tracksTag = 'cosmicMuons'
-tpToStaCosmicMuonAssociation.UseTracker = False
-tpToStaCosmicMuonAssociation.UseMuon = True
-
-tpToGlbCosmicMuonAssociation.tpTag = 'mix:MergedTrackTruth'
-tpToGlbCosmicMuonAssociation.tracksTag = 'globalCosmicMuons'
-tpToGlbCosmicMuonAssociation.UseTracker = True
-tpToGlbCosmicMuonAssociation.UseMuon = True
-
+tpToGlbCosmic1LegSelMuonAssociation = MABH.clone()
+tpToGlbCosmic1LegSelMuonAssociation.tracksTag = 'globalCosmicMuons1Leg'
+tpToGlbCosmic1LegSelMuonAssociation.UseTracker = True
+tpToGlbCosmic1LegSelMuonAssociation.UseMuon = True
 
 #
 # The full-sim association sequences
 #
 
 muonAssociation_seq = cms.Sequence(
-    extractedMuonTracks_seq
-    +seedsOfSTAmuons_seq
-    +probeTracks_seq+(tpToTkMuonAssociation+tpToTkmuTrackAssociation)
-    +(tpToStaSeedAssociation+tpToStaMuonAssociation+tpToStaUpdMuonAssociation+tpToGlbMuonAssociation)
-#   +(tpToStaTrackAssociation+tpToStaUpdTrackAssociation+tpToGlbTrackAssociation)
-)
-muonAssociationTEV_seq = cms.Sequence(
-    (tpToTevFirstMuonAssociation+tpToTevPickyMuonAssociation+tpToTevDytMuonAssociation)
-#    +(tpToTevFirstTrackAssociation+tpToTevPickyTrackAssociation)
-)
-muonAssociationDisplaced_seq = cms.Sequence(seedsOfDisplacedSTAmuons_seq
- +(tpToDisplacedStaSeedAssociation+tpToDisplacedStaMuonAssociation)
-)
-muonAssociationRefit_seq = cms.Sequence(
-    (tpToStaRefitMuonAssociation+tpToStaRefitUpdMuonAssociation)
-)
-muonAssociationSET_seq = cms.Sequence(
-    (tpToStaSETMuonAssociation+tpToStaSETUpdMuonAssociation+tpToGlbSETMuonAssociation)
-#    +(tpToStaSETTrackAssociation+tpToStaSETUpdTrackAssociation+tpToGlbSETTrackAssociation)
-)
-muonAssociationCosmic_seq = cms.Sequence(
-    (tpToTkCosmicMuonAssociation+tpToStaCosmicMuonAssociation+tpToGlbCosmicMuonAssociation)
-#    +(tpToTkCosmicTrackAssociation+tpToStaCosmicTrackAssociation+tpToGlbCosmicTrackAssociation)
-)
-muonAssociationHLT_seq = cms.Sequence(
-    (tpToL2MuonAssociation+tpToL2UpdMuonAssociation+tpToL3MuonAssociation+tpToL3TkMuonAssociation)
-#    +(tpToL2TrackAssociation+tpToL2UpdTrackAssociation+tpToL3TrackAssociation+tpToL3TkTrackTrackAssociation)
-)
-
-
-#
-# Associators for Fast Sim
-#
-
-tpToTkmuTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-#    label_tr = cms.InputTag('generalTracks')
-    label_tr = cms.InputTag('probeTracks')
-)
-
-tpToStaTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneMuons','')
-)
-
-tpToStaUpdTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('standAloneMuons','UpdatedAtVtx')
-)
-
-tpToGlbTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('extractedGlobalMuons')
-)
-
-tpToTevFirstTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','firstHit')
-)
-
-tpToTevPickyTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','picky')
-)
-
-tpToTevDytTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('tevMuons','dyt')
-)
-
-tpToL2TrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL2Muons','')
-)
-
-tpToL2UpdTrackAssociationFS = cms.EDProducer('TrackAssociatorEDProducer',
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL2Muons','UpdatedAtVtx')
-)
-
-tpToL3TrackAssociationFS = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('TrackAssociatorByDeltaR'),
-    label_tp = cms.InputTag('mix', 'MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3Muons')
-)
-
-tpToL3TkTrackTrackAssociationFS = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('OnlineTrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix','MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3TkTracksFromL2','')
-)
-
-tpToL3L2TrackTrackAssociationFS = cms.EDProducer("TrackAssociatorEDProducer",
-    ignoremissingtrackcollection=cms.untracked.bool(True),
-    associator = cms.string('OnlineTrackAssociatorByHits'),
-    label_tp = cms.InputTag('mix','MergedTrackTruth'),
-    label_tr = cms.InputTag('hltL3Muons:L2Seeded')
-)
-
-
-#MuonAssociation
-import SimMuon.MCTruth.MuonAssociatorByHits_cfi
-
-baseMuonAssociatorFS = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.clone()
-baseMuonAssociatorFS.tpTag = 'mix:MergedTrackTruth'
-baseMuonAssociatorFS.UseTracker = True
-baseMuonAssociatorFS.UseMuon = True
-baseMuonAssociatorFS.simtracksTag = "famosSimHits"
-baseMuonAssociatorFS.DTsimhitsTag  = "MuonSimHits:MuonDTHits"
-baseMuonAssociatorFS.CSCsimHitsTag = "MuonSimHits:MuonCSCHits"
-baseMuonAssociatorFS.RPCsimhitsTag = "MuonSimHits:MuonRPCHits"
-baseMuonAssociatorFS.simtracksXFTag = "mix:famosSimHits"
-baseMuonAssociatorFS.DTsimhitsXFTag  = "mix:MuonSimHitsMuonDTHits"
-baseMuonAssociatorFS.CSCsimHitsXFTag = "mix:MuonSimHitsMuonCSCHits"
-baseMuonAssociatorFS.RPCsimhitsXFTag = "mix:MuonSimHitsMuonRPCHits"
-baseMuonAssociatorFS.ROUList = ['famosSimHitsTrackerHits']
-
-
-tpToTkMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToStaSeedAssociationFS = baseMuonAssociatorFS.clone()
-tpToStaMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToStaUpdMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToStaRefitMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToStaRefitUpdMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToGlbMuonAssociationFS  = baseMuonAssociatorFS.clone()
-tpToTevFirstMuonAssociationFS = baseMuonAssociatorFS.clone()
-tpToTevPickyMuonAssociationFS = baseMuonAssociatorFS.clone()
-tpToTevDytMuonAssociationFS = baseMuonAssociatorFS.clone()
-tpToL3TkMuonAssociationFS = baseMuonAssociatorFS.clone()
-tpToL2MuonAssociationFS   = baseMuonAssociatorFS.clone()
-tpToL2UpdMuonAssociationFS   = baseMuonAssociatorFS.clone()
-tpToL3MuonAssociationFS   = baseMuonAssociatorFS.clone()
-
-#tpToTkMuonAssociationFS.tracksTag = 'generalTracks'
-tpToTkMuonAssociationFS.tracksTag = 'probeTracks'
-tpToTkMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToTkMuonAssociationFS.UseTracker = True
-tpToTkMuonAssociationFS.UseMuon = False
-
-tpToStaSeedAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToStaSeedAssociationFS.tracksTag = 'seedsOfSTAmuons'
-tpToStaSeedAssociationFS.UseTracker = False
-tpToStaSeedAssociationFS.UseMuon = True
-
-tpToStaMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToStaMuonAssociationFS.tracksTag = 'standAloneMuons'
-tpToStaMuonAssociationFS.UseTracker = False
-tpToStaMuonAssociationFS.UseMuon = True
-
-tpToStaUpdMuonAssociationFS.tracksTag = 'standAloneMuons:UpdatedAtVtx'
-tpToStaUpdMuonAssociationFS.UseTracker = False
-tpToStaUpdMuonAssociationFS.UseMuon = True
-
-tpToStaRefitMuonAssociationFS.tracksTag = 'refittedStandAloneMuons'
-tpToStaRefitMuonAssociationFS.UseTracker = False
-tpToStaRefitMuonAssociationFS.UseMuon = True
-
-tpToStaRefitUpdMuonAssociationFS.tracksTag = 'refittedStandAloneMuons:UpdatedAtVtx'
-tpToStaRefitUpdMuonAssociationFS.UseTracker = False
-tpToStaRefitUpdMuonAssociationFS.UseMuon = True
-
-tpToGlbMuonAssociationFS.tracksTag = 'extractedGlobalMuons'
-tpToGlbMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToGlbMuonAssociationFS.UseTracker = True
-tpToGlbMuonAssociationFS.UseMuon = True
-
-tpToTevFirstMuonAssociationFS.tracksTag = 'tevMuons:firstHit'
-tpToTevFirstMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToTevFirstMuonAssociationFS.UseTracker = True
-tpToTevFirstMuonAssociationFS.UseMuon = True
-
-tpToTevPickyMuonAssociationFS.tracksTag = 'tevMuons:picky'
-tpToTevPickyMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToTevPickyMuonAssociationFS.UseTracker = True
-tpToTevPickyMuonAssociationFS.UseMuon = True
-
-tpToTevDytMuonAssociationFS.tracksTag = 'tevMuons:dyt'
-tpToTevDytMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToTevDytMuonAssociationFS.UseTracker = True
-tpToTevDytMuonAssociationFS.UseMuon = True
-
-tpToL3TkMuonAssociationFS.tracksTag = 'hltL3TkTracksFromL2'
-tpToL3TkMuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToL3TkMuonAssociationFS.UseTracker = True
-tpToL3TkMuonAssociationFS.UseMuon = False
-tpToL3TkMuonAssociationFS.ignoreMissingTrackCollection = True
-tpToL3TkMuonAssociationFS.UseSplitting = False
-tpToL3TkMuonAssociationFS.UseGrouped = False
-
-tpToL2MuonAssociationFS.tracksTag = 'hltL2Muons'
-tpToL2MuonAssociationFS.UseTracker = False
-tpToL2MuonAssociationFS.UseMuon = True
-tpToL2MuonAssociationFS.ignoreMissingTrackCollection = True
-
-tpToL2UpdMuonAssociationFS.tracksTag = 'hltL2Muons:UpdatedAtVtx'
-tpToL2UpdMuonAssociationFS.UseTracker = False
-tpToL2UpdMuonAssociationFS.UseMuon = True
-tpToL2UpdMuonAssociationFS.ignoreMissingTrackCollection = True
-
-tpToL3MuonAssociationFS.tracksTag = 'hltL3Muons'
-tpToL3MuonAssociationFS.tpTag = 'mix:MergedTrackTruth'
-tpToL3MuonAssociationFS.UseTracker = True
-tpToL3MuonAssociationFS.UseMuon = True
-tpToL3MuonAssociationFS.ignoreMissingTrackCollection = True
-tpToL3MuonAssociationFS.UseSplitting = False
-tpToL3MuonAssociationFS.UseGrouped = False
-
-
-
-muonAssociationFastSim_seq = cms.Sequence(
-        extractedMuonTracks_seq
-        +seedsOfSTAmuons_seq
-        +probeTracks+(tpToTkMuonAssociationFS+tpToTkmuTrackAssociationFS) 
-        +(tpToStaSeedAssociationFS+tpToStaMuonAssociationFS+tpToStaUpdMuonAssociationFS+tpToGlbMuonAssociationFS)
-        +(tpToStaRefitMuonAssociationFS+tpToStaRefitUpdMuonAssociationFS)
-        +(tpToTevFirstMuonAssociationFS+tpToTevPickyMuonAssociationFS+tpToTevDytMuonAssociationFS)
-#        +tpToStaTrackAssociationFS+tpToStaUpdTrackAssociationFS+tpToGlbTrackAssociationFS
-#        +tpToTevFirstTrackAssociationFS+tpToTevPickyTrackAssociationFS
-        )
-muonAssociationHLTFastSim_seq = cms.Sequence(
-    tpToL2MuonAssociationFS+tpToL2UpdMuonAssociationFS+tpToL3MuonAssociationFS+tpToL3TkMuonAssociationFS
-#    +tpToL2TrackAssociationFS+tpToL2UpdTrackAssociationFS+tpToL3TrackAssociationFS+tpToL3TkTrackTrackAssociationFS
+    probeTracks_seq+tpToTkMuonAssociation
+    +trackAssociatorByHits+tpToTkmuTrackAssociation
+    +seedsOfSTAmuons_seq+tpToStaSeedAssociation+tpToStaMuonAssociation+tpToStaUpdMuonAssociation
+    +tpToGlbMuonAssociation
     )
 
+muonAssociationTEV_seq = cms.Sequence(
+    tpToTevFirstMuonAssociation+tpToTevPickyMuonAssociation+tpToTevDytMuonAssociation
+    )
+
+muonAssociationDisplaced_seq = cms.Sequence(
+    seedsOfDisplacedSTAmuons_seq+tpToDisplacedStaSeedAssociation+tpToDisplacedStaMuonAssociation
+    +tpToDisplacedTrkMuonAssociation+tpToDisplacedGlbMuonAssociation
+    )
+
+muonAssociationRefit_seq = cms.Sequence(
+    tpToStaRefitMuonAssociation+tpToStaRefitUpdMuonAssociation
+    )
+
+muonAssociationCosmic_seq = cms.Sequence(
+    tpToTkCosmicSelMuonAssociation+ tpToTkCosmic1LegSelMuonAssociation
+    +tpToStaCosmicSelMuonAssociation+tpToStaCosmic1LegSelMuonAssociation
+    +tpToGlbCosmicSelMuonAssociation+tpToGlbCosmic1LegSelMuonAssociation
+    )
+
+muonAssociationHLT_seq = cms.Sequence(
+    tpToL3TkMuonAssociation+tpToL3OITkMuonAssociation+tpToL3FromL1TkMuonAssociation+
+    tpToL3MuonAssociation+tpToL3GlbMuonAssociation+tpToL3NoIDMuonAssociation
+    )
+
+
+# fastsim has no hlt specific dt hit collection
+from Configuration.Eras.Modifier_fastSim_cff import fastSim
+_DTrechitTag = SimMuon.MCTruth.MuonAssociatorByHits_cfi.muonAssociatorByHits.DTrechitTag
+fastSim.toModify(tpToL3TkMuonAssociation, DTrechitTag = _DTrechitTag)
+fastSim.toModify(tpToL3NoIDMuonAssociation, DTrechitTag = _DTrechitTag)
+fastSim.toModify(tpToL3GlbMuonAssociation, DTrechitTag = _DTrechitTag)
+fastSim.toModify(tpToL3MuonAssociation, DTrechitTag = _DTrechitTag)

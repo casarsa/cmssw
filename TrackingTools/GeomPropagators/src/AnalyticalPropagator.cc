@@ -9,9 +9,7 @@
 #include "TrackingTools/GeomPropagators/interface/PropagationExceptions.h"
 #include "TrackingTools/GeomPropagators/interface/StraightLinePlaneCrossing.h"
 #include "TrackingTools/GeomPropagators/interface/StraightLineBarrelCylinderCrossing.h"
-#include "TrackingTools/GeomPropagators/interface/HelixBarrelPlaneCrossingByCircle.h"
-#include "TrackingTools/GeomPropagators/interface/HelixForwardPlaneCrossing.h"
-#include "TrackingTools/GeomPropagators/interface/HelixArbitraryPlaneCrossing.h"
+#include "TrackingTools/GeomPropagators/interface/OptimalHelixPlaneCrossing.h"
 #include "TrackingTools/GeomPropagators/interface/HelixBarrelCylinderCrossing.h"
 #include "TrackingTools/AnalyticalJacobians/interface/AnalyticalCurvilinearJacobian.h"
 #include "TrackingTools/GeomPropagators/interface/PropagationDirectionFromPath.h"
@@ -19,6 +17,7 @@
 #include "TrackingTools/GeomPropagators/interface/PropagationExceptions.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "FWCore/Utilities/interface/Likely.h"
 
 #include <cmath>
 
@@ -37,13 +36,13 @@ AnalyticalPropagator::propagateWithPath(const FreeTrajectoryState& fts,
   double s;
   
   // check if already on plane
-  if likely (plane.localZclamped(fts.position()) !=0)  {
+  if LIKELY (plane.localZclamped(fts.position()) !=0)  {
       // propagate
       bool parametersOK = this->propagateParametersOnPlane(fts, plane, x, p, s);
       // check status and deltaPhi limit
       float dphi2 = float(s)*rho;
       dphi2 = dphi2*dphi2*fts.momentum().perp2();
-      if unlikely( !parametersOK || dphi2>theMaxDPhi2*fts.momentum().mag2() )  return TsosWP(TrajectoryStateOnSurface(),0.);
+      if UNLIKELY( !parametersOK || dphi2>theMaxDPhi2*fts.momentum().mag2() )  return TsosWP(TrajectoryStateOnSurface(),0.);
     }
   else {
     LogDebug("AnalyticalPropagator")<<"not going anywhere. Already on surface.\n"
@@ -58,7 +57,7 @@ AnalyticalPropagator::propagateWithPath(const FreeTrajectoryState& fts,
   // Compute propagated state and check change in curvature
   //
   GlobalTrajectoryParameters gtp(x,p,fts.charge(),theField);
-  if unlikely(std::abs(gtp.transverseCurvature()-rho)>theMaxDBzRatio*std::abs(rho) ) 
+  if UNLIKELY(std::abs(gtp.transverseCurvature()-rho)>theMaxDBzRatio*std::abs(rho) ) 
     return TsosWP(TrajectoryStateOnSurface(),0.);
   //
   // construct TrajectoryStateOnSurface
@@ -83,19 +82,19 @@ AnalyticalPropagator::propagateWithPath(const FreeTrajectoryState& fts,
   // check status and deltaPhi limit
   float dphi2 = s*rho;
   dphi2 = dphi2*dphi2*fts.momentum().perp2();
-  if unlikely( !parametersOK || dphi2>theMaxDPhi2*fts.momentum().mag2() )  return TsosWP(TrajectoryStateOnSurface(),0.);
+  if UNLIKELY( !parametersOK || dphi2>theMaxDPhi2*fts.momentum().mag2() )  return TsosWP(TrajectoryStateOnSurface(),0.);
   //
   // Compute propagated state and check change in curvature
   //
   GlobalTrajectoryParameters gtp(x,p,fts.charge(),theField);
-  if unlikely( std::abs(gtp.transverseCurvature()-rho)>theMaxDBzRatio*std::abs(rho) ) 
+  if UNLIKELY( std::abs(gtp.transverseCurvature()-rho)>theMaxDBzRatio*std::abs(rho) ) 
     return TsosWP(TrajectoryStateOnSurface(),0.);
   //
   // create result TSOS on TangentPlane (local parameters & errors are better defined)
   //
 
   //try {
-    ReferenceCountingPointer<TangentPlane> plane(cylinder.tangentPlane(x));  // need to be here until tsos is created!
+    ConstReferenceCountingPointer<TangentPlane> plane(cylinder.tangentPlane(x));  // need to be here until tsos is created!
     return propagatedStateWithPath(fts,*plane,gtp,s);
   /*
   } catch(...) {
@@ -148,7 +147,7 @@ bool AnalyticalPropagator::propagateParametersOnCylinder(
 {
 
   GlobalPoint const & sp = cylinder.position();
-  if unlikely(sp.x()!=0. || sp.y()!=0.) {
+  if UNLIKELY(sp.x()!=0. || sp.y()!=0.) {
     throw PropagationException("Cannot propagate to an arbitrary cylinder");
   }
   // preset output
@@ -161,7 +160,7 @@ bool AnalyticalPropagator::propagateParametersOnCylinder(
   // Straight line approximation? |rho|<1.e-10 equivalent to ~ 1um 
   // difference in transversal position at 10m.
   //
-  if unlikely( std::abs(rho)<1.e-10f )
+  if UNLIKELY( std::abs(rho)<1.e-10f )
     return propagateWithLineCrossing(fts.position(),p,cylinder,x,s);
   //
   // Helix case
@@ -175,7 +174,7 @@ bool AnalyticalPropagator::propagateParametersOnCylinder(
   //
   HelixBarrelCylinderCrossing cylinderCrossing(fts.position(),fts.momentum(),rho,
 					       propagationDirection(),cylinder);
-  if unlikely( !cylinderCrossing.hasSolution() )  return false;
+  if UNLIKELY( !cylinderCrossing.hasSolution() )  return false;
   // path length
   s = cylinderCrossing.pathLength();
   // point
@@ -202,13 +201,12 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   // Straight line approximation? |rho|<1.e-10 equivalent to ~ 1um 
   // difference in transversal position at 10m.
   //
-  if unlikely( std::abs(rho)<1.e-10f )
+  if UNLIKELY( std::abs(rho)<1.e-10f )
     return propagateWithLineCrossing(fts.position(),p,plane,x,s);
   //
   // Helix case 
   //
-  GlobalVector u = plane.normalVector();
-  constexpr float small = 1.e-6; // for orientation of planes
+
   //
   // Frame-independant point and vector are created explicitely to 
   // avoid confusing gcc (refuses to compile with temporary objects
@@ -216,23 +214,9 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   //
   HelixPlaneCrossing::PositionType helixPos(x);
   HelixPlaneCrossing::DirectionType helixDir(p);
-  if likely(isOldPropagationType) {
-      if (std::abs(u.z()) < small) {
-	// barrel plane:
-	// instantiate HelixBarrelPlaneCrossing, get vector of solutions and check for existance
-	HelixBarrelPlaneCrossingByCircle planeCrossing(helixPos,helixDir,rho,propagationDirection());
-	return propagateWithHelixCrossing(planeCrossing,plane,fts.momentum().mag(),x,p,s);
-      }
-      if ( (std::abs(u.x()) < small) & (std::abs(u.y()) < small) ) {
-	// forward plane:
-	// instantiate HelixForwardPlaneCrossing, get vector of solutions and check for existance
-	HelixForwardPlaneCrossing planeCrossing(helixPos,helixDir,rho,propagationDirection());
-	return propagateWithHelixCrossing(planeCrossing,plane,fts.momentum().mag(),x,p,s);
-      }
-      // arbitrary plane:
-      // instantiate HelixArbitraryPlaneCrossing, get vector of solutions and check for existance
-      HelixArbitraryPlaneCrossing planeCrossing(helixPos,helixDir,rho,propagationDirection());
-      return propagateWithHelixCrossing(planeCrossing,plane,fts.momentum().mag(),x,p,s);
+  if LIKELY(isOldPropagationType) {
+      OptimalHelixPlaneCrossing planeCrossing(plane,helixPos,helixDir,rho,propagationDirection());
+      return propagateWithHelixCrossing(*planeCrossing,plane,fts.momentum().mag(),x,p,s);
     }
 
 
@@ -257,7 +241,7 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   HelixPlaneCrossing::PositionType helixPos1(gp1);
   HelixPlaneCrossing::DirectionType helixDir1(gm1);
   LogDebug("AnalyticalPropagator") << "gp1 before calling planeCrossing1: " << gp1 << "\n";
-  HelixArbitraryPlaneCrossing planeCrossing1(helixPos1,helixDir1,rho1,propagationDirection());
+  OptimalHelixPlaneCrossing planeCrossing1(plane,helixPos1,helixDir1,rho1,propagationDirection());
   
   HelixPlaneCrossing::PositionType xGen;
   HelixPlaneCrossing::DirectionType pGen;
@@ -266,7 +250,7 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   if(propagationDirection()==oppositeToMomentum)
     tolerance *=-1;
   
-  bool check1 = propagateWithHelixCrossing(planeCrossing1,plane,fts.momentum().mag(),gp1,gm1,s1);
+  bool check1 = propagateWithHelixCrossing(*planeCrossing1,plane,fts.momentum().mag(),gp1,gm1,s1);
   double dphi1 = fabs(fts.momentum().phi()-gm1.phi());
   LogDebug("AnalyticalPropagator") << "check1, s1, dphi, gp1: " 
 				   << check1 << " , "
@@ -276,8 +260,8 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   
   //move forward a bit to avoid that the propagator doesn't propagate because the state is already on surface.
   //we want to go to the other point of intersection between the helix and the plane
-  xGen = planeCrossing1.position(s1+tolerance);
-  pGen = planeCrossing1.direction(s1+tolerance);
+  xGen = (*planeCrossing1).position(s1+tolerance);
+  pGen = (*planeCrossing1).direction(s1+tolerance);
   
   /*
     if(!check1 || s1>170 ){
@@ -306,9 +290,9 @@ AnalyticalPropagator::propagateParametersOnPlane(const FreeTrajectoryState& fts,
   double rho2 = rho1;
   HelixPlaneCrossing::PositionType helixPos2(gp2);
   HelixPlaneCrossing::DirectionType helixDir2(gm2);
-  HelixArbitraryPlaneCrossing planeCrossing2(helixPos2,helixDir2,rho2,propagationDirection());
+  OptimalHelixPlaneCrossing planeCrossing2(plane,helixPos2,helixDir2,rho2,propagationDirection());
   
-  bool check2 = propagateWithHelixCrossing(planeCrossing2,plane,gm2.mag(),gp2,gm2,s2);
+  bool check2 = propagateWithHelixCrossing(*planeCrossing2,plane,gm2.mag(),gp2,gm2,s2);
   
   if(!check2){
     x = gp1;
@@ -425,7 +409,7 @@ AnalyticalPropagator::propagateWithHelixCrossing (HelixPlaneCrossing& planeCross
 						  double& s) const {
   // get solution
   std::pair<bool,double> propResult = planeCrossing.pathLength(plane);
-  if unlikely( !propResult.first )  return false;
+  if UNLIKELY( !propResult.first )  return false;
 
   s = propResult.second;
   x = GlobalPoint(planeCrossing.position(s));

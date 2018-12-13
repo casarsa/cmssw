@@ -2,15 +2,14 @@
 #include "TrackingTools/TrackFitters/interface/TrajectoryStateCombiner.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
-#include "Geometry/CommonDetUnit/interface/GeomDetUnit.h"
+#include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "Geometry/CommonTopologies/interface/StripTopology.h"
 #include "Geometry/CommonTopologies/interface/PixelTopology.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/MeasurementError.h"
 #include "DataFormats/GeometryCommonDetAlgo/interface/MeasurementVector.h"
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-#include "Geometry/Records/interface/IdealGeometryRecord.h"
-#include "Geometry/TrackerGeometryBuilder/interface/GluedGeomDet.h"
+#include "Geometry/CommonDetUnit/interface/GluedGeomDet.h"
 // #include "RecoTracker/MeasurementDet/interface/RecHitPropagator.h"
 #include "TrackingTools/TransientTrackingRecHit/interface/TrackingRecHitProjector.h"
 #include "RecoTracker/TransientTrackingRecHit/interface/ProjectedRecHit2D.h"
@@ -53,7 +52,7 @@ TrajectoryAtInvalidHit::TrajectoryAtInvalidHit( const TrajectoryMeasurement& tm,
     unsigned int matched_iidd = iidd-(iidd & 0x3);
     DetId matched_id(matched_iidd);
     
-    GluedGeomDet * gdet=(GluedGeomDet *)tracker->idToDet(matched_id);
+    const GluedGeomDet * gdet=static_cast<const GluedGeomDet *>(tracker->idToDet(matched_id));
     
     // get the sensor det indicated by mono
     if (mono == 1) monodet=gdet->stereoDet();
@@ -93,7 +92,7 @@ TrajectoryAtInvalidHit::TrajectoryAtInvalidHit( const TrajectoryMeasurement& tm,
     //set module id to be mono det
     iidd = monodet->geographicalId().rawId();
   } else {
-    monodet = (GeomDetUnit*)theHit->det();
+    monodet = theHit->det();
     hasValidHit = theHit->isValid();
   }
   

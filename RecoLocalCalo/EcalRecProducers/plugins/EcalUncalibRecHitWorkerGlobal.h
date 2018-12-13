@@ -9,11 +9,10 @@
  *  \author R. Bruneliere - A. Zabi
  */
 
-#include "RecoLocalCalo/EcalRecProducers/interface/EcalUncalibRecHitWorkerBaseClass.h"
+#include "RecoLocalCalo/EcalRecProducers/interface/EcalUncalibRecHitWorkerRunOneDigiBase.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalUncalibRecHitRecWeightsAlgo.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalUncalibRecHitRecChi2Algo.h"
 #include "RecoLocalCalo/EcalRecAlgos/interface/EcalUncalibRecHitRatioMethodAlgo.h"
-#include "RecoLocalCalo/EcalRecAlgos/interface/EcalUncalibRecHitLeadingEdgeAlgo.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "CondFormats/EcalObjects/interface/EcalTimeCalibConstants.h"
 #include "CondFormats/EcalObjects/interface/EcalTimeOffsetConstant.h"
@@ -31,18 +30,21 @@ namespace edm {
         class Event;
         class EventSetup;
         class ParameterSet;
+	class ParameterSetDescription;
 }
 
-class EcalUncalibRecHitWorkerGlobal : public EcalUncalibRecHitWorkerBaseClass {
+class EcalUncalibRecHitWorkerGlobal : public EcalUncalibRecHitWorkerRunOneDigiBase {
 
         public:
                 EcalUncalibRecHitWorkerGlobal(const edm::ParameterSet&, edm::ConsumesCollector& c);
-				EcalUncalibRecHitWorkerGlobal(const edm::ParameterSet&);
-                virtual ~EcalUncalibRecHitWorkerGlobal() {};
+		EcalUncalibRecHitWorkerGlobal(const edm::ParameterSet&);
+		EcalUncalibRecHitWorkerGlobal():testbeamEEShape(EEShape(true)), testbeamEBShape(EBShape(true)){;}
+                ~EcalUncalibRecHitWorkerGlobal() override {};
 
-                void set(const edm::EventSetup& es);
-                bool run(const edm::Event& evt, const EcalDigiCollection::const_iterator & digi, EcalUncalibratedRecHitCollection & result);
+                void set(const edm::EventSetup& es) override;
+                bool run(const edm::Event& evt, const EcalDigiCollection::const_iterator & digi, EcalUncalibratedRecHitCollection & result) override;
 
+		edm::ParameterSetDescription getAlgoDescription() override;
         protected:
 
                 double pedVec[3];
@@ -64,8 +66,8 @@ class EcalUncalibRecHitWorkerGlobal : public EcalUncalibRecHitWorkerBaseClass {
                 const EcalWeightSet::EcalChi2WeightMatrix* chi2mat[2];
                 EcalUncalibRecHitRecWeightsAlgo<EBDataFrame> weightsMethod_barrel_;
                 EcalUncalibRecHitRecWeightsAlgo<EEDataFrame> weightsMethod_endcap_;
-                const EEShape testbeamEEShape; // used in the chi2
-                const EBShape testbeamEBShape; // can be replaced by simple shape arrays of float in the future
+                EEShape testbeamEEShape; // used in the chi2
+                EBShape testbeamEBShape; // can be replaced by simple shape arrays of float in the future
 
                 // determie which of the samples must actually be used by ECAL local reco
 		edm::ESHandle<EcalSampleMask> sampleMaskHand_;
@@ -99,13 +101,10 @@ class EcalUncalibRecHitWorkerGlobal : public EcalUncalibRecHitWorkerBaseClass {
 
                 edm::ESHandle<EcalTimeBiasCorrections> timeCorrBias_;
 
-                // leading edge method
                 edm::ESHandle<EcalTimeCalibConstants> itime;
 		edm::ESHandle<EcalTimeOffsetConstant> offtime;
                 std::vector<double> ebPulseShape_;
                 std::vector<double> eePulseShape_;
-                EcalUncalibRecHitLeadingEdgeAlgo<EBDataFrame> leadingEdgeMethod_barrel_;
-                EcalUncalibRecHitLeadingEdgeAlgo<EEDataFrame> leadingEdgeMethod_endcap_;
 
                 // chi2 method
 		bool kPoorRecoFlagEB_;

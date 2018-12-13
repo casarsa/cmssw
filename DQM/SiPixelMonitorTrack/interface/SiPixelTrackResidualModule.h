@@ -23,6 +23,7 @@
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 
+namespace edm { class EventSetup; }
 
 class SiPixelTrackResidualModule { 
   public:
@@ -30,7 +31,7 @@ class SiPixelTrackResidualModule {
     SiPixelTrackResidualModule(const uint32_t);
    ~SiPixelTrackResidualModule();
 
-   void book(const edm::ParameterSet&, DQMStore::IBooker &, bool reducedSet=true, int type=0, bool isUpgrade=false);
+   void book(const edm::ParameterSet&, edm::EventSetup const&, DQMStore::IBooker &, bool reducedSet=true, int type=0, bool isUpgrade=false);
    void fill(const Measurement2DVector&, bool reducedSet=true, bool modon=true, bool ladon=true, bool layon=true, bool phion = true, bool bladeon=true, bool diskon=true, bool ringon=true);
    void fill(const SiPixelCluster &clust, bool onTrack, double corrCharge, bool reducedSet,  bool modon, bool ladon, bool layon, bool phion, bool bladeon, bool diskon, bool ringon); 
    void nfill(int onTrack, int offTrack, bool reducedSet,  bool modon, bool ladon, bool layon, bool phion, bool bladeon, bool diskon, bool ringon);

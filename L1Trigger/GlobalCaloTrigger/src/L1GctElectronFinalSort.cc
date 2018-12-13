@@ -1,5 +1,4 @@
 #include "L1Trigger/GlobalCaloTrigger/interface/L1GctElectronFinalSort.h"
-
 #include "L1Trigger/GlobalCaloTrigger/interface/L1GctEmLeafCard.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -10,12 +9,12 @@ L1GctElectronFinalSort::L1GctElectronFinalSort(bool iso, L1GctEmLeafCard* posEta
                                                          L1GctEmLeafCard* negEtaCard):
   L1GctProcessor(),
   m_emCandsType(iso),
-  m_thePosEtaLeafCard(0), m_theNegEtaLeafCard(0),
+  m_thePosEtaLeafCard(nullptr), m_theNegEtaLeafCard(nullptr),
   m_inputCands(16),
   m_outputCands(4),
   m_setupOk(true)
 {
-  if(posEtaCard!=0){
+  if(posEtaCard!=nullptr){
     m_thePosEtaLeafCard = posEtaCard;
   }else{
     m_setupOk = false;
@@ -24,7 +23,7 @@ L1GctElectronFinalSort::L1GctElectronFinalSort(bool iso, L1GctEmLeafCard* posEta
 	<<"L1GctElectronFinalSort::Constructor() : 1st EmLeafCard passed is zero";
     }
   }
-  if(negEtaCard!=0){
+  if(negEtaCard!=nullptr){
     m_theNegEtaLeafCard = negEtaCard;
   }else{
     m_setupOk = false;
@@ -83,7 +82,7 @@ void L1GctElectronFinalSort::process(){
     }
 
     //Then sort it
-    sort(data.begin(),data.end(),rank_gt());
+    sort(data.begin(),data.end(),L1GctElectronSorter::rankByGt);
   
     //Copy data to output buffer
     std::vector<L1GctEmCand> temp(4);

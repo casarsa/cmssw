@@ -1,3 +1,4 @@
+from __future__ import print_function
 ## Original version of code heavily based on recipe written by Wai Yip
 ## Tung, released under PSF license.
 ## http://code.activestate.com/recipes/534109/
@@ -6,6 +7,7 @@ import re
 import os
 import xml.sax.handler
 import pprint
+import six
 
 class DataNode (object):
 
@@ -23,14 +25,14 @@ class DataNode (object):
 
 
     def __getitem__ (self, key):
-        if isinstance (key, basestring):
+        if isinstance (key, str):
             return self._attrs.get(key,None)
         else:
             return [self][key]
 
 
     def __contains__ (self, name):
-        return self._attrs.has_key(name)
+        return name in self._attrs
 
 
     def __nonzero__ (self):
@@ -89,7 +91,7 @@ class DataNode (object):
         if isinstance (obj, list):
             first = True
             for value in obj:
-                print "value", value, value.__class__.__name__
+                print("value", value, value.__class__.__name__)
                 if first:
                     tempoffset = offset
                     first = False
@@ -99,7 +101,7 @@ class DataNode (object):
                     tempoffset = offset
                 if isinstance (value, DataNode):
                     retval += value.stringify (offset=tempoffset)
-                    print "  calling stringify for %s" % value
+                    print("  calling stringify for %s" % value)
                 elif DataNode.isiterable (value):
                     retval += DataNode._outputValues (value, '', offset)
                 else:
@@ -134,7 +136,7 @@ class DataNode (object):
             retval += '\n' + ' ' * offset
             retval += '%s: ' % name
         first = True
-        for key, value in sorted (self._attrs.iteritems()):
+        for key, value in sorted (six.iteritems(self._attrs)):
             if first:
                 retval += '{ \n'
                 tempspace = offset + 3
@@ -239,11 +241,11 @@ def xml2obj (**kwargs):
     contents   = kwargs.get ('contents')
     filename   = kwargs.get ('filename')
     if not filehandle and not contents and not filename:
-        raise RuntimeError, "You must provide 'filehandle', 'contents', or 'filename'"
+        raise RuntimeError("You must provide 'filehandle', 'contents', or 'filename'")
     if     filehandle and contents or \
            filehandle and filename or \
            contents   and filename:
-        raise RuntimeError, "You must provide only ONE of 'filehandle', 'contents', or 'filename'"
+        raise RuntimeError("You must provide only ONE of 'filehandle', 'contents', or 'filename'")
 
     # are we filtering?
     filtering = kwargs.get ('filtering')
@@ -254,7 +256,7 @@ def xml2obj (**kwargs):
                 try:
                     filehandle = open (filename, 'r')
                 except:
-                    raise RuntimeError, "Failed to open '%s'" % filename
+                    raise RuntimeError("Failed to open '%s'" % filename)
             contents = ''
             for line in filehandle:
                 contents += line
@@ -271,6 +273,6 @@ def xml2obj (**kwargs):
             try:
                 filehandle = open (filename, 'r')
             except:
-                raise RuntimeError, "Failed to open '%s'" % filename
+                raise RuntimeError("Failed to open '%s'" % filename)
         xml.sax.parse(filehandle, builder)
     return builder.topLevel()

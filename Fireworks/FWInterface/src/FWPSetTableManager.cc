@@ -20,7 +20,6 @@
 #include "Fireworks/Core/interface/fwLog.h"
 
 #include "FWCore/Framework/interface/ScheduleInfo.h"
-#include "FWCore/PythonParameterSet/interface/MakeParameterSets.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/Exception.h"
 //
@@ -759,7 +758,7 @@ FWTableCellRendererBase* FWPSetTableManager::cellRenderer(int iSortedRowNumber, 
 
    std::string value;
    std::string label;
-   TGGC* gc = 0;
+   TGGC* gc = nullptr;
    if (data.level == 0)
    {
       const PathInfo &path = m_paths[data.path];

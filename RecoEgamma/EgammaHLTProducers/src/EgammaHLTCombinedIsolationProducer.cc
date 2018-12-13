@@ -49,7 +49,7 @@ void EgammaHLTCombinedIsolationProducer::fillDescriptions(edm::ConfigurationDesc
   
 // ------------ method called to produce the data  ------------
 void
-EgammaHLTCombinedIsolationProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+EgammaHLTCombinedIsolationProducer::produce(edm::StreamID sid, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   
   edm::Handle<reco::RecoEcalCandidateCollection> recoecalcandHandle;
   iEvent.getByToken(recoEcalCandidateProducer_, recoecalcandHandle);
@@ -78,8 +78,7 @@ EgammaHLTCombinedIsolationProducer::produce(edm::Event& iEvent, const edm::Event
     
   }
 
-  std::auto_ptr<reco::RecoEcalCandidateIsolationMap> Map(new reco::RecoEcalCandidateIsolationMap(TotalIsolMap));
-  iEvent.put(Map);
+  iEvent.put(std::make_unique<reco::RecoEcalCandidateIsolationMap>(TotalIsolMap));
 
 }
 

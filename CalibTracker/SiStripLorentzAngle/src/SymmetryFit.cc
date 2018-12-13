@@ -2,7 +2,6 @@
 #include <cmath>
 #include <cassert>
 #include <memory>
-#include "boost/foreach.hpp"
 
 TH1* SymmetryFit::symmetryChi2(std::string basename, const std::vector<TH1*>& candidates, const std::pair<unsigned,unsigned> range)
 {
@@ -11,14 +10,14 @@ TH1* SymmetryFit::symmetryChi2(std::string basename, const std::vector<TH1*>& ca
   SymmetryFit combined(fake,range);
   delete fake;
 
-  BOOST_FOREACH(const TH1* candidate, candidates) {
+  for(auto const* candidate : candidates) {
     SymmetryFit sf(candidate,range); 
     combined+=sf; 
     delete sf.chi2_; 
   }
 
   int status = combined.fit();
-  if(status) { delete combined.chi2_; combined.chi2_=0;}
+  if(status) { delete combined.chi2_; combined.chi2_=nullptr;}
   return combined.chi2_;
 }
 
@@ -26,7 +25,7 @@ TH1* SymmetryFit::symmetryChi2(const TH1* candidate, const std::pair<unsigned,un
 {
   SymmetryFit sf(candidate, range);
   int status = sf.fit();
-  if(status) { delete sf.chi2_; sf.chi2_=0; }
+  if(status) { delete sf.chi2_; sf.chi2_=nullptr; }
   return sf.chi2_;
 }
 
@@ -36,7 +35,7 @@ SymmetryFit::SymmetryFit(const TH1* h, const std::pair<unsigned,unsigned> r)
     range_(r),
     minmaxUsable_(findUsableMinMax()),
     ndf_( minmaxUsable_.first<minmaxUsable_.second ? minmaxUsable_.second-minmaxUsable_.first : 0),
-    chi2_(0)
+    chi2_(nullptr)
 {
   makeChi2Histogram();
   fillchi2();
@@ -124,7 +123,7 @@ float SymmetryFit::chi2_element(std::pair<unsigned,unsigned> range)
 int SymmetryFit::fit() {
 
   std::vector<double> p = pol2_from_pol3(chi2_);
-  if( !p.size() || 
+  if( p.empty() || 
       p[0] < chi2_->GetBinCenter(1) || 
       p[0] > chi2_->GetBinCenter(chi2_->GetNbinsX()))
     return 7;
@@ -172,7 +171,7 @@ std::vector<double> SymmetryFit::pol2_from_pol2(TH1* hist) {
 std::vector<double> SymmetryFit::pol2_from_pol3(TH1* hist) {
   std::vector<double> v;
 
-  std::unique_ptr<TF1> func( new TF1("mypol3","pol3")); 
+  auto func = std::make_unique<TF1>("mypol3","pol3"); 
   int status = hist->Fit(func.get(),"WQ");
   if(!status) {
     std::vector<double> p;

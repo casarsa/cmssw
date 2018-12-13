@@ -1,48 +1,18 @@
 #ifndef DataFormat_Math_SSEVec_H
 #define DataFormat_Math_SSEVec_H
 
-#if !defined(__arm__) && !defined(__aarch64__) && !defined(__MIC__)
-#if defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ > 4)
+#if !defined(__arm__) && !defined(__aarch64__) && !defined(__MIC__) && !defined(__powerpc64__) && !defined(__PPC64__) && !defined(__powerpc__) && !defined(__NVCC__)
+#if defined(__GNUC__) 
 #include <x86intrin.h>
 #define CMS_USE_SSE
 #ifdef __AVX__
 #define CMS_USE_AVX
 #endif /* __AVX__ */
-#else /* defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ > 4) */
-
-#ifdef __SSE2__
-#define CMS_USE_SSE
-
-#include <mmintrin.h>
-#include <emmintrin.h>
-#endif /* __SSE2__ */
-#ifdef __SSE3__
-#include <pmmintrin.h>
-#endif /* __SSE3__ */
-#ifdef __SSE4_1__
-#include <smmintrin.h>
-#endif /* __SSE4_1__ */
-
-#endif /* defined(__GNUC__) && (__GNUC__ == 4) && (__GNUC_MINOR__ > 4) */
+#endif /* defined(__GNUC__) */
 #endif /* !defined(__arm__) && !defined(__aarch64__) && !defined(__MIC__) */
 
 #include<cmath>
 
-// needed fro gcc < 4.6
-namespace mathSSE {
-  struct ZeroUpper {
-    ZeroUpper() {
-#ifdef __AVX__
-    _mm256_zeroupper();
-#endif
-    }
-   ~ZeroUpper() {
-#ifdef __AVX__
-    _mm256_zeroupper();
-#endif
-    }
-  };
-}
 
 namespace mathSSE {
   template<typename T> inline T sqrt(T t) { return std::sqrt(t);}
@@ -90,8 +60,9 @@ namespace mathSSE {
     v4 = _mm_shuffle_ps(v2, v1, _MM_SHUFFLE(3, 1, 0, 1));
     
     v3 = _mm_mul_ps(v3, v4);
-    const  __m128 neg = _mm_set_ps(0.0f,0.0f,-0.0f,0.0f);
-    return _mm_xor_ps(_mm_sub_ps(v5, v3), neg);
+    const __m128i neg = _mm_set_epi32(0,0,0x80000000,0);
+    __m128i ret = __m128i(_mm_sub_ps(v5, v3));
+    return __m128(_mm_xor_si128(ret,neg));
   }
 #endif // CMS_USE_SSE
 
@@ -124,9 +95,9 @@ namespace mathSSE {
     v4 = _mm256_permute_pd(v4,5);
     
     v3 = _mm256_mul_pd(v3, v4);
-    const  __m256d neg = _mm256_set_pd(0.0,0.0,-0.0,0.0);
-    return _mm256_xor_pd(_mm256_sub_pd(v5, v3), neg);
- 
+     __m256d ret = _mm256_sub_pd(v5, v3);
+    const  __m256i neg = _mm256_set_epi64x(0,0,0x8000000000000000,0);
+    return __m256d(_mm256_xor_si256(__m256i(ret), neg));
   }
 
 #endif //  CMS_USE_AVX
@@ -914,14 +885,14 @@ inline double dot(mathSSE::Vec4D a, mathSSE::Vec4D b) {
 inline mathSSE::Vec4D cross(mathSSE::Vec4D a, mathSSE::Vec4D b) __attribute__((always_inline)) __attribute__ ((pure));
 
 inline mathSSE::Vec4D cross(mathSSE::Vec4D a, mathSSE::Vec4D b) {
-  const __m128d neg = _mm_set_pd ( 0.0 , -0.0 );
+  const __m128i neg = _mm_set_epi64x( 0, 0x8000000000000000 );
   // lh .z * rh .x , lh .z * rh .y
   __m128d l1 = _mm_mul_pd ( _mm_unpacklo_pd ( a.vec[1] , a.vec[1] ), b.vec[0] );
   // rh .z * lh .x , rh .z * lh .y
   __m128d l2 = _mm_mul_pd ( _mm_unpacklo_pd (  b.vec[1],  b.vec[1] ),  a.vec[0] );
   __m128d m1 = _mm_sub_pd ( l1 , l2 ); // l1 - l2
   m1 = _mm_shuffle_pd ( m1 , m1 , 1 ); // switch the elements
-  m1 = _mm_xor_pd ( m1 , neg ); // change the sign of the first element
+  m1 = __m128d(_mm_xor_si128 ( __m128i(m1) , neg )); // change the sign of the first element
   // lh .x * rh .y , lh .y * rh .x
   l1 = _mm_mul_pd (  a.vec[0] , _mm_shuffle_pd (  b.vec[0] ,  b.vec[0] , 1 ) );
   // lh .x * rh .y - lh .y * rh .x
@@ -953,25 +924,6 @@ namespace mathSSE {
 #endif
 }
 
-// chephes func
-#include "DataFormats/Math/interface/sse_mathfun.h"
-namespace mathSSE {
-  inline Vec4F log(Vec4F v) { return log_ps(v.vec);}
-  inline Vec4F exp(Vec4F v) { return exp_ps(v.vec);}
-  inline Vec4F sin(Vec4F v) { return sin_ps(v.vec);}
-  inline Vec4F cos(Vec4F v) { return cos_ps(v.vec);}
-  inline void sincos(Vec4F v, Vec4F & s, Vec4F & c) { sincos_ps(v.vec,&s.vec, &c.vec);}
-
-  inline float log(float f) { float s; _mm_store_ss(&s,log_ps(_mm_load_ss(&f))); return s;}
-  inline float exp(float f) { float s; _mm_store_ss(&s,exp_ps(_mm_load_ss(&f))); return s;}
-  inline float sin(float f) { float s; _mm_store_ss(&s,sin_ps(_mm_load_ss(&f))); return s;}
-  inline float cos(float f) { float s; _mm_store_ss(&s,log_ps(_mm_load_ss(&f))); return s;}
-  inline void sincos(float f, float & s, float & c) { 
-    __m128 vs, vc; 
-    sincos_ps(_mm_load_ss(&f),&vs, &vc);   
-    _mm_store_ss(&s,vs);_mm_store_ss(&c,vc);   
-  }
-}
 #endif // CMS_USE_SSE
 
 

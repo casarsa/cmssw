@@ -66,8 +66,8 @@ namespace edm {
     const_iterator end() const noexcept { return begin()+size_; }
     const_iterator cend() const noexcept { return cbegin()+size_; }
 
-    constexpr bool empty() noexcept { return size_ == 0; }
-    constexpr size_type size() noexcept { return size_; }
+    constexpr bool empty() const noexcept { return size_ == 0; }
+    constexpr size_type size() const noexcept { return size_; }
     static constexpr size_type capacity() noexcept { return N; }
 
     void clear() {
@@ -84,6 +84,21 @@ namespace edm {
     // Undefined behaviour if size()==N
     void push_back_unchecked(const T& value) {
       data_[size_] = value;
+      ++size_;
+    }
+
+    // Throws if size()==N
+    template <typename ...Args>
+    void emplace_back(Args&&... args) {
+      if(size_ >= N)
+        throw std::length_error("emplace_back on already-full VecArray (N="+std::to_string(N)+")");
+      emplace_back_unchecked(std::forward<Args>(args)...);
+    }
+
+    // Undefined behaviour if size()==N
+    template <typename ...Args>
+    void emplace_back_unchecked(Args&&... args) {
+      data_[size_] = T(std::forward<Args>(args)...);
       ++size_;
     }
 

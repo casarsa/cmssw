@@ -35,18 +35,21 @@
 //
 // class decleration
 //
+namespace edm {
+  class HepMCProduct;
+}
 
 class MCProcessRangeFilter : public edm::EDFilter {
    public:
       explicit MCProcessRangeFilter(const edm::ParameterSet&);
-      ~MCProcessRangeFilter();
+      ~MCProcessRangeFilter() override;
 
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
    private:
       // ----------member data ---------------------------
       
-       std::string label_;      
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        int minProcessID;
        int maxProcessID;  
        double pthatMin;

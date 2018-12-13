@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import logging
 import copy
 import os.path
@@ -10,7 +11,7 @@ from PyQt4.QtGui import QDialog,QListWidget,QVBoxLayout,QHBoxLayout,QToolButton,
 from Vispa.Main.Application import Application
 from Vispa.Views.PropertyView import PropertyView
 from Vispa.Main.Exceptions import exception_traceback
-from ToolDataAccessor import standardToolsDir,ConfigToolBase
+from .ToolDataAccessor import standardToolsDir,ConfigToolBase
 
 class ToolDialog(QDialog):
     def __init__(self,parent=None):
@@ -68,7 +69,7 @@ class ToolDialog(QDialog):
         # Show test tool
         #from FWCore.GuiBrowsers.editorTools import ChangeSource
         #self._toolsDict["ChangeSource"]=ChangeSource
-        if len(self._toolsDict.keys())==0 and self._toolsDir==standardToolsDir:
+        if len(self._toolsDict)==0 and self._toolsDir==standardToolsDir:
             logging.error(__name__ + ": Could not find any PAT tools. These will be available for the ConfigEditor in a future release.")
             QCoreApplication.instance().errorMessage("Could not find any PAT tools. These will be available for the ConfigEditor in a future release.")
             return
@@ -115,7 +116,7 @@ class ToolDialog(QDialog):
                     ok=False
                     logging.error(__name__ + ": Could not apply tool "+self._toolDataAccessor.label(self._selectedTool)+" (problem with enable recording flag) Please restart the ConfigEditor.")
                     QCoreApplication.instance().errorMessage("Could not apply tool "+self._toolDataAccessor.label(self._selectedTool)+" (problem with enable recording flag) Please restart the ConfigEditor.")
-            except Exception,e:
+            except Exception as e:
                 ok=False
                 logging.error(__name__ + ": Could not apply tool "+self._toolDataAccessor.label(self._selectedTool)+": "+exception_traceback())
                 QCoreApplication.instance().errorMessage("Cannot apply tool "+self._toolDataAccessor.label(self._selectedTool)+" (see log file for details):\n"+str(e))

@@ -51,11 +51,11 @@ void reco::writeSpecific(reco::CaloJet & jet,
     geometry->getSubdetectorGeometry(DetId::Calo, CaloTowerDetId::SubdetId);
 
   edm::ESHandle<HcalTopology> topology;
-  c.get<IdealGeometryRecord>().get(topology);
+  c.get<HcalRecNumberingRecord>().get(topology);
 
   // Make the specific
   reco::CaloJet::Specific specific;
-  makeSpecific (constituents, *towerGeometry, &specific, *topology);
+  makeSpecific (constituents, towerGeometry, &specific, *topology);
   // Set the calo jet
   jet = reco::CaloJet( p4, point, specific, constituents);  
 }
@@ -133,11 +133,11 @@ void reco::writeSpecific(reco::PFClusterJet & jet,
 
 //______________________________________________________________________________
 bool reco::makeSpecific(vector<reco::CandidatePtr> const & towers,
-			const CaloSubdetectorGeometry& towerGeometry,
+			const CaloSubdetectorGeometry* towerGeometry,
 			CaloJet::Specific* caloJetSpecific,
 			const HcalTopology &topology)
 {
-  if (0==caloJetSpecific) return false;
+  if (nullptr==caloJetSpecific) return false;
 
   // 1.- Loop over the tower Ids, 
   // 2.- Get the corresponding CaloTower
@@ -189,7 +189,7 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & towers,
 	break;
       }
       // get area of the tower (++ minus --)
-      const CaloCellGeometry* geometry = towerGeometry.getGeometry(tower->id());
+      auto geometry = towerGeometry->getGeometry(tower->id());
       if (geometry) {
 	jetArea += geometry->etaSpan() * geometry->phiSpan();
       }
@@ -242,7 +242,7 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & towers,
 bool reco::makeSpecific(vector<reco::CandidatePtr> const & particles,	   
 			PFJet::Specific* pfJetSpecific)
 {
-  if (0==pfJetSpecific) return false;
+  if (nullptr==pfJetSpecific) return false;
   
   // 1.- Loop over PFCandidates, 
   // 2.- Get the corresponding PFCandidate
@@ -268,6 +268,8 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & particles,
   float chargedMuEnergy=0.;
   int   chargedMultiplicity=0;
   int   neutralMultiplicity=0;
+
+  float HOEnergy=0.;
   
   vector<reco::CandidatePtr>::const_iterator itParticle;
   for (itParticle=particles.begin();itParticle!=particles.end();++itParticle){
@@ -277,6 +279,11 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & particles,
     }    
     const Candidate* pfCand = itParticle->get();
     if (pfCand) {
+
+      const PFCandidate* pfCandCast = dynamic_cast<const PFCandidate*>(pfCand);
+      if (pfCandCast)
+        HOEnergy += pfCandCast->hoEnergy();
+
       switch (std::abs(pfCand->pdgId())) {
       case 211: //PFCandidate::h:       // charged hadron
 	chargedHadronEnergy += pfCand->energy();
@@ -360,6 +367,8 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & particles,
   pfJetSpecific->mChargedMultiplicity=chargedMultiplicity;
   pfJetSpecific->mNeutralMultiplicity=neutralMultiplicity;
 
+  pfJetSpecific->mHOEnergy= HOEnergy;
+
   return true;
 }
 
@@ -368,7 +377,7 @@ bool reco::makeSpecific(vector<reco::CandidatePtr> const & particles,
 bool reco::makeSpecific(vector<reco::CandidatePtr> const & mcparticles, 
 			GenJet::Specific* genJetSpecific)
 {
-  if (0==genJetSpecific) return false;
+  if (nullptr==genJetSpecific) return false;
 
   vector<reco::CandidatePtr>::const_iterator itMcParticle=mcparticles.begin();
   for (;itMcParticle!=mcparticles.end();++itMcParticle) {

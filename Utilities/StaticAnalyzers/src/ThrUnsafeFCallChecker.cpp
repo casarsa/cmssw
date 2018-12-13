@@ -40,7 +40,7 @@ void TUFWalker::VisitChildren( clang::Stmt *S) {
 void TUFWalker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 	CXXMethodDecl * MD = CE->getMethodDecl();
 	if (!MD) return;
-	const CXXMethodDecl * PD = llvm::dyn_cast<CXXMethodDecl>(AC->getDecl());
+	const CXXMethodDecl * PD = llvm::dyn_cast_or_null<CXXMethodDecl>(AC->getDecl());
 	if (!PD) return;
 	std::string mname = support::getQualifiedName(*MD);
 	std::string pname = support::getQualifiedName(*PD);
@@ -50,10 +50,10 @@ void TUFWalker::VisitCXXMemberCallExpr( CXXMemberCallExpr *CE ) {
 		os << "Known thread unsafe function " << mname << " is called in function " << pname;
 		PathDiagnosticLocation CELoc = PathDiagnosticLocation::createBegin(CE, BR.getSourceManager(),AC);
  		BugType * BT = new BugType(Checker, "known thread unsafe function called","ThreadSafety");
-		BugReport * R = new BugReport(*BT,os.str(),CELoc);
+		std::unique_ptr<BugReport> R = llvm::make_unique<BugReport>(*BT,os.str(),CELoc);
 		R->setDeclWithIssue(AC->getDecl());
 		R->addRange(CE->getSourceRange());
-		BR.emitReport(R);
+		BR.emitReport(std::move(R));
 		std::string tname = "function-checker.txt.unsorted";
 		std::string ostring =  "function '"+ pname + "' known thread unsafe function '" + mname + "'.\n";
 		support::writeLog(ostring,tname);
@@ -79,8 +79,8 @@ void ThrUnsafeFCallChecker::checkASTDecl(const FunctionTemplateDecl *TD, Analysi
 	clang::ento::PathDiagnosticLocation DLoc =clang::ento::PathDiagnosticLocation::createBegin( TD, SM );
 	if ( SM.isInSystemHeader(DLoc.asLocation()) || SM.isInExternCSystemHeader(DLoc.asLocation()) ) return;
 
-	for (FunctionTemplateDecl::spec_iterator I = const_cast<clang::FunctionTemplateDecl *>(TD)->spec_begin(), 
-			E = const_cast<clang::FunctionTemplateDecl *>(TD)->spec_end(); I != E; ++I) 
+	for (auto I = TD->spec_begin(), 
+			    E = TD->spec_end(); I != E; ++I) 
 		{
 			if (I->doesThisDeclarationHaveABody()) {
 				clangcms::TUFWalker walker(this,BR, mgr.getAnalysisDeclContext(*I));

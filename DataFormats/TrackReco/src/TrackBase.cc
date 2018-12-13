@@ -9,7 +9,7 @@ using namespace reco;
 std::string const TrackBase::algoNames[] = {
     "undefAlgorithm",
     "ctf",
-    "rs",
+    "duplicateMerge",
     "cosmics",
     "initialStep",
     "lowPtTripletStep",
@@ -29,14 +29,30 @@ std::string const TrackBase::algoNames[] = {
     "globalMuon",
     "cosmicStandAloneMuon",
     "cosmicGlobalMuon",
-    "iter1LargeD0",
-    "iter2LargeD0",
-    "iter3LargeD0",
-    "iter4LargeD0",
-    "iter5LargeD0",
+    "highPtTripletStep",
+    "lowPtQuadStep",
+    "detachedQuadStep",
+    "reservedForUpgrades1",
+    "reservedForUpgrades2",
     "bTagGhostTracks",
     "beamhalo" ,
-    "gsf"
+    "gsf",
+    "hltPixel",
+    "hltIter0",
+    "hltIter1",
+    "hltIter2",
+    "hltIter3",
+    "hltIter4",
+    "hltIterX",
+    "hiRegitMuInitialStep",
+    "hiRegitMuLowPtTripletStep",
+    "hiRegitMuPixelPairStep",
+    "hiRegitMuDetachedTripletStep",
+    "hiRegitMuMixedTripletStep",
+    "hiRegitMuPixelLessStep",
+    "hiRegitMuTobTecStep",
+    "hiRegitMuMuonSeededStepInOut",
+    "hiRegitMuMuonSeededStepOutIn"
 };
 
 std::string const TrackBase::qualityNames[] = {
@@ -46,19 +62,27 @@ std::string const TrackBase::qualityNames[] = {
     "confirmed",
     "goodIterative",
     "looseSetWithPV",
-    "highPuritySetWithPV"
+    "highPuritySetWithPV",
+    "discarded"
 };
 
 TrackBase::TrackBase() :
+    covt0t0_(-1.f),
+    covbetabeta_(-1.f),
     chi2_(0),
     vertex_(0, 0, 0),
+    t0_(0),
     momentum_(0, 0, 0),
+    beta_(0),
     ndof_(0),
     charge_(0),
     algorithm_(undefAlgorithm),
+    originalAlgorithm_(undefAlgorithm),
     quality_(0),
-    nLoops_(0)
+    nLoops_(0),
+    stopReason_(0)
 {
+    algoMask_.set(algorithm_);
     index idx = 0;
     for (index i = 0; i < dimension; ++i) {
         for (index j = 0; j <= i; ++j) {
@@ -69,16 +93,25 @@ TrackBase::TrackBase() :
 
 TrackBase::TrackBase(double chi2, double ndof, const Point &vertex, const Vector &momentum,
                      int charge, const CovarianceMatrix &cov, TrackAlgorithm algorithm,
-                     TrackQuality quality, signed char nloops):
+                     TrackQuality quality, signed char nloops, uint8_t stopReason,
+		     float t0, float beta, float covt0t0, float covbetabeta):
+    covt0t0_(covt0t0),
+    covbetabeta_(covbetabeta),
     chi2_(chi2),
     vertex_(vertex),
+    t0_(t0),
     momentum_(momentum),
+    beta_(beta),
     ndof_(ndof),
     charge_(charge),
     algorithm_(algorithm),
+    originalAlgorithm_(algorithm),
     quality_(0),
-    nLoops_(nloops)
+    nLoops_(nloops),
+    stopReason_(stopReason)
 {
+    algoMask_.set(algorithm_);
+
     index idx = 0;
     for (index i = 0; i < dimension; ++i) {
         for (index j = 0; j <= i; ++j) {

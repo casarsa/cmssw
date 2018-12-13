@@ -7,40 +7,38 @@
 import FWCore.ParameterSet.Config as cms
 
 from RecoTracker.TkTrackingRegions.GlobalTrackingRegion_cfi import *
-#extend the seeds to inner rings of TEC
-TECi = cms.PSet(
-        minRing = cms.int32(1),
-            matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
-            useRingSlector = cms.bool(True),
-            TTRHBuilder = cms.string('WithTrackAngle'),
-            rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit"),
-            maxRing = cms.int32(2)
-            )
+from RecoLocalTracker.SiStripClusterizer.SiStripClusterChargeCut_cfi import *
+
 layerInfo = cms.PSet(
     TID = cms.PSet(
         matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
         useRingSlector = cms.bool(False),
         TTRHBuilder = cms.string('WithTrackAngle'),
+        clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutNone')),
         rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit")
     ),
     FPix = cms.PSet(
         TTRHBuilder = cms.string('TTRHBuilderWithoutAngle4PixelPairs'),
         HitProducer = cms.string('siPixelRecHits'),
     ),
-    TEC = cms.PSet(
+    TEC = cms.PSet(#extend the seeds to inner rings of TEC
+        minRing = cms.int32(1),
+        matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
+        useRingSlector = cms.bool(True),
+        TTRHBuilder = cms.string('WithTrackAngle'),
+        clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutNone')),
+        rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit"),
+        maxRing = cms.int32(2)
+    ),
+    MTEC = cms.PSet(# re-use MTEC name for the outer rings
         minRing = cms.int32(5),
         matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
         useRingSlector = cms.bool(False),
         TTRHBuilder = cms.string('WithTrackAngle'),
+        clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutNone')),
         rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit"),
         maxRing = cms.int32(7)
     ),
-    TEC1 = TECi,
-    TEC2 = TECi,
-    TEC3 = TECi,
-    TEC4 = TECi,
-    TEC5 = TECi,
-    TEC6 = TECi
 )
 
 layerList = cms.vstring(
@@ -58,10 +56,10 @@ layerList = cms.vstring(
     'TEC4_pos+TEC5_pos',
     'TEC5_neg+TEC6_neg',
     'TEC5_pos+TEC6_pos',
-    'TEC7_neg+TEC8_neg',
-    'TEC7_pos+TEC8_pos', 
-    'TEC8_neg+TEC9_neg',
-    'TEC8_pos+TEC9_pos'
+    'MTEC7_neg+MTEC8_neg',
+    'MTEC7_pos+MTEC8_pos',
+    'MTEC8_neg+MTEC9_neg',
+    'MTEC8_pos+MTEC9_pos'
     )
 
 beamhaloTrackerSeeds = cms.EDProducer("CtfSpecialSeedGenerator",

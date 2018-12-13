@@ -50,7 +50,7 @@ JetCorrFactors::Flavor
 JetCorrFactors::jecFlavor(std::string flavor) const
 {
   std::map<std::string, Flavor> flavors;
-  std::transform(flavor.begin(), flavor.end(), flavor.begin(), std::ptr_fun<int,int>(std::tolower));
+  std::transform(flavor.begin(), flavor.end(), flavor.begin(), [&](int c){ return std::tolower(c);} );
   flavors["uds"]=UDS; flavors["charm"]=CHARM; flavors["bottom"]=BOTTOM; flavors["gluon"]=GLUON; flavors["none"]=NONE;
   if(flavors.find(flavor)==flavors.end()){
     throw cms::Exception("InvalidRequest") << "You ask for a flavor, which does not exist. Available flavors are: \n"
@@ -112,8 +112,7 @@ JetCorrFactors::print() const
   edm::LogInfo message( "JetCorrFactors" );
   for(std::vector<CorrectionFactor>::const_iterator corrFactor=jec_.begin(); corrFactor!=jec_.end(); ++corrFactor){
     unsigned int corrFactorIdx=corrFactor-jec_.begin();
-    std::stringstream idx; idx << corrFactorIdx;
-    message << std::setw(3) << idx << "  " << corrFactor->first;
+    message << std::setw(3) << corrFactorIdx << "  " << corrFactor->first;
     if( flavorDependent(*corrFactor) ){
       for(std::vector<float>::const_iterator flavor=corrFactor->second.begin(); flavor!=corrFactor->second.end(); ++flavor){
 	unsigned int flavorIdx=flavor-corrFactor->second.begin();

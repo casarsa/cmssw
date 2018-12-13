@@ -2,6 +2,7 @@
 #include "GsfElectronBaseProducer.h"
 
 #include "RecoEcal/EgammaCoreTools/interface/EcalClusterFunctionFactory.h"
+#include "RecoEgamma/EgammaIsolationAlgos/interface/EleTkIsolFromCands.h"
 
 #include "FWCore/Common/interface/Provenance.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -25,7 +26,7 @@
 
 using namespace reco;
 
-void GsfElectronBaseProducer::fillDescription( edm::ParameterSetDescription & desc )
+void GsfElectronBaseProducer::fillDescription( edm::ParameterSetDescription & desc)
  {
   // input collections
   desc.add<edm::InputTag>("previousGsfElectronsTag",edm::InputTag("ecalDrivenGsfElectrons")) ;
@@ -123,13 +124,8 @@ void GsfElectronBaseProducer::fillDescription( edm::ParameterSetDescription & de
   //desc.add<int>("severityLevelCut",4) ;
 
   // Isolation algos configuration
-  desc.add<double>("intRadiusBarrelTk",0.015) ;
-  desc.add<double>("intRadiusEndcapTk",0.015) ;
-  desc.add<double>("stripBarrelTk",0.015) ;
-  desc.add<double>("stripEndcapTk",0.015) ;
-  desc.add<double>("ptMinTk",0.7) ;
-  desc.add<double>("maxVtxDistTk",0.2) ;
-  desc.add<double>("maxDrbTk",999999999.) ;
+  desc.add("trkIsol03Cfg",EleTkIsolFromCands::pSetDescript());
+  desc.add("trkIsol04Cfg",EleTkIsolFromCands::pSetDescript());
   desc.add<double>("intRadiusHcal",0.15) ;
   desc.add<double>("etMinHcal",0.0) ;
   desc.add<double>("intRadiusEcalBarrel",3.0) ;
@@ -152,7 +148,7 @@ void GsfElectronBaseProducer::fillDescription( edm::ParameterSetDescription & de
   desc.add<std::string>("crackCorrectionFunction","EcalClusterCrackCorrection") ;
  }
 
-GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
+GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg, const gsfAlgoHelpers::HeavyObjectCache* )
  : ecalSeedingParametersChecked_(false)
  {
   produces<GsfElectronCollection>();
@@ -287,6 +283,7 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
   if (hcalCfg_.hOverEConeSize>0)
    {
     hcalCfg_.useTowers = true ;
+    hcalCfg_.checkHcalStatus = cfg.getParameter<bool>("checkHcalStatus") ;
     hcalCfg_.hcalTowers = 
       consumes<CaloTowerCollection>(cfg.getParameter<edm::InputTag>("hcalTowers")) ;
     hcalCfg_.hOverEPtMin = cfg.getParameter<double>("hOverEPtMin") ;
@@ -295,6 +292,7 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
   if (hcalCfgPflow_.hOverEConeSize>0)
    {
     hcalCfgPflow_.useTowers = true ;
+    hcalCfgPflow_.checkHcalStatus = cfg.getParameter<bool>("checkHcalStatus") ;
     hcalCfgPflow_.hcalTowers = 
       consumes<CaloTowerCollection>(cfg.getParameter<edm::InputTag>("hcalTowers")) ;
     hcalCfgPflow_.hOverEPtMin = cfg.getParameter<double>("hOverEPtMinPflow") ;
@@ -314,13 +312,6 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
 
   // isolation
   GsfElectronAlgo::IsolationConfiguration isoCfg ;
-  isoCfg.intRadiusBarrelTk = cfg.getParameter<double>("intRadiusBarrelTk") ;
-  isoCfg.intRadiusEndcapTk = cfg.getParameter<double>("intRadiusEndcapTk") ;
-  isoCfg.stripBarrelTk = cfg.getParameter<double>("stripBarrelTk") ;
-  isoCfg.stripEndcapTk = cfg.getParameter<double>("stripEndcapTk") ;
-  isoCfg.ptMinTk = cfg.getParameter<double>("ptMinTk") ;
-  isoCfg.maxVtxDistTk = cfg.getParameter<double>("maxVtxDistTk") ;
-  isoCfg.maxDrbTk = cfg.getParameter<double>("maxDrbTk") ;
   isoCfg.intRadiusHcal = cfg.getParameter<double>("intRadiusHcal") ;
   isoCfg.etMinHcal = cfg.getParameter<double>("etMinHcal") ;
   isoCfg.intRadiusEcalBarrel = cfg.getParameter<double>("intRadiusEcalBarrel") ;
@@ -342,10 +333,10 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
   regressionCfg.ecalWeightsFromDB = cfg.getParameter<bool>("ecalWeightsFromDB");
   regressionCfg.combinationWeightsFromDB = cfg.getParameter<bool>("combinationWeightsFromDB");
   // functions for corrector
-  EcalClusterFunctionBaseClass * superClusterErrorFunction = 0 ;
+  EcalClusterFunctionBaseClass * superClusterErrorFunction = nullptr ;
   std::string superClusterErrorFunctionName
    = cfg.getParameter<std::string>("superClusterErrorFunction") ;
-  if (superClusterErrorFunctionName!="")
+  if (!superClusterErrorFunctionName.empty())
    {
     superClusterErrorFunction
      = EcalClusterFunctionFactory::get()->create(superClusterErrorFunctionName,cfg) ;
@@ -355,18 +346,18 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
    superClusterErrorFunction
     = EcalClusterFunctionFactory::get()->create("EcalClusterEnergyUncertaintyObjectSpecific",cfg) ;
   }
-  EcalClusterFunctionBaseClass * crackCorrectionFunction = 0 ;
+  EcalClusterFunctionBaseClass * crackCorrectionFunction = nullptr ;
   std::string crackCorrectionFunctionName
    = cfg.getParameter<std::string>("crackCorrectionFunction") ;
-  if (crackCorrectionFunctionName!="")
+  if (!crackCorrectionFunctionName.empty())
    {
     crackCorrectionFunction
      = EcalClusterFunctionFactory::get()->create(crackCorrectionFunctionName,cfg) ;
    }
 
 
-   mva_NIso_Cfg_.vweightsfiles=cfg.getParameter<std::vector<std::string>>("SoftElecMVAFilesString");
-   mva_Iso_Cfg_.vweightsfiles=cfg.getParameter<std::vector<std::string>>("ElecMVAFilesString");
+   mva_NIso_Cfg_.vweightsfiles = cfg.getParameter<std::vector<std::string>>("SoftElecMVAFilesString");
+   mva_Iso_Cfg_.vweightsfiles  = cfg.getParameter<std::vector<std::string>>("ElecMVAFilesString");
   // create algo
   algo_ = new GsfElectronAlgo
    ( inputCfg_, strategyCfg_,
@@ -377,7 +368,10 @@ GsfElectronBaseProducer::GsfElectronBaseProducer( const edm::ParameterSet& cfg )
      crackCorrectionFunction,
      mva_NIso_Cfg_,
      mva_Iso_Cfg_,
-     regressionCfg
+     regressionCfg,
+     cfg.getParameter<edm::ParameterSet>("trkIsol03Cfg"),
+     cfg.getParameter<edm::ParameterSet>("trkIsol04Cfg")
+     
    ) ;
 
 
@@ -429,9 +423,9 @@ void GsfElectronBaseProducer::fillEvent( edm::Event & event )
     algo_->displayInternalElectrons("GsfElectronAlgo Info (after amb. solving)") ;
    }
   // final filling
-  std::auto_ptr<GsfElectronCollection> finalCollection( new GsfElectronCollection ) ;
+  auto finalCollection = std::make_unique<GsfElectronCollection>();
   algo_->copyElectrons(*finalCollection) ;
-  orphanHandle_ = event.put(finalCollection) ;
+  orphanHandle_ = event.put(std::move(finalCollection));
 }
 
 void GsfElectronBaseProducer::endEvent()

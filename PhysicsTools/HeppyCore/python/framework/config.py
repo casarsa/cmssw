@@ -1,8 +1,11 @@
+from __future__ import print_function
 # Copyright (C) 2014 Colin Bernet
 # https://github.com/cbernet/heppy/blob/master/LICENSE
 
 from weight import Weight
+import copy
 import glob
+import six
 
 def printComps(comps, details=False):
     '''
@@ -15,18 +18,18 @@ def printComps(comps, details=False):
     for c in comps:
         if not hasattr(c, 'splitFactor'):
             c.splitFactor = 1
-        print c.name, c.splitFactor, len(c.files)
+        print(c.name, c.splitFactor, len(c.files))
         if len(c.files)==0:
             continue
         else:
             if details:
-                print c.files[0]
+                print(c.files[0])
             nJobs += c.splitFactor
             nCompsWithFiles += 1
 
-    print '-'*70
-    print '# components with files = ', nCompsWithFiles
-    print '# jobs                  = ', nJobs
+    print('-'*70)
+    print('# components with files = ', nCompsWithFiles)
+    print('# jobs                  = ', nJobs)
 
 
 class CFG(object):
@@ -40,15 +43,45 @@ class CFG(object):
         header = '{type}: {name}'.format( type=self.__class__.__name__,
                                           name=self.name)
         varlines = ['\t{var:<15}:   {value}'.format(var=var, value=value) \
-                    for var,value in sorted(vars(self).iteritems()) \
+                    for var,value in sorted(vars(six.iteritems(self))) \
                     if var is not 'name']
         all = [ header ]
         all.extend(varlines)
         return '\n'.join( all )
 
+    def clone(self, **kwargs):
+        '''Make a copy of this object, redefining (or adding) some parameters, just
+           like in the CMSSW python configuration files. 
+
+           For example, you can do
+              module1 = cfg.Analyzer(SomeClass, 
+                          param1 = value1, 
+                          param2 = value2, 
+                          param3 = value3, 
+                          ...)
+              module2 = module1.clone(
+                         param2 = othervalue,
+                         newparam = newvalue)
+           and module2 will inherit the configuration of module2 except for
+           the value of param2, and for having an extra newparam of value newvalue
+           (the latter may be useful if e.g. newparam were optional, and needed
+           only when param2 == othervalue)
+
+           Note that, just like in CMSSW, this is a shallow copy and not a deep copy,
+           i.e. if in the example above value1 were to be an object, them module1 and
+           module2 will share the same instance of value1, and not have two copies.
+        '''
+        other = copy.copy(self)
+        for k,v in six.iteritems(kwargs):
+            setattr(other, k, v)
+        return other
+    
 class Analyzer( CFG ):
     '''Base analyzer configuration, see constructor'''
-    def __init__(self, class_object, instance_label='1', 
+
+    num_instance = 0
+    
+    def __init__(self, class_object, instance_label=None, 
                  verbose=False, **kwargs):
         '''
         One could for example define the analyzer configuration for a
@@ -74,17 +107,68 @@ class Analyzer( CFG ):
         '''
 
         self.class_object = class_object
+        self.__class__.num_instance += 1 
+        if instance_label is None:
+            instance_label = str(self.__class__.num_instance)
         self.instance_label = instance_label
-        self.name = self.build_name()
         self.verbose = verbose
-        # self.cfg = CFG(**kwargs)
         super(Analyzer, self).__init__(**kwargs)
+
+    def __setattr__(self, name, value):
+        '''You may decide to copy an existing analyzer and change
+        its instance_label. In that case, one must stay consistent.'''
+        self.__dict__[name] = value
+        if name == 'instance_label':
+            self.name = self.build_name()   
 
     def build_name(self):
         class_name = '.'.join([self.class_object.__module__, 
                                self.class_object.__name__])
         name = '_'.join([class_name, self.instance_label])
         return name 
+
+    def clone(self, **kwargs):
+        other = super(Analyzer, self).clone(**kwargs)
+        if 'class_object' in kwargs and 'name' not in kwargs:
+            other.name = other.build_name()
+        return other
+
+    
+class Service( CFG ):
+    
+    num_instance = 0
+
+    def __init__(self, class_object, instance_label=None, 
+                 verbose=False, **kwargs):
+        self.class_object = class_object
+        self.__class__.num_instance += 1 
+        if instance_label is None:
+            instance_label = str(self.__class__.num_instance)
+        self.instance_label = instance_label
+        self.__class__.num_instance += 1 
+        self.name = self.build_name()
+        self.verbose = verbose
+        super(Service, self).__init__(**kwargs)
+
+    def build_name(self):
+        class_name = '.'.join([self.class_object.__module__, 
+                               self.class_object.__name__])
+        name = '_'.join([class_name, self.instance_label])
+        return name 
+
+    def __setattr__(self, name, value):
+        '''You may decide to copy an existing analyzer and change
+        its instance_label. In that case, one must stay consistent.'''
+        self.__dict__[name] = value
+        if name == 'instance_label':
+            self.name = self.build_name()   
+
+    def clone(self, **kwargs):
+        other = super(Service, self).clone(**kwargs)
+        if 'class_object' in kwargs and 'name' not in kwargs:
+            other.name = other.build_name()
+        return other
+
 
 class Sequence( list ):
     '''A list with print functionalities.
@@ -106,9 +190,9 @@ class Component( CFG ):
     DataComponent, MCComponent, EmbedComponent
     for more information.'''
     def __init__(self, name, files, tree_name=None, triggers=None, **kwargs):
-        if isinstance(triggers, basestring):
+        if isinstance(triggers, str):
             triggers = [triggers]
-        if type(files) == str:
+        if isinstance(files, str):
             files = sorted(glob.glob(files))
         super( Component, self).__init__( name = name,
                                           files = files,
@@ -117,11 +201,12 @@ class Component( CFG ):
         self.dataset_entries = 0
         self.isData = False
         self.isMC = False
+        self.isEmbed = False
 
 class DataComponent( Component ):
 
-    def __init__(self, name, files, intLumi, triggers, json=None):
-        super(DataComponent, self).__init__(name, files, triggers)
+    def __init__(self, name, files, intLumi=None, triggers=[], json=None):
+        super(DataComponent, self).__init__(name, files, triggers=triggers)
         self.isData = True
         self.intLumi = intLumi
         self.json = json
@@ -136,10 +221,9 @@ class DataComponent( Component ):
 
 
 class MCComponent( Component ):
-    def __init__(self, name, files, triggers, xSection,
-                 nGenEvents,
-                 # vertexWeight,tauEffWeight, muEffWeight,
-                 effCorrFactor, **kwargs ):
+    def __init__(self, name, files, triggers=[], xSection=1,
+                 nGenEvents=None,
+                 effCorrFactor=None, **kwargs ):
         super( MCComponent, self).__init__( name = name,
                                             files = files,
                                             triggers = triggers, **kwargs )
@@ -164,46 +248,17 @@ class MCComponent( Component ):
 class Config( object ):
     '''Main configuration object, holds a sequence of analyzers, and
     a list of components.'''
-    def __init__(self, components, sequence, events_class):
+    def __init__(self, components, sequence, services, events_class,preprocessor=None):
+        self.preprocessor = preprocessor
         self.components = components
         self.sequence = sequence
+        self.services = services
         self.events_class = events_class
 
     def __str__(self):
-        comp = '\n'.join( map(str, self.components))
-        sequence = str( self.sequence)
-        return '\n'.join([comp, sequence])
+        comp = '\n'.join(map(str, self.components))
+        sequence = str(self.sequence)
+        services = '\n'.join( map(str, self.services))
+        return '\n'.join([comp, sequence, services])
 
 
-if __name__ == '__main__':
-
-    from PhysicsTools.HeppyCore.framework.chain import Chain as Events
-    from PhysicsTools.HeppyCore.analyzers.Printer import Printer
-
-    class Ana1(object):
-        pass
-    ana1 = Analyzer(
-        Ana1,
-        toto = '1',
-        tata = 'a'
-        )
-    ana2 = Analyzer(
-        Printer,
-        'instance1'
-        )
-    sequence = Sequence( [ana1, ana2] )
-
-    DYJets = MCComponent(
-        name = 'DYJets',
-        files ='blah_mc.root',
-        xSection = 3048.,
-        nGenEvents = 34915945,
-        triggers = ['HLT_MC'],
-        vertexWeight = 1.,
-        effCorrFactor = 1 )
-    selectedComponents = [DYJets]
-    sequence = [ana1, ana2]
-    config = Config( components = selectedComponents,
-                     sequence = sequence, 
-                     events_class = Events )
-    print config

@@ -10,9 +10,9 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "FWCore/ParameterSet/interface/ProcessDesc.h"
-#include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+#include "FWCore/FWLite/interface/FWLiteEnabler.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
-#include "FWCore/PythonParameterSet/interface/PythonProcessDesc.h"
+#include "FWCore/ParameterSetReader/interface/ProcessDescImpl.h"
 
 
 //using namespace std;
@@ -24,14 +24,14 @@ int main(int argc, char *argv[]){
   // ----------------------------------------------------------------------
   // First Part: 
   //
-  //  * enable the AutoLibraryLoader 
+  //  * enable FWLite 
   //  * book the histograms of interest 
   //  * open the input file
   // ----------------------------------------------------------------------
 
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
-  AutoLibraryLoader::enable();
+  FWLiteEnabler::enable();
 
   // only allow one argument for this simple example which should be the
   // the python cfg file
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]){
   }
 
   // get the python configuration
-  PythonProcessDesc builder(argv[1]);
+  ProcessDescImpl builder(argv[1]);
   const edm::ParameterSet& fwliteParameters = builder.processDesc()->getProcessPSet()->getParameter<edm::ParameterSet>("FWLiteParams");
 
   // now get each parameter
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
   edm::InputTag jets_    ( fwliteParameters.getParameter<edm::InputTag>("jets"  ) );
 
   // book a set of histograms
-  fwlite::TFileService fs = fwlite::TFileService(output_.c_str());
+  fwlite::TFileService fs = fwlite::TFileService(output_);
   TFileDirectory theDir = fs.mkdir("analyzePatCleaning");
   TH1F* emfAllJets_    = theDir.make<TH1F>("emfAllJets"    , "f_{emf}(All Jets)"    ,  20,  0.,  1.);
   TH1F* emfCleanJets_  = theDir.make<TH1F>("emfCleanJets"  , "f_{emf}(Clean Jets)"  ,  20,  0.,  1.);

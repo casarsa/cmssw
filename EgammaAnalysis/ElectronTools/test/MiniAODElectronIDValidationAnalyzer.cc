@@ -177,7 +177,6 @@ MiniAODElectronIDValidationAnalyzer::~MiniAODElectronIDValidationAnalyzer()
 void
 MiniAODElectronIDValidationAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-   // using namespace edm;
 
   //edm::Handle<edm::ValueMap<float> > full5x5sieie;
   edm::Handle<edm::View<pat::Electron> > collection;
@@ -202,9 +201,8 @@ MiniAODElectronIDValidationAnalyzer::analyze(const edm::Event& iEvent, const edm
   iEvent.getByToken(convToken_, convs);
   iEvent.getByToken(beamToken_, thebs);
   
-  const auto& ele_refs = collection->refVector();
-  
-  for( const auto& el : ele_refs ) {
+  for( size_t i = 0; i < collection->size(); ++i ) {
+    auto el = collection->refAt(i);
     pt_ = el->pt();
     etaSC_ = el->superCluster()->eta();
     
@@ -241,11 +239,10 @@ MiniAODElectronIDValidationAnalyzer::analyze(const edm::Event& iEvent, const edm
     // Conversion rejection
     constexpr reco::HitPattern::HitCategory missingHitType =
       reco::HitPattern::MISSING_INNER_HITS;
-    expectedMissingInnerHits_ = el->gsfTrack()->hitPattern().numberOfHits(missingHitType);
+    expectedMissingInnerHits_ = el->gsfTrack()->hitPattern().numberOfLostHits(missingHitType);
     passConversionVeto_ = false;
     if( thebs.isValid() && convs.isValid() ) {
-      passConversionVeto_ = !ConversionTools::hasMatchedConversion(*el,convs,
-								   thebs->position());
+      passConversionVeto_ = !ConversionTools::hasMatchedConversion(*el,*convs,thebs->position());
     }else{
       printf("\n\nERROR!!! conversions not found!!!\n");
     }

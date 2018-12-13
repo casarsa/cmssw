@@ -70,13 +70,13 @@ void VarProcessor::configure(ConfigCtx &config)
 	}
 
 	if (config.loop && !ctx)
-		config.loop = 0;
+		config.loop = nullptr;
 	else if (!config.loop && ctx)
 		config.loop = this;
 }
 
 VarProcessor::ConfigCtx::ConfigCtx(const std::vector<Variable::Flags>& flags) :
-	loop(0), ctx(0)
+	loop(nullptr), ctx(nullptr)
 {
 	for(std::vector<Variable::Flags>::const_iterator iter = flags.begin();
 	    iter != flags.end(); ++iter)
@@ -87,7 +87,7 @@ VarProcessor::ConfigCtx::Context *
 VarProcessor::configureLoop(ConfigCtx::Context *ctx, ConfigCtx::iterator begin,
                             ConfigCtx::iterator cur, ConfigCtx::iterator end)
 {
-	return 0;
+	return nullptr;
 }
 
 template<>
@@ -119,12 +119,13 @@ VarProcessor *ProcessRegistry<VarProcessor, Calibration::VarProcessor,
 }
 
 void VarProcessor::deriv(double *input, int *conf, double *output,
-                         int *outConf, int *loop, unsigned int offset,
+                         int *outConf, int *loop, LoopCtx& ctx,
+                         unsigned int offset,
                          unsigned int in, unsigned int out_,
                          std::vector<double> &deriv) const
 {
 	ValueIterator iter(inputVars.iter(), input, conf,
-	                   output, outConf, loop, offset);
+	                   output, outConf, loop, ctx, offset);
 
 	eval(iter, nInputVars);
 
@@ -189,7 +190,7 @@ void VarProcessor::deriv(double *input, int *conf, double *output,
 #endif
 		if (loop && curConf >= loop) {
 			pos += offset;
-			loop = 0;
+			loop = nullptr;
 		}
 
 		unsigned int n = loop ? (curConf[1] - curConf[0]) : 1;

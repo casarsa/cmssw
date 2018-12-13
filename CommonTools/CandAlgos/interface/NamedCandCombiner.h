@@ -16,7 +16,7 @@
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "CommonTools/CandUtils/interface/NamedCandCombiner.h"
 #include "CommonTools/CandAlgos/interface/decayParser.h"
-#include "CommonTools/Utilities/interface/StringCutObjectSelector.h"
+#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "DataFormats/Common/interface/Handle.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -146,7 +146,7 @@ namespace reco {
 	  }
 	  cv.push_back(r);
 	}
-	std::auto_ptr<NamedCompositeCandidateCollection> out = combiner_.combine(cv, roles_);
+	std::unique_ptr<NamedCompositeCandidateCollection> out = combiner_.combine(cv, roles_);
 	if(setLongLived_ || setMassConstraint_ || setPdgId_) {
 	  typename NamedCompositeCandidateCollection::iterator i = out->begin(), e = out->end();
 	  for(; i != e; ++i) {

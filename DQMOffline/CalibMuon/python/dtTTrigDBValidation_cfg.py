@@ -29,7 +29,7 @@ process.MessageLogger = cms.Service("MessageLogger",
     destinations = cms.untracked.vstring('cerr')
 )
 
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 process.load("Geometry.DTGeometry.dtGeometry_cfi")
 process.DTGeometryESModule.applyAlignment = False
 process.load("Geometry.MuonNumbering.muonNumberingInitialization_cfi")
@@ -71,7 +71,8 @@ process.ttrigRef = cms.ESSource("PoolDBESSource",
     siteLocalConfig = cms.untracked.bool(False)
 )
 
-process.dtTTrigAnalyzer = cms.EDAnalyzer("DTtTrigDBValidation",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.dtTTrigAnalyzer = DQMEDAnalyzer('DTtTrigDBValidation',
     labelDBRef = cms.string('ttrigRef'),
     labelDB = cms.string('ttrigToValidate'),
     tTrigTestName = cms.string('tTrigDifferenceInRange'),

@@ -11,7 +11,7 @@ class Py8EGun : public Py8GunBase {
    public:
       
       Py8EGun( edm::ParameterSet const& );
-      ~Py8EGun() {}
+      ~Py8EGun() override {}
 	 
       bool generatePartonsAndHadronize() override;
       const char* classname() const override;
@@ -71,6 +71,11 @@ bool Py8EGun::generatePartonsAndHadronize()
          particleID = std::fabs(particleID) ;
       }
       (fMasterGen->event).append( particleID, 1, 0, 0, px, py, pz, ee, mass ); 
+      int eventSize = (fMasterGen->event).size()-1;
+// -log(flat) = exponential distribution
+      double tauTmp = -(fMasterGen->event)[eventSize].tau0() * log(randomEngine().flat());
+      (fMasterGen->event)[eventSize].tau( tauTmp );
+
 
 // Here also need to add anti-particle (if any)
 // otherwise just add a 2nd particle of the same type 
@@ -80,18 +85,23 @@ bool Py8EGun::generatePartonsAndHadronize()
       {
          if ( (fMasterGen->particleData).isParticle( -particleID ) )
 	 {
-	    (fMasterGen->event).append( -particleID, 1, 0, 0, px, py, pz, ee, mass );
+	    (fMasterGen->event).append( -particleID, 1, 0, 0, -px, -py, -pz, ee, mass );
 	 }
 	 else
 	 {
-	    (fMasterGen->event).append( particleID, 1, 0, 0, px, py, pz, ee, mass );
+	    (fMasterGen->event).append( particleID, 1, 0, 0, -px, -py, -pz, ee, mass );
 	 }
+         eventSize = (fMasterGen->event).size()-1;
+// -log(flat) = exponential distribution
+         tauTmp = -(fMasterGen->event)[eventSize].tau0() * log(randomEngine().flat());
+         (fMasterGen->event)[eventSize].tau( tauTmp );
       }
 
    }
    
    if ( !fMasterGen->next() ) return false;
-   
+   evtGenDecay();
+
    event().reset(new HepMC::GenEvent);
    return toHepMC.fill_next_event( fMasterGen->event, event().get() );
   

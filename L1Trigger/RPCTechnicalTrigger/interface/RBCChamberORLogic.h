@@ -9,7 +9,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
-
+#include <array>
 
 /** @class RBCChamberORLogic RBCChamberORLogic.h
  *  
@@ -29,13 +29,11 @@ public:
   /// Standard constructor
   RBCChamberORLogic( ); 
   
-  virtual ~RBCChamberORLogic( ); ///< Destructor
-      
-  void process ( const RBCInput & , std::bitset<2> & );
+  void process ( const RBCInput & , std::bitset<2> & ) override;
   
-  void setBoardSpecs( const RBCBoardSpecs::RBCBoardConfig & );
+  void setBoardSpecs( const RBCBoardSpecs::RBCBoardConfig & ) override;
   
-  std::bitset<6> * getlayersignal(int _idx) { return & m_layersignal[_idx]; };
+  std::bitset<6> * getlayersignal(int _idx) override { return & m_layersignal[_idx]; };
   
   typedef std::vector<std::string>::iterator itr2names;
   typedef std::map<std::string,bool>::iterator itr2chambers;
@@ -50,7 +48,7 @@ public:
   
   void setmaxlevel( int _mx ) { m_maxlevel = _mx;};
   
-  std::bitset<6> * m_layersignal;
+  std::array<std::bitset<6>,2> m_layersignal;
   
 protected:
   

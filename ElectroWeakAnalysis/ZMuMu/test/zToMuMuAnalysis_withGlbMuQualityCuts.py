@@ -1,3 +1,4 @@
+from __future__ import print_function
 #analysis code.
 #It produces plot for Fit study
 #author Luca Lista
@@ -49,28 +50,28 @@ process.TFileService = cms.Service(
 zSelection = cms.PSet(
     cut = cms.string("charge = 0 & daughter(0).pt > 20 & daughter(1).pt > 20 & abs(daughter(0).eta)<2.1 & abs(daughter(1).eta)<2.1 & mass > 20"),
     isoCut = cms.double(3.),
-    ptThreshold = cms.untracked.double("1.5"),
-    etEcalThreshold = cms.untracked.double("0.2"),
-    etHcalThreshold = cms.untracked.double("0.5"),
-    deltaRVetoTrk = cms.untracked.double("0.015"),
-    deltaRTrk = cms.untracked.double("0.3"),
-    deltaREcal = cms.untracked.double("0.25"),
-    deltaRHcal = cms.untracked.double("0.25"),
-    alpha = cms.untracked.double("0."),
-    beta = cms.untracked.double("-0.75"),
+    ptThreshold = cms.untracked.double(1.5),
+    etEcalThreshold = cms.untracked.double(0.2),
+    etHcalThreshold = cms.untracked.double(0.5),
+    deltaRVetoTrk = cms.untracked.double(0.015),
+    deltaRTrk = cms.untracked.double(0.3),
+    deltaREcal = cms.untracked.double(0.25),
+    deltaRHcal = cms.untracked.double(0.25),
+    alpha = cms.untracked.double(0.),
+    beta = cms.untracked.double(-0.75),
     relativeIsolation = cms.bool(False)
 
 # For standard isolation (I_Tkr<3GeV) choose this configuration:
 #   isoCut = cms.double(3.),
-#   ptThreshold = cms.untracked.double("1.5"),
-#   etEcalThreshold = cms.untracked.double("0.2"),
-#   etHcalThreshold = cms.untracked.double("0.5"),
-#   deltaRVetoTrk = cms.untracked.double("0.015"),
-#   deltaRTrk = cms.untracked.double("0.3"),
-#   deltaREcal = cms.untracked.double("0.25"),
-#   deltaRHcal = cms.untracked.double("0.25"),
-#   alpha = cms.untracked.double("0."),
-#   beta = cms.untracked.double("-0.75"),
+#   ptThreshold = cms.untracked.double(1.5),
+#   etEcalThreshold = cms.untracked.double(0.2),
+#   etHcalThreshold = cms.untracked.double(0.5),
+#   deltaRVetoTrk = cms.untracked.double(0.015),
+#   deltaRTrk = cms.untracked.double(0.3),
+#   deltaREcal = cms.untracked.double(0.25),
+#   deltaRHcal = cms.untracked.double(0.25),
+#   alpha = cms.untracked.double(0.),
+#   beta = cms.untracked.double(-0.75),
 #   relativeIsolation = cms.bool(False)
 
 
@@ -436,7 +437,7 @@ etaBounds = [2.1]
 ##### etaBounds = [-2.1, -1.2, -0.8, 0.8, 1.2, 2.1]
 
 def addModulesFromTemplate(sequence, moduleLabel, src, probeSelection):
-    print "selection for: ", moduleLabel   
+    print("selection for: ", moduleLabel)   
     for i in range(len(etaBounds)-1):
         etaMin = etaBounds[i]
         etaMax = etaBounds[i+1]
@@ -445,7 +446,7 @@ def addModulesFromTemplate(sequence, moduleLabel, src, probeSelection):
             cut = "%5.3f < daughter(1).eta < %5.3f" %(etaMin, etaMax)
         elif probeSelection == "double":
             cut = "%5.3f < daughter(0).eta < %5.3f | %5.3f < daughter(1).eta < %5.3f" %(etaMin, etaMax, etaMin, etaMax)
-        print i, ") cut = ",  cut 
+        print(i, ") cut = ",  cut) 
         setattr(module, "cut", cut)
         setattr(module, "src", cms.InputTag(src))
         copyModuleLabel = moduleLabel + str(i)
@@ -495,13 +496,13 @@ process.goodZToMuMuOneTrackPlots.src = cms.InputTag("goodZToMuMuOneTrackFirstHLT
 process.globalMuQualityCutsAnalysis= cms.EDAnalyzer(
     "GlbMuQualityCutsAnalysis",
     src = cms.InputTag("goodZToMuMuAtLeast1HLT"), # dimuonsOneTrack, dimuonsOneStandAlone
-    ptMin = cms.untracked.double("0.0"),
-    massMin = cms.untracked.double("0.0"),
-    massMax = cms.untracked.double("120.0"),
-    etaMin = cms.untracked.double("-1.0"),
-    etaMax = cms.untracked.double("10.0"),
-    trkIso = cms.untracked.double("10000"),
-    chi2Cut = cms.untracked.double("10"),
+    ptMin = cms.untracked.double(0.0),
+    massMin = cms.untracked.double(0.0),
+    massMax = cms.untracked.double(120.0),
+    etaMin = cms.untracked.double(-1.0),
+    etaMax = cms.untracked.double(10.0),
+    trkIso = cms.untracked.double(10000),
+    chi2Cut = cms.untracked.double(10),
     nHitCut = cms.untracked.int32(10)
  )
 

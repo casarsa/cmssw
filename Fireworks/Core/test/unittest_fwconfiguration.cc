@@ -94,10 +94,10 @@ BOOST_AUTO_TEST_CASE( fwconfiguration )
    BOOST_CHECK(found->value()==kValue);
    BOOST_CHECK_THROW(config.valueForKey("blah"), std::runtime_error);
    
-   streamTo(std::cout, topConfig, "top");
+   FWConfiguration::streamTo(std::cout, topConfig, "top");
 
    //Test manager
-   std::auto_ptr<Conf> pConf(new Conf() );
+   std::unique_ptr<Conf> pConf(new Conf() );
    
    FWConfigurationManager confMgr;
    confMgr.add("first", pConf.get() );

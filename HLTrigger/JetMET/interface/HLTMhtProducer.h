@@ -12,7 +12,7 @@
  *
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -31,12 +31,12 @@ namespace edm {
 }
 
 // Class declaration
-class HLTMhtProducer : public edm::EDProducer {
+class HLTMhtProducer : public edm::stream::EDProducer<> {
   public:
     explicit HLTMhtProducer(const edm::ParameterSet & iConfig);
-    ~HLTMhtProducer();
+    ~HLTMhtProducer() override;
     static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-    virtual void produce(edm::Event & iEvent, const edm::EventSetup & iSetup);
+    void produce(edm::Event & iEvent, const edm::EventSetup & iSetup) override;
 
   private:
     /// Use pt; otherwise, use et.

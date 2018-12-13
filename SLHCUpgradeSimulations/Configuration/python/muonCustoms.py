@@ -1,3 +1,4 @@
+from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 
 
@@ -48,11 +49,11 @@ def customise_csc_cond_ungangedME11A_mc(process):
 
     from CalibMuon.Configuration.getCSCConditions_frontier_cff import cscConditions
     for (classname, tag) in myconds:
-      print classname, tag
+      print(classname, tag)
       sourcename = 'unganged_' + classname
       process.__setattr__(sourcename, cscConditions.clone())
       process.__getattribute__(sourcename).toGet = cms.VPSet( cms.PSet( record = cms.string(classname), tag = cms.string(tag)) )
-      process.__getattribute__(sourcename).connect = cms.string('frontier://FrontierProd/CMS_COND_CSC_000')
+      process.__getattribute__(sourcename).connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS')
       process.__setattr__('esp_' + classname, cms.ESPrefer("PoolDBESSource", sourcename) )
     
     del cscConditions
@@ -63,8 +64,10 @@ def customise_csc_cond_ungangedME11A_mc(process):
 def customise_csc_Indexing(process):
     """Settings for the upgrade raw vs offline condition channel translation
     """
-    process.CSCIndexerESProducer.AlgoName=cms.string("CSCIndexerPostls1")
-    process.CSCChannelMapperESProducer.AlgoName=cms.string("CSCChannelMapperPostls1")
+    if hasattr(process,"CSCIndexerESProducer"):
+        process.CSCIndexerESProducer.AlgoName=cms.string("CSCIndexerPostls1")
+    if hasattr(process,"CSCChannelMapperESProducer"):
+        process.CSCChannelMapperESProducer.AlgoName=cms.string("CSCChannelMapperPostls1")
     return process
 
 
@@ -100,16 +103,16 @@ def csc_PathVsModule_SanityCheck(process):
         ('digi2raw_step', 'cscpacker'),
         ('digi2raw_step', 'csctfpacker'),
         ('reconstruction', 'csc2DRecHits'),
-        ('dqmoffline_step', 'muonAnalyzer'),
+        ('dqmoffline_step', 'muonAnalyzer')
         #('dqmHarvesting', ''),
-        ('validation_step', 'relvalMuonBits')
+#        ('validation_step', 'relvalMuonBits')
     ]
     # verify:
     for path_name, module_name in paths_modules:
         if hasattr(process, path_name) and not hasattr(process, module_name):
-            print "WARNING: module %s is not in %s path!!!" % (module_name, path_name)
-            print "         This path has the following modules:"
-            print "         ", getattr(process, path_name).moduleNames(),"\n"
+            print("WARNING: module %s is not in %s path!!!" % (module_name, path_name))
+            print("         This path has the following modules:")
+            print("         ", getattr(process, path_name).moduleNames(),"\n")
 
 
 # ------------------------------------------------------------------ 
@@ -272,16 +275,5 @@ def customise_csc_PostLS1(process):
     # Validation
     if hasattr(process, 'relvalMuonBits'):
         process = customise_csc_Validation(process)
-
-    return process
-
-def customise_csc_hlt(process):
-    
-    process.CSCGeometryESModule.useGangedStripsInME1a = False
-    
-    process.hltCsc2DRecHits.readBadChannels = cms.bool(False)
-    process.hltCsc2DRecHits.CSCUseGasGainCorrections = cms.bool(False)
-    
-    process = customise_csc_Indexing(process)
 
     return process

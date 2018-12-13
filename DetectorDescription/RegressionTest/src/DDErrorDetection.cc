@@ -1,18 +1,29 @@
-namespace std { } using namespace std;
-
 #include "DetectorDescription/RegressionTest/interface/DDErrorDetection.h"
-#include "DetectorDescription/Core/src/DDCheck.h"
-#include <iostream>
+
 #include <fstream>
 
+#include "DetectorDescription/Core/interface/Store.h"
+//***** Explicit template instantiation of Singleton
+#include "DetectorDescription/Core/interface/Singleton.icc"
+#include "DetectorDescription/Core/interface/DDBase.h"
+#include "DetectorDescription/Core/interface/DDCompactView.h"
+#include "DetectorDescription/Core/interface/DDLogicalPart.h"
+#include "DetectorDescription/Core/interface/DDMaterial.h"
+#include "DetectorDescription/Core/interface/DDName.h"
+#include "DetectorDescription/Core/interface/DDSolid.h"
+#include "DetectorDescription/Core/interface/DDSolidShapes.h"
+#include "DetectorDescription/Core/interface/DDSpecifics.h"
+#include "DetectorDescription/Core/interface/DDTransform.h"
+#include "DataFormats/Math/interface/Graph.h"
+#include "DataFormats/Math/interface/GraphWalker.h"
+#include "DetectorDescription/RegressionTest/src/DDCheck.h"
 //**** to get rid of compile errors about ambiguous delete of Stores
 #include "DetectorDescription/Core/src/LogicalPart.h"
 #include "DetectorDescription/Core/src/Solid.h"
 #include "DetectorDescription/Core/src/Material.h"
 #include "DetectorDescription/Core/src/Specific.h"
 
-//***** Explicit template instantiation of Singleton
-#include "DetectorDescription/Base/interface/Singleton.icc"
+using namespace std;
 
 template class DDI::Singleton<std::map<std::string,std::set<DDLogicalPart> > >;
 template class DDI::Singleton<std::map<std::string,std::set<DDMaterial> > >;
@@ -75,10 +86,9 @@ void DDErrorDetection::warnings()
 const std::map<std::string, std::set<DDLogicalPart> > & DDErrorDetection::lp_cpv( const DDCompactView & cpv)
 {
   static std::map<std::string, std::set<DDLogicalPart> > result_;
-  if (result_.size()) return result_;
+  if (!result_.empty()) return result_;
   
-  //  DDCompactView cpv;
-  const DDCompactView::graph_type & g = cpv.graph();
+  const auto & g = cpv.graph();
   
   std::map<std::string, std::set<DDLogicalPart> >::const_iterator it(lp_err::instance().begin()),
                                                        ed(lp_err::instance().end());
@@ -86,7 +96,7 @@ const std::map<std::string, std::set<DDLogicalPart> > & DDErrorDetection::lp_cpv
     std::set<DDLogicalPart>::const_iterator sit(it->second.begin()), sed(it->second.end());
     for( ; sit != sed; ++sit) {
       const DDLogicalPart & lp = *sit;
-      DDCompactView::graph_type::const_edge_range er = g.edges(lp);
+      auto er = g.edges(lp);
       if (g.nodeIndex(lp).second) {
         result_.insert(make_pair(lp.ddname().fullname(), std::set<DDLogicalPart>()));  
       }
@@ -102,7 +112,7 @@ const std::map<std::string, std::set<DDLogicalPart> > & DDErrorDetection::lp_cpv
 const std::map<DDSolid, std::set<DDLogicalPart> > & DDErrorDetection::so_lp()
 {
   static std::map<DDSolid, std::set<DDLogicalPart> > result_;
-  if (result_.size()) return result_;
+  if (!result_.empty()) return result_;
   
   const std::map<DDSolid, std::set<DDSolid> > & err_mat = so();
   std::map<DDSolid, std::set<DDSolid> >::const_iterator it(err_mat.begin()), ed(err_mat.end());
@@ -141,21 +151,19 @@ const std::map<DDSpecifics, std::set<pair<DDLogicalPart, std::string> > & DDErro
 const std::map<DDMaterial, std::set<DDLogicalPart> > & DDErrorDetection::ma_lp()
 {
   static std::map<DDMaterial, std::set<DDLogicalPart> > result_;
-  if (result_.size()) return result_;
+  if (!result_.empty()) return result_;
   
-  const std::vector<pair<std::string,DDName> > & err_mat = ma();
-  std::vector<pair<std::string,DDName> >::const_iterator it(err_mat.begin()), ed(err_mat.end());
+  const std::vector<pair<std::string, std::string> > & err_mat = ma();
+  std::vector<pair<std::string, std::string> >::const_iterator it(err_mat.begin()), ed(err_mat.end());
   for (; it != ed; ++it) {
     std::set<DDLogicalPart> s;
     DDMaterial m(it->second);
     result_[m]=s;
-    //std::cout << "insert: " << m.name() << std::endl;
   }
   DDLogicalPart::iterator<DDLogicalPart> lpit,lped; lped.end();
   for (; lpit != lped; ++lpit) {
     if (lpit->isDefined().second) {
       std::map<DDMaterial, std::set<DDLogicalPart> >::iterator i = result_.find(lpit->material());
-      //std::cout << "searching: " << lpit->name() << std::endl;
       if ( i != result_.end() ) {
       //std::cout << std::endl << "FOUND: " << lpit->name() << std::endl << std::endl;
       i->second.insert(*lpit);
@@ -166,12 +174,12 @@ const std::map<DDMaterial, std::set<DDLogicalPart> > & DDErrorDetection::ma_lp()
 }
 
   
-const std::vector<pair<std::string,DDName> > & DDErrorDetection::ma()
+const std::vector<pair<std::string, std::string> > & DDErrorDetection::ma()
 {
-  static std::vector<pair<std::string,DDName> > result_;
+  static std::vector<pair<std::string, std::string> > result_;
   ofstream o("/dev/null");
 
-  if (result_.size()) return result_;
+  if (!result_.empty()) return result_;
   
   DDCheckMaterials(o,&result_);
   return result_;
@@ -184,11 +192,11 @@ const std::vector<pair<std::string,DDName> > & DDErrorDetection::ma()
 const std::map<DDSolid,std::set<DDSolid> > & DDErrorDetection::so()
 {
   static std::map<DDSolid, std::set<DDSolid> > result_;
-  if (result_.size()) return result_;
+  if (!result_.empty()) return result_;
  
   // build the material dependency graph
-  typedef graph<DDSolid,double> ma_graph_t;
-  typedef graphwalker<DDSolid,double> ma_walker_t;
+  using ma_graph_t = math::Graph<DDSolid,double>;
+  using ma_walker_t = math::GraphWalker<DDSolid,double>;
     
   ma_graph_t mag;
   std::vector<DDSolid> errs;
@@ -197,7 +205,7 @@ const std::map<DDSolid,std::set<DDSolid> > & DDErrorDetection::so()
     DDSolid  ma = *it;
     if (ma.isDefined().second) {
       DDSolidShape sh = ma.shape();
-      if ( (sh == ddunion) || (sh == ddintersection) || (sh == ddsubtraction) ) {
+      if ( (sh == DDSolidShape::ddunion) || (sh == DDSolidShape::ddintersection) || (sh == DDSolidShape::ddsubtraction) ) {
        DDBooleanSolid bs(ma);
        DDSolid a(bs.solidA()),b(bs.solidB());
        //DDRotation r(bs.rotation());
@@ -207,28 +215,22 @@ const std::map<DDSolid,std::set<DDSolid> > & DDErrorDetection::so()
      }  
     }
     else {
-      errs.push_back(ma);
+      errs.emplace_back(ma);
     }
   }
   
-    std::vector<DDSolid>::const_iterator mit(errs.begin()),
-                                      med(errs.end());
-    for (; mit != med; ++mit) {
+  std::vector<DDSolid>::const_iterator mit(errs.begin()),
+    med(errs.end());
+  for (; mit != med; ++mit) {
 
-    try {
-      // loop over erroreous materials
-      ma_walker_t w(mag,*mit);
-      while (w.next()) {
-        result_[*mit].insert(w.current().first);
-      }
-      std::cout << std::endl;
-    } 
-    catch(DDSolid m) {
-      ;
-      //std::cout << "no such material: " << m << " for creating a walker." << std::endl;
+    ma_walker_t w(mag,*mit);
+    while (w.next()) {
+      result_[*mit].insert(w.current().first);
     }
-   } 
-   return result_;
+    std::cout << std::endl;
+  } 
+  
+  return result_;
 }
 
 
@@ -254,8 +256,8 @@ void DDErrorDetection::report(const DDCompactView& cpv, ostream & o)
   o << lp_cpv(cpv) << std::endl;
   
   o << "B) Detailed report on Materials:" << std::endl;
-  const std::vector<pair<std::string,DDName> > & res = ma();
-  std::vector<pair<std::string,DDName> >::const_iterator it(res.begin()), ed(res.end());
+  const std::vector<pair<std::string,std::string>> & res = ma();
+  std::vector<pair<std::string,std::string>>::const_iterator it(res.begin()), ed(res.end());
   for (; it != ed; ++it) {
     std::cout << it->second << ":  " << it->first << std::endl;
   }

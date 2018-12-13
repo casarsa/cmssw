@@ -52,17 +52,17 @@ runTheTest(const PSet& test) {
     assertIdentical(expected, result);
     if(test.getParameter<bool>("InvalidCharge")) throw cms::Exception("Failed") << "Charges are valid, contrary to expectation.\n";
   }
-  catch(StripClusterizerAlgorithm::InvalidChargeException e) {
-    if(!test.getParameter<bool>("InvalidCharge")) throw e;
+  catch(StripClusterizerAlgorithm::InvalidChargeException const&) {
+    if(!test.getParameter<bool>("InvalidCharge")) throw;
   }
-  catch(cms::Exception e) {
+  catch(cms::Exception& e) {
     std::cout << ( e << "Input:\n" << printDigis(digiset));
   }
 }
 
 void ClusterizerUnitTester::
 constructDigis(const VPSet& stripset, edmNew::DetSetVector<SiStripDigi>& digis) {
-  edmNew::DetSetVector<SiStripDigi>::FastFiller digisFF(digis, detId);
+  edmNew::DetSetVector<SiStripDigi>::TSFastFiller digisFF(digis, detId);
   for(iter_t strip = stripset.begin(); strip < stripset.end(); strip++) {
     digisFF.push_back( SiStripDigi(strip->getParameter<unsigned>("Strip"),
 				   strip->getParameter<unsigned>("ADC") ));
@@ -72,7 +72,7 @@ constructDigis(const VPSet& stripset, edmNew::DetSetVector<SiStripDigi>& digis) 
 
 void ClusterizerUnitTester::
 constructClusters(const VPSet& clusterset, output_t& clusters) {
-  output_t::FastFiller clustersFF(clusters, detId);
+  output_t::TSFastFiller clustersFF(clusters, detId);
   for(iter_t c = clusterset.begin(); c<clusterset.end(); c++) {
     uint16_t firststrip =  c->getParameter<unsigned>("FirstStrip");
     std::vector<unsigned> amplitudes =  c->getParameter<std::vector<unsigned> >("Amplitudes");

@@ -24,7 +24,8 @@
 // user include files
 #include "FWCore/PluginManager/interface/ModuleDef.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
-#include "DataFormats/JetReco/interface/CATopJetTagInfo.h"
+#include "FWCore/Framework/interface/Event.h"
+#include "DataFormats/BTauReco/interface/CATopJetTagInfo.h"
 #include "DataFormats/JetReco/interface/PFJetCollection.h"
 
 //include header file
@@ -53,7 +54,7 @@ void BasicToPFJet::produce( edm::Event& Event, const edm::EventSetup& EventSetup
   Event.getByToken(inputToken_, BasicJetColl);
 
   //now make the new pf jet collection
-  std::auto_ptr<reco::PFJetCollection> PFJetColl(new reco::PFJetCollection);
+  auto PFJetColl = std::make_unique<reco::PFJetCollection>();
   //reco::PFJetCollection* PFJetColl = new reco::PFJetCollection;
   //make the 'specific'
   reco::PFJet::Specific specific;
@@ -67,8 +68,8 @@ void BasicToPFJet::produce( edm::Event& Event, const edm::EventSetup& EventSetup
     PFJetColl->push_back(pfjet);
   }
 
-  //std::auto_ptr<reco::PFJetCollection> selectedPFJets(PFJetColl);
-  Event.put(PFJetColl);
+  //std::unique_ptr<reco::PFJetCollection> selectedPFJets(PFJetColl);
+  Event.put(std::move(PFJetColl));
 }
 
  

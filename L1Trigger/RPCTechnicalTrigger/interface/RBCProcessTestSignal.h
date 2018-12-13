@@ -7,11 +7,12 @@
 #include "L1Trigger/RPCTechnicalTrigger/interface/RPCInputSignal.h"
 #include "L1Trigger/RPCTechnicalTrigger/interface/ProcessInputSignal.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <iostream>
 #include <fstream>
 #include <ios>
 #include <cmath>
+#include <memory>
 
 /** @class RBCProcessTestSignal RBCProcessTestSignal.h
  *  
@@ -24,32 +25,29 @@
  */
 class RBCProcessTestSignal : public ProcessInputSignal {
 public: 
-  /// Standard constructor
-  RBCProcessTestSignal( ) {}; 
+  explicit RBCProcessTestSignal( const char * ); 
   
-  RBCProcessTestSignal( const char * ); 
+  ~RBCProcessTestSignal( ) override; ///< Destructor
   
-  virtual ~RBCProcessTestSignal( ); ///< Destructor
-  
-  int  next();
+  int  next() override;
   
   void rewind();
   
   void showfirst();
   
-  RPCInputSignal * retrievedata() { 
-    return  m_lbin; 
+  RPCInputSignal * retrievedata() override { 
+    return  m_lbin.get(); 
   };
   
 protected:
   
 private:
   
-  std::ifstream * m_in;
+  std::ifstream m_in;
   
-  RBCInput * m_input;
+  RBCInput m_input;
 
-  RPCInputSignal * m_lbin;
+  std::unique_ptr<RPCInputSignal> m_lbin;
   
   
 };

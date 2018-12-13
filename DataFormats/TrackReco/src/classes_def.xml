@@ -1,14 +1,24 @@
 <lcgdict>
-  <class name="reco::HitPattern" ClassVersion="12">
+
+  <class name="reco::TrackBase::AlgoMask"/>
+  <class name="reco::HitPattern" ClassVersion="13">
+      <version ClassVersion="13" checksum="2211596316"/>
       <version ClassVersion="12" checksum="3922863495"/>
       <version ClassVersion="11" checksum="1621684703"/>
   </class>
-
-  <class name="reco::TrackBase" ClassVersion="13">
+  <class name="reco::TrackResiduals" ClassVersion="11">
+   <version ClassVersion="11" checksum="639174599"/>
+   <version ClassVersion="10" checksum="2022291691"/>
+  </class>
+  <class name="reco::TrackBase" ClassVersion="20">
+   <version ClassVersion="20" checksum="1589774059"/>
+   <version ClassVersion="19" checksum="4090229239"/>
+   <version ClassVersion="18" checksum="1935215297"/>
+   <version ClassVersion="17" checksum="1774167599"/>
+   <version ClassVersion="16" checksum="3673246687"/>
+   <version ClassVersion="15" checksum="1802760569"/>
+   <version ClassVersion="14" checksum="3929365050"/>
    <version ClassVersion="13" checksum="1244921154"/>
-    <field name="vertex_" iotype="ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
-    <field name="momentum_" iotype="ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
-   
    <version ClassVersion="12" checksum="2704717983"/>
     <field name="vertex_" iotype="ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
     <field name="momentum_" iotype="ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
@@ -18,21 +28,90 @@
     <field name="momentum_" iotype="ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
   </class>
  <ioread
+    sourceClass="reco::HitPattern"
+      source="uint16_t hitPattern[50]"
+      targetClass="reco::HitPattern"
+      target="hitPattern"
+      version="[12]"
+      include="utility"
+      >
+   <![CDATA[
+            using namespace reco;
+
+            const unsigned short HitSize = 11;
+            const unsigned short PatternSize = 50;
+            const int MaxHits = (PatternSize * sizeof(uint16_t) * 8) / HitSize;
+
+            auto getHitFromOldHitPattern = [](const uint16_t hitPattern[], const int position) {
+                uint16_t bitEndOffset = (position + 1) * HitSize;
+                uint8_t secondWord   = (bitEndOffset >> 4);
+                uint8_t secondWordBits = bitEndOffset & (16 - 1); // that is, bitEndOffset % 32
+                if (secondWordBits >= HitSize) {
+                    // full block is in this word
+                    uint8_t lowBitsToTrash = secondWordBits - HitSize;
+                    return (hitPattern[secondWord] >> lowBitsToTrash) & ((1 << HitSize) - 1);
+                } else {
+                    uint8_t  firstWordBits   = HitSize - secondWordBits;
+                    uint16_t firstWordBlock  = hitPattern[secondWord - 1] >> (16 - firstWordBits);
+                    uint16_t secondWordBlock = hitPattern[secondWord] & ((1 << secondWordBits) - 1);
+                    return firstWordBlock + (secondWordBlock << firstWordBits);
+                }
+            };
+
+            auto appendOldHitPattern = [&](const uint16_t pattern) {
+                // for this version we just have to add a 0 bit to the top of the pattern
+                const static unsigned short HitTypeMask = 0x3;
+                const static unsigned short HitTypeOffset = 0;                
+
+                const uint16_t VALID_CONST = (uint16_t) TrackingRecHit::valid;
+                const uint16_t MISSING_CONST = (uint16_t) TrackingRecHit::missing;
+                const uint16_t INACTIVE_CONST = (uint16_t) TrackingRecHit::inactive;
+                const uint16_t BAD_CONST = (uint16_t) TrackingRecHit::bad;
+
+                uint16_t rawHitType = (pattern >> HitTypeOffset) & HitTypeMask;                
+
+                TrackingRecHit::Type hitType = TrackingRecHit::valid;
+                switch (rawHitType) {
+                case VALID_CONST:
+                    hitType = TrackingRecHit::valid;
+                    break;
+                case MISSING_CONST:
+                    hitType = TrackingRecHit::missing;
+                    break;
+                case INACTIVE_CONST:
+                    hitType = TrackingRecHit::inactive;
+                    break;
+                case BAD_CONST:
+                    hitType = TrackingRecHit::bad;
+                    break;
+                }                
+                return newObj->appendHit(pattern,hitType);                
+            };
+
+            auto fillNewHitPatternWithOldHitPattern = [&](const uint16_t oldHitPattern[]) {
+                newObj->clear();
+                for (int i = 0; i < MaxHits; i++) {
+                    uint16_t pattern = getHitFromOldHitPattern(oldHitPattern, i);
+                    if (pattern == 0) {
+                        break;
+                    }
+                    if(!appendOldHitPattern(pattern)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+
+            fillNewHitPatternWithOldHitPattern(onfile.hitPattern);
+      ]]>
+ </ioread>
+ <ioread
       sourceClass="reco::HitPattern"
       source="uint32_t hitPattern_[25]"
       targetClass="reco::HitPattern"
       target="hitPattern"
       version="[-11]"
-      include="utility;
-        DataFormats/SiPixelDetId/interface/PXBDetId.h;
-        DataFormats/SiPixelDetId/interface/PXFDetId.h;
-        DataFormats/SiStripDetId/interface/TIBDetId.h;
-        DataFormats/SiStripDetId/interface/TIDDetId.h;
-        DataFormats/SiStripDetId/interface/TOBDetId.h;
-        DataFormats/SiStripDetId/interface/TECDetId.h;
-        DataFormats/MuonDetId/interface/DTLayerId.h;
-        DataFormats/MuonDetId/interface/CSCDetId.h;
-        DataFormats/MuonDetId/interface/RPCDetId.h"
+      include="utility,DataFormats/MuonDetId/interface/DTLayerId.h,DataFormats/MuonDetId/interface/CSCDetId.h,DataFormats/MuonDetId/interface/RPCDetId.h"
       >
       <![CDATA[
             using namespace reco;
@@ -41,7 +120,7 @@
             const unsigned short PatternSize = 25;
             const int MaxHits = (PatternSize * sizeof(uint32_t) * 8) / HitSize;
 
-            auto getHitFromOldHitPattern = [HitSize](const uint32_t hitPattern[], const int position) {
+            auto getHitFromOldHitPattern = [](const uint32_t hitPattern[], const int position) {
                 uint16_t bitEndOffset = (position + 1) * HitSize;
                 uint8_t secondWord   = (bitEndOffset >> 5);
                 uint8_t secondWordBits = bitEndOffset & (32 - 1); // that is, bitEndOffset % 32
@@ -57,7 +136,7 @@
                 }
             };
 
-            auto oldHitPatternToTrackingRecHitPair = [&](const uint32_t pattern) {
+            auto appendOldHitPattern = [&](const uint32_t pattern) {
                 // value used for those parameters needed by XXXDetId constructors
                 // but that we do not care about because they are not stored in the
                 // HitPattern.
@@ -113,26 +192,7 @@
 
                 DetId detId;
                 if (detector == DetId::Tracker) {
-                    switch (subdet) {
-                    case PixelSubdetector::PixelBarrel:
-                        detId = PXBDetId(layer, DONT_CARE, DONT_CARE);
-                        break;
-                    case PixelSubdetector::PixelEndcap:
-                        detId = PXFDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE);
-                        break;
-                    case StripSubdetector::TIB:
-                        detId = TIBDetId(layer, DONT_CARE, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TID:
-                        detId = TIDDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TOB:
-                        detId = TOBDetId(layer, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TEC:
-                        detId = TECDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    }
+                    return newObj->appendTrackerHit(subdet, layer, stereo, hitType);
                 } else if (detector == DetId::Muon) {
                     switch (subdet) {
                     case MuonSubdetId::DT: {
@@ -155,8 +215,9 @@
                     }
                     break;
                     }
+                    return newObj->appendMuonHit(detId, hitType);
                 }
-                return std::pair<DetId, TrackingRecHit::Type>(detId, hitType);
+                return false;
             };
 
             auto fillNewHitPatternWithOldHitPattern = [&](const uint32_t oldHitPattern[]) {
@@ -166,8 +227,7 @@
                     if (pattern == 0) {
                         break;
                     }
-                    std::pair<DetId, TrackingRecHit::Type> hitInfo = oldHitPatternToTrackingRecHitPair(pattern);
-                    if (!newObj->appendHit(hitInfo.first, hitInfo.second)) {
+                    if(!appendOldHitPattern(pattern)) {
                         return false;
                     }
                 }
@@ -189,7 +249,7 @@
       <![CDATA[
             using namespace reco;
 
-            auto newHitPatternToPair = [&](const uint16_t pattern, const HitPattern::HitCategory category) {
+            auto appendNewHitPattern = [&](const uint16_t pattern, const HitPattern::HitCategory category) {
                 // value used for those parameters needed by XXXDetId constructors
                 // but that we do not care about.
                 const uint8_t DONT_CARE = 1;
@@ -247,28 +307,15 @@
                     break;
                 }
 
+                if (category == HitPattern::MISSING_INNER_HITS) {
+                    hitType = TrackingRecHit::missing_inner;
+                } else if (category == HitPattern::MISSING_OUTER_HITS) {
+                    hitType = TrackingRecHit::missing_outer;
+                }
+
                 DetId detId;
                 if (detector == DetId::Tracker) {
-                    switch (subdet) {
-                    case PixelSubdetector::PixelBarrel:
-                        detId = PXBDetId(layer, DONT_CARE, DONT_CARE);
-                        break;
-                    case PixelSubdetector::PixelEndcap:
-                        detId = PXFDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE);
-                        break;
-                    case StripSubdetector::TIB:
-                        detId = TIBDetId(layer, DONT_CARE, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TID:
-                        detId = TIDDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TOB:
-                        detId = TOBDetId(layer, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    case StripSubdetector::TEC:
-                        detId = TECDetId(DONT_CARE, layer, DONT_CARE, DONT_CARE, DONT_CARE, DONT_CARE, stereo);
-                        break;
-                    }
+                    return newObj->appendTrackerHitPattern(subdet, layer, stereo, hitType);
                 } else if (detector == DetId::Muon) {
                     switch (subdet) {
                     case MuonSubdetId::DT: {
@@ -291,23 +338,16 @@
                     }
                     break;
                     }
+                    return newObj->appendMuonHitPattern(detId, hitType);
                 }
-
-                if (category == HitPattern::MISSING_INNER_HITS) {
-                    hitType = TrackingRecHit::missing_inner;
-                } else if (category == HitPattern::MISSING_OUTER_HITS) {
-                    hitType = TrackingRecHit::missing_outer;
-                }
-
-                return std::pair<DetId, TrackingRecHit::Type>(detId, hitType);
+                return false;
             };
 
             auto fillNewHitPatternFromNewHitPattern = [&](const HitPattern hitPattern, const HitPattern::HitCategory category) {
-                uint8_t hitCount = hitPattern.numberOfHits(HitPattern::TRACK_HITS);
+                uint8_t hitCount = hitPattern.numberOfAllHits(HitPattern::TRACK_HITS);
                 for (int i = 0; i < hitCount; i++) {
                     uint16_t pattern = hitPattern.getHitPattern(HitPattern::TRACK_HITS, i);
-                    std::pair<DetId, TrackingRecHit::Type> hitInfo = newHitPatternToPair(pattern, category);
-                    if (!newObj->appendHitPattern(hitInfo.first, hitInfo.second)) {
+                    if(!appendNewHitPattern(pattern, category)) {
                         return false;
                     }
                 }
@@ -325,13 +365,10 @@
       ]]>
  </ioread>
 
-  <class name="reco::TrackResiduals" ClassVersion="10">
-   <version ClassVersion="10" checksum="2022291691"/>
-  </class>
-
-  <class name="reco::TrackExtraBase" ClassVersion="11">
+  <class name="reco::TrackExtraBase" ClassVersion="12">
    <version ClassVersion="10" checksum="3548207838"/>
    <version ClassVersion="11" checksum="3450798337"/>
+   <version ClassVersion="12" checksum="1846152141"/>
   </class>
   <ioread sourceClass = "reco::TrackExtraBase" version="[-10]" targetClass="reco::TrackExtraBase" source ="TrackingRecHitRefVector recHits_" target="m_hitCollection">
     <![CDATA[m_hitCollection=onfile.recHits_.refVector().refCore();]]>
@@ -344,7 +381,11 @@
   </ioread>
 
 
-  <class name="reco::TrackExtra" ClassVersion="10">
+  <class name="reco::TrackExtra" ClassVersion="14">
+   <version ClassVersion="14" checksum="388593738"/>
+   <version ClassVersion="13" checksum="2526033150"/>
+   <version ClassVersion="12" checksum="106004853"/>
+   <version ClassVersion="11" checksum="2586227274"/>
    <version ClassVersion="10" checksum="1613098482"/>
     <field name="outerPosition_" iotype="ROOT::Math::PositionVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
     <field name="outerMomentum_" iotype="ROOT::Math::DisplacementVector3D<ROOT::Math::Cartesian3D<Double32_t>,ROOT::Math::DefaultCoordinateSystemTag>" /> 
@@ -357,7 +398,15 @@
   <class name="edm::Ref<std::vector<reco::TrackExtra>,reco::TrackExtra,edm::refhelper::FindUsingAdvance<std::vector<reco::TrackExtra>,reco::TrackExtra> >"/>
   <class name="edm::RefVector<std::vector<reco::TrackExtra>,reco::TrackExtra,edm::refhelper::FindUsingAdvance<std::vector<reco::TrackExtra>,reco::TrackExtra> >"/>
 
-  <class name="reco::Track" ClassVersion="12">
+  <class name="reco::Track" ClassVersion="20">
+   <version ClassVersion="20" checksum="2864582648"/>
+   <version ClassVersion="19" checksum="362503460"/>
+   <version ClassVersion="18" checksum="3235158110"/>
+   <version ClassVersion="17" checksum="3387867292"/>
+   <version ClassVersion="16" checksum="697987788"/>
+   <version ClassVersion="15" checksum="3694119510"/>
+   <version ClassVersion="14" checksum="4228121071"/>
+   <version ClassVersion="13" checksum="36410295"/>
    <version ClassVersion="12" checksum="1190637787"/>
    <version ClassVersion="11" checksum="1190637787"/>
    <version ClassVersion="10" checksum="1190637787"/>
@@ -373,11 +422,7 @@
   <class name="edm::Ptr<reco::Track>" />
   <class name="std::vector<edm::Ptr<reco::Track> >" />
 
-  <class pattern="edm::KeyVal<*>" />
   <class pattern="edm::Wrapper<edm::AssociationMap<*>" />
-  <class pattern="edm::Ref<edm::AssociationMap<*>" />
-  <class pattern="edm::RefProd<edm::AssociationMap<*>" />
-  <class pattern="edm::RefVector<edm::AssociationMap<*>" />
 
   <class name="edm::helpers::Key<edm::RefProd <std::vector <reco::Track> > >" />
 
@@ -406,8 +451,9 @@
   </class>
 
 
-      <class name="reco::DeDxHit"  ClassVersion="11">
+      <class name="reco::DeDxHit"  ClassVersion="12">
        <version ClassVersion="11" checksum="2617380234"/>
+       <version ClassVersion="12" checksum="3747851168"/>       
       </class>
       <class name="reco::DeDxHitCollection" />
 
@@ -433,12 +479,17 @@
      <class name="edm::reftobase::IndirectHolder<reco::Track>"/>
      <class name="edm::reftobase::BaseHolder<reco::Track>"/>
      <class name="edm::reftobase::RefHolder<reco::TrackRef>"/>
+     <class name="edm::reftobase::RefHolder<edm::Ptr<reco::Track> >"/>
      <class name="edm::reftobase::Holder<reco::Track, reco::TrackRef>"/>
 
      <class name="std::vector<edm::RefToBase<reco::Track> >" />
 
      <class name="std::pair<edm::RefToBase<reco::Track>,double>" />
      <class name="std::vector<std::pair<edm::RefToBase<reco::Track>,double> >" />
+
+     <class name="edm::reftobase::BaseVectorHolder<reco::Track>" />
+     <class name="reco::TrackBaseRefVector"/>
+     <class name="edm::Wrapper<reco::TrackBaseRefVector>"/>
 
      <!-- RefToBaseProd<reco::Track> -->
      <class name="edm::RefToBaseProd<reco::Track>" />
@@ -462,18 +513,41 @@
 
 
      <class name="std::pair<reco::Track,reco::Track>"/>
-     <class name="edm::Wrapper<std::pair<reco::Track,reco::Track> > "/>
+     <class name="edm::Wrapper<std::pair<reco::Track,reco::Track> >"/>
      <class name="std::pair<TrackCandidate,std::pair<reco::Track,reco::Track> >" />
      <class name="edm::Wrapper<std::pair<TrackCandidate,std::pair<reco::Track,reco::Track> > >" />
      <class name="std::vector<std::pair<TrackCandidate,std::pair<reco::Track,reco::Track> > >"/>
      <class name="edm::Wrapper<std::vector<std::pair<TrackCandidate,std::pair<reco::Track,reco::Track> > > >"/>
 
      <class name="std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > >"/>
-     <class name="edm::Wrapper<std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > > "/>
+     <class name="edm::Wrapper<std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > >"/>
      <class name="std::pair<TrackCandidate,std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > >" />
      <class name="edm::Wrapper<std::pair<TrackCandidate,std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > > >" />
      <class name="std::vector<std::pair<TrackCandidate,std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > > >"/>
      <class name="edm::Wrapper<std::vector<std::pair<TrackCandidate,std::pair<edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> >,edm::Ref<std::vector<reco::Track>,reco::Track,edm::refhelper::FindUsingAdvance<std::vector<reco::Track>,reco::Track> > > > > >"/>
 
+
+   <class name="reco::DeDxHitInfo::DeDxHitInfoContainer" ClassVersion="2">
+    <version ClassVersion="2" checksum="3964047764"/>
+   </class>
+   <class name="reco::DeDxHitInfo::DeDxHitInfoContainerCollection"/>
+
+
+   <class name="reco::DeDxHitInfo" ClassVersion="3">
+    <version ClassVersion="3" checksum="2577777556"/>
+    <version ClassVersion="2" checksum="3000986250"/>
+   </class>
+   <class name="reco::DeDxHitInfoCollection"/>
+   <class name="reco::DeDxHitInfoRef"/>
+   <class name="reco::DeDxHitInfoRefProd"/>
+   <class name="reco::DeDxHitInfoRefVector"/>
+   <class name="reco::DeDxHitInfoAss"/>
+   <class name="edm::Wrapper<reco::DeDxHitInfo>"/>
+   <class name="edm::Wrapper<reco::DeDxHitInfoCollection>"/>
+   <class name="edm::Wrapper<reco::DeDxHitInfoAss>"/>
+
+   <class name="SeedStopInfo" persistent="false"/>
+   <class name="std::vector<SeedStopInfo>" persistent="false"/>
+   <class name="edm::Wrapper<std::vector<SeedStopInfo> >" persistent="false"/>
 
   </lcgdict>

@@ -22,10 +22,10 @@ This example creates a histogram of Jet Pt, using Jets with Pt above 30 and ETA 
 #include "PhysicsTools/SelectorUtils/interface/JetIDSelectionFunctor.h"
 #include "PhysicsTools/SelectorUtils/interface/PFJetIDSelectionFunctor.h"
 #include "PhysicsTools/SelectorUtils/interface/RunLumiSelector.h"
-#include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+#include "FWCore/FWLite/interface/FWLiteEnabler.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
 #include "DataFormats/FWLite/interface/ChainEvent.h"
-#include "FWCore/PythonParameterSet/interface/PythonProcessDesc.h"
+#include "FWCore/ParameterSetReader/interface/ProcessDescImpl.h"
 #include "FWCore/ParameterSet/interface/ProcessDesc.h"
 
 
@@ -97,9 +97,9 @@ public:
     
   }
 
-  virtual ~JetIDStudiesSelector() {}
+  ~JetIDStudiesSelector() override {}
 
-  virtual bool operator()( edm::EventBase const & event, pat::strbitset & ret) override{
+  bool operator()( edm::EventBase const & event, pat::strbitset & ret) override{
 
     pat::strbitset retCaloJet = jetSel_->getBitTemplate();
     pat::strbitset retPFJet = pfJetSel_->getBitTemplate();
@@ -244,12 +244,12 @@ int main (int argc, char* argv[])
 
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
-  AutoLibraryLoader::enable();
+  FWLiteEnabler::enable();
 
 
   cout << "Getting parameters" << endl;
   // Get the python configuration
-  PythonProcessDesc builder(argv[1]);
+  ProcessDescImpl builder(argv[1]);
   std::shared_ptr<edm::ProcessDesc> b = builder.processDesc();
   std::shared_ptr<edm::ParameterSet> parameters = b->getProcessPSet();
   parameters->registerIt(); 
@@ -423,7 +423,7 @@ int main (int argc, char* argv[])
 	  hists["hist_fHPD"]->Fill( jet.jetID().fHPD );
 	  hists["hist_nConstituents"]->Fill( jet.nConstituents() );
 
-	  if ( useMC && jet.genJet() != 0 ) {
+	  if ( useMC && jet.genJet() != nullptr ) {
 	    hists["hist_jetGenEmE"]->Fill( jet.genJet()->emEnergy() );
 	    hists["hist_jetGenHadE"]->Fill( jet.genJet()->hadEnergy() );
 	    hists["hist_jetEoverGenE"]->Fill( jet.energy() / jet.genJet()->energy() );
@@ -511,7 +511,7 @@ int main (int argc, char* argv[])
 	hists["hist_pf_jetNHF"]->Fill( jet.neutralHadronEnergyFraction()  );
 
 
-	if ( useMC && jet.genJet() != 0 ) {
+	if ( useMC && jet.genJet() != nullptr ) {
 	  hists["hist_pf_jetGenEmE"]->Fill( jet.genJet()->emEnergy() );
 	  hists["hist_pf_jetGenHadE"]->Fill( jet.genJet()->hadEnergy() );
 	  hists["hist_pf_jetEoverGenE"]->Fill( jet.energy() / jet.genJet()->energy() );

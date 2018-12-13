@@ -1,6 +1,5 @@
-#include "FTFPCMS_BERT_EML.hh"
-#include "SimG4Core/PhysicsLists/interface/CMSEmStandardPhysics95msc93.h"
-#include "SimG4Core/PhysicsLists/interface/CMSMonopolePhysics.h"
+#include "FTFPCMS_BERT_EML.h"
+#include "SimG4Core/PhysicsLists/interface/CMSEmStandardPhysics.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "G4DecayPhysics.hh"
@@ -14,10 +13,8 @@
 #include "G4DataQuestionaire.hh"
 #include "G4HadronPhysicsFTFP_BERT.hh"
 
-FTFPCMS_BERT_EML::FTFPCMS_BERT_EML(G4LogicalVolumeToDDLogicalPartMap& map, 
-			   const HepPDT::ParticleDataTable * table_,
-			   sim::ChordFinderSetter *chordFinderSetter_, 
-			   const edm::ParameterSet & p) : PhysicsList(map, table_, chordFinderSetter_, p) {
+FTFPCMS_BERT_EML::FTFPCMS_BERT_EML(const edm::ParameterSet & p) 
+  : PhysicsList(p) {
 
   G4DataQuestionaire it(photon);
   
@@ -25,19 +22,19 @@ FTFPCMS_BERT_EML::FTFPCMS_BERT_EML(G4LogicalVolumeToDDLogicalPartMap& map,
   bool emPhys  = p.getUntrackedParameter<bool>("EMPhysics",true);
   bool hadPhys = p.getUntrackedParameter<bool>("HadPhysics",true);
   bool tracking= p.getParameter<bool>("TrackingCut");
-  bool munucl  = p.getParameter<bool>("FlagMuNucl");
+  double timeLimit = p.getParameter<double>("MaxTrackTime")*CLHEP::ns;
   edm::LogInfo("PhysicsList") << "You are using the simulation engine: "
-			      << "FTFP_BERT_EML with Flags for EM Physics "
+			      << "FTFP_BERT_EML: \n Flags for EM Physics "
 			      << emPhys << ", for Hadronic Physics "
-			      << hadPhys << " and tracking cut " << tracking;
+			      << hadPhys << " and tracking cut " << tracking
+			      << "   t(ns)= " << timeLimit/CLHEP::ns;
 
   if (emPhys) {
     // EM Physics
-    RegisterPhysics( new CMSEmStandardPhysics95msc93("EM standard msc93",ver,""));
+    RegisterPhysics( new CMSEmStandardPhysics(ver));
 
     // Synchroton Radiation & GN Physics
     G4EmExtraPhysics* gn = new G4EmExtraPhysics(ver);
-    if(munucl) { G4String yes = "on"; gn->MuonNuclear(yes); }
     RegisterPhysics(gn);
   }
 
@@ -61,11 +58,10 @@ FTFPCMS_BERT_EML::FTFPCMS_BERT_EML(G4LogicalVolumeToDDLogicalPartMap& map,
 
     // Neutron tracking cut
     if (tracking) {
-      RegisterPhysics( new G4NeutronTrackingCut(ver));
+      G4NeutronTrackingCut* ncut= new G4NeutronTrackingCut(ver);
+      ncut->SetTimeLimit(timeLimit);
+      RegisterPhysics(ncut);
     }
   }
-
-  // Monopoles
-  RegisterPhysics( new CMSMonopolePhysics(table_,chordFinderSetter_,p));
 }
 

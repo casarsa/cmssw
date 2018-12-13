@@ -5,6 +5,7 @@ using std::endl;
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -25,13 +26,13 @@ unsigned int L1RCTLookupTables::lookup(unsigned short ecalInput,
 				       unsigned short crdNo,
 				       unsigned short twrNo) const
 {
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
-  if(channelMask_ == 0)
+  if(channelMask_ == nullptr)
     throw cms::Exception("L1RCTChannelMask Invalid")
       << "L1RCTChannelMask should be set every event" << channelMask_;
-  if(noisyChannelMask_ == 0)
+  if(noisyChannelMask_ == nullptr)
     throw cms::Exception("L1RCTNoisyChannelMask Invalid")
       << "L1RCTNoisyChannelMask should be set every event" << noisyChannelMask_;
   if(ecalInput > 0xFF) 
@@ -166,10 +167,10 @@ unsigned int L1RCTLookupTables::lookup(unsigned short hfInput,
 				       unsigned short twrNo
 				       ) const
 {
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
-  if(channelMask_ == 0)
+  if(channelMask_ == nullptr)
     throw cms::Exception("L1RCTChannelMask Invalid")
       << "L1RCTChannelMask should be set every event" << channelMask_;
   if(hfInput > 0xFF) 
@@ -200,6 +201,14 @@ unsigned int L1RCTLookupTables::lookup(unsigned short hfInput,
   if(rctParameters_->jetMETHCalScaleFactors().size()==32){
      scalehf = (float) rctParameters_->jetMETHCalScaleFactors()[iAbsEta-1];
   } // The max eta for the various scale factors is 32, check to see if used.
+  else if(rctParameters_->jetMETHCalScaleFactors().size()==32*10){
+     int ht_bin = ((int) floor(et)/5);
+     // lowest bin (1) is 0-10GeV
+     if ( ht_bin < 1 ) ht_bin = 1;
+     // highest bin (9) is 45GeV and up
+     if ( ht_bin > 9 ) ht_bin = 9;
+     scalehf = (float) rctParameters_->jetMETHCalScaleFactors()[32*ht_bin+iAbsEta-1];
+  } // et-dependent scale factors (optional, of course, if set to 1)
 
   et=scalehf*et; // Allow for scaling the HF as well e.g. zero out if needed
 
@@ -209,7 +218,7 @@ unsigned int L1RCTLookupTables::lookup(unsigned short hfInput,
 
 bool L1RCTLookupTables::hOeFGVetoBit(float ecal, float hcal, bool fgbit) const
 {
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
   bool veto = false;
@@ -234,7 +243,7 @@ bool L1RCTLookupTables::hOeFGVetoBit(float ecal, float hcal, bool fgbit) const
 bool L1RCTLookupTables::activityBit(float ecal, float hcal) const
 {
   // Redefined for upgrade as EM activity only
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
   bool aBit = false;
@@ -301,7 +310,7 @@ float L1RCTLookupTables::convertEcal(unsigned short ecal, unsigned short iAbsEta
 // converts compressed hcal energy to linear (real) scale
 float L1RCTLookupTables::convertHcal(unsigned short hcal, unsigned short iAbsEta, short sign) const
 {
-  if (hcalScale_ != 0)
+  if (hcalScale_ != nullptr)
     {
       return (hcalScale_->et( hcal, iAbsEta, sign ));
     }
@@ -328,7 +337,7 @@ unsigned long L1RCTLookupTables::convertToInteger(float et,
 
 unsigned int L1RCTLookupTables::eGammaETCode(float ecal, float hcal, int iAbsEta) const
 {
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
   float etLinear = rctParameters_->EGammaTPGSum(ecal,hcal,iAbsEta);
@@ -337,7 +346,7 @@ unsigned int L1RCTLookupTables::eGammaETCode(float ecal, float hcal, int iAbsEta
 
 unsigned int L1RCTLookupTables::jetMETETCode(float ecal, float hcal, int iAbsEta) const
 {
-  if(rctParameters_ == 0)
+  if(rctParameters_ == nullptr)
     throw cms::Exception("L1RCTParameters Invalid")
       << "L1RCTParameters should be set every event" << rctParameters_;
   float etLinear = rctParameters_->JetMETTPGSum(ecal,hcal,iAbsEta);

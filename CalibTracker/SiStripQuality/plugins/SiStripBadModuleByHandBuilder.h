@@ -19,12 +19,12 @@ class SiStripBadModuleByHandBuilder : public ConditionDBWriter<SiStripBadStrip> 
 public:
 
   explicit SiStripBadModuleByHandBuilder(const edm::ParameterSet&);
-  ~SiStripBadModuleByHandBuilder();
+  ~SiStripBadModuleByHandBuilder() override;
 
 
 private:
 
-  SiStripBadStrip* getNewObject();
+  std::unique_ptr<SiStripBadStrip> getNewObject() override;
 
 private:
   edm::FileInPath fp_;

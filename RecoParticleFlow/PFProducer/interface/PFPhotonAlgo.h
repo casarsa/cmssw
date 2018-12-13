@@ -81,11 +81,11 @@ class PFPhotonAlgo {
   //check candidate validity
   bool isPhotonValidCandidate(const reco::PFBlockRef&  blockRef,
 			      std::vector< bool >&  active,
-			      std::auto_ptr< reco::PFCandidateCollection > &pfPhotonCandidates,
+			      std::unique_ptr< reco::PFCandidateCollection > &pfPhotonCandidates,
 			      std::vector<reco::PFCandidatePhotonExtra>& pfPhotonExtraCandidates,
 			      std::vector<reco::PFCandidate>& 
 			      tempElectronCandidates
-			      //      std::auto_ptr< reco::PFCandidateCollection > &pfElectronCandidates_  
+			      //      std::shared_ptr< reco::PFCandidateCollection > &pfElectronCandidates_  
 			      ){
     isvalid_=false;
     // RunPFPhoton has to set isvalid_ to TRUE in case it finds a valid candidate
@@ -198,10 +198,10 @@ private:
   void RunPFPhoton(const reco::PFBlockRef&  blockRef,
 		   std::vector< bool >& active,
 
-		   std::auto_ptr< reco::PFCandidateCollection > &pfPhotonCandidates,
+		   std::unique_ptr<reco::PFCandidateCollection> &pfPhotonCandidates,
 		   std::vector<reco::PFCandidatePhotonExtra>& 
 		   pfPhotonExtraCandidates,
-		   //  std::auto_ptr< reco::PFCandidateCollection > 
+		   //  std::unique_ptr<reco::PFCandidateCollection> 
 		   //&pfElectronCandidates_
 		   std::vector<reco::PFCandidate>& 
 		   tempElectronCandidates

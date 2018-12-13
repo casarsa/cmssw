@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-#include "boost/utility.hpp"
-
 // forward declarations
 
 namespace edm {
@@ -31,12 +29,16 @@ namespace edm {
    class ProductID;
    class WrapperBase;
 
-   class EDProductGetter : private boost::noncopyable {
+   class EDProductGetter {
 
    public:
 
      EDProductGetter();
      virtual ~EDProductGetter();
+
+     EDProductGetter(EDProductGetter const&) = delete; // stop default
+
+     EDProductGetter const& operator=(EDProductGetter const&) = delete; // stop default
 
      // ---------- const member functions ---------------------
      virtual WrapperBase const* getIt(ProductID const&) const = 0;

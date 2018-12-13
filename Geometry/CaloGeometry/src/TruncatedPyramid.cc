@@ -61,10 +61,9 @@ TruncatedPyramid::TruncatedPyramid( const CornersVec& corn ,
 TruncatedPyramid::~TruncatedPyramid() 
 {}
 
-const GlobalPoint 
-TruncatedPyramid::getPosition( CCGFloat depth ) const 
+GlobalPoint TruncatedPyramid::getPosition( CCGFloat depth ) const
 {
-   return CaloCellGeometry::getPosition() + depth*m_axis ;
+  return CaloCellGeometry::getPosition() + depth*m_axis ;
 }
 
 CCGFloat 
@@ -121,7 +120,7 @@ TruncatedPyramid::getTransform( Tr3D& tr, Pt3DVec* lptr ) const
    const double dz ( param()[0] ) ;
 
    Pt3D  lFront ;
-   assert( 0 != param() ) ;
+   assert( nullptr != param() ) ;
    std::vector<Pt3D > lc( 8, Pt3D(0,0,0) ) ;
    if( 11.2 > dz )
    {
@@ -179,7 +178,7 @@ TruncatedPyramid::getTransform( Tr3D& tr, Pt3DVec* lptr ) const
    tr = Tr3D( dlFront , dlBack , dlOne ,
 	      dgFront , dgBack , dgOne    ) ;
 
-   if( 0 != lptr ) (*lptr) = lc ;
+   if( nullptr != lptr ) (*lptr) = lc ;
 }
 
 void
@@ -247,20 +246,20 @@ TruncatedPyramid::localCorners( Pt3DVec&        lc  ,
 				const CCGFloat* pv  ,
 				Pt3D&           ref   )
 {
-   assert( 0 != pv ) ;
+   assert( nullptr != pv ) ;
    assert( 8 == lc.size() ) ;
 
-   const CCGFloat dz ( pv[0] ) ;
-   const CCGFloat th ( pv[1] ) ;
-   const CCGFloat ph ( pv[2] ) ;
-   const CCGFloat h1 ( pv[3] ) ;
-   const CCGFloat b1 ( pv[4] ) ;
-   const CCGFloat t1 ( pv[5] ) ;
-   const CCGFloat a1 ( pv[6] ) ;
-   const CCGFloat h2 ( pv[7] ) ;
-   const CCGFloat b2 ( pv[8] ) ;
-   const CCGFloat t2 ( pv[9] ) ;
-   const CCGFloat a2 ( pv[10]) ;
+   const CCGFloat dz ( pv[TruncatedPyramid::k_Dz]    ) ;
+   const CCGFloat th ( pv[TruncatedPyramid::k_Theta] ) ;
+   const CCGFloat ph ( pv[TruncatedPyramid::k_Phi]   ) ;
+   const CCGFloat h1 ( pv[TruncatedPyramid::k_Dy1]   ) ;
+   const CCGFloat b1 ( pv[TruncatedPyramid::k_Dx1]   ) ;
+   const CCGFloat t1 ( pv[TruncatedPyramid::k_Dx2]   ) ;
+   const CCGFloat a1 ( pv[TruncatedPyramid::k_Alp1]  ) ;
+   const CCGFloat h2 ( pv[TruncatedPyramid::k_Dy2]   ) ;
+   const CCGFloat b2 ( pv[TruncatedPyramid::k_Dx3]   ) ;
+   const CCGFloat t2 ( pv[TruncatedPyramid::k_Dx4]   ) ;
+   const CCGFloat a2 ( pv[TruncatedPyramid::k_Alp2]  ) ;
   
    const CCGFloat ta1 ( tan( a1 ) ) ; // lower plane
    const CCGFloat ta2 ( tan( a2 ) ) ; // upper plane

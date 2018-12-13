@@ -49,7 +49,7 @@ HLTHFRecoEcalCandidateProducer::HLTHFRecoEcalCandidateProducer(edm::ParameterSet
 
 } 
 
-void HLTHFRecoEcalCandidateProducer::produce(edm::Event & e, edm::EventSetup const& iSetup) {  
+void HLTHFRecoEcalCandidateProducer::produce(edm::StreamID sid, edm::Event & e, edm::EventSetup const& iSetup) const {  
   
   
   edm::Handle<reco::SuperClusterCollection> super_clus;
@@ -61,12 +61,12 @@ void HLTHFRecoEcalCandidateProducer::produce(edm::Event & e, edm::EventSetup con
   int nvertex = 1;
    
   // create return data
-  std::auto_ptr<reco::RecoEcalCandidateCollection> retdata1(new reco::RecoEcalCandidateCollection());
+  auto retdata1 = std::make_unique<reco::RecoEcalCandidateCollection>();
 
   
   algo_.produce(super_clus,*hf_assoc,*retdata1,nvertex);
  
-  e.put(retdata1);
+  e.put(std::move(retdata1));
 
 }
 

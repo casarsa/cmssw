@@ -1,4 +1,7 @@
 <lcgdict>  
-  <class name="VersionedGsfElectronSelector"/>
-  <class name="VersionedPatElectronSelector"/>
+  <class pattern="VersionedSelector<*>"/>
+  <class pattern="MakeVersionedSelector<*>"/>
+  <class pattern="PrintVIDToString<*>"/>
+  <class pattern="MakePtrFromCollection<*>"/>
+  <class name="ElectronMVAEstimatorRun2" transient="true"/>
 </lcgdict>

@@ -98,6 +98,25 @@ DQMFileSaver::saveForOffline(const std::string &workflow, int run, int lumi) con
 
   if (lumi == 0) // save for run
   {
+    // set run end flag
+    dbe_->cd();
+    dbe_->setCurrentFolder("Info/ProvInfo");
+    
+    // do this, because ProvInfo is not yet run in offline DQM
+    MonitorElement* me = dbe_->get("Info/ProvInfo/CMSSW"); 
+    if (!me) me = dbe_->bookString("CMSSW", edm::getReleaseVersion().c_str() );
+    
+    me = dbe_->get("Info/ProvInfo/runIsComplete");
+    if (!me) me = dbe_->bookFloat("runIsComplete");
+    
+    if (me)
+      { 
+	if (runIsComplete_)
+	  me->Fill(1.);
+	else
+	  me->Fill(0.);
+      }
+    
     dbe_->save(filename,
                "",
                "^(Reference/)?([^/]+)",
@@ -107,6 +126,9 @@ DQMFileSaver::saveForOffline(const std::string &workflow, int run, int lumi) con
                (DQMStore::SaveReferenceTag) saveReference_,
                saveReferenceQMin_,
                fileUpdate_ ? "UPDATE" : "RECREATE");
+
+    // save the JobReport
+    saveJobReport(filename);
   }
   else // save EventInfo folders for luminosity sections
   {
@@ -135,6 +157,7 @@ DQMFileSaver::saveForOffline(const std::string &workflow, int run, int lumi) con
       }
     }
   }
+
 }
 
 static void
@@ -213,7 +236,7 @@ DQMFileSaver::saveForOnline(int run, const std::string &suffix, const std::strin
     {
       dbe_->cd();
       std::vector<MonitorElement*> pNamesVector = dbe_->getMatchingContents("^" + systems[i] + "/.*/EventInfo/processName",lat::Regexp::Perl);
-      if (pNamesVector.size() > 0){
+      if (!pNamesVector.empty()){
         doSaveForOnline(dbe_, run, enableMultiThread_,
                         fileBaseName_ + systems[i] + suffix + child_ + ".root",
                         "", "^(Reference/)?([^/]+)", rewrite,
@@ -237,36 +260,45 @@ DQMFileSaver::saveForOnline(int run, const std::string &suffix, const std::strin
 }
 
 
-void
-DQMFileSaver::fillJson(int run, int lumi, const std::string& dataFilePathName, boost::property_tree::ptree& pt) const
+boost::property_tree::ptree
+DQMFileSaver::fillJson(int run, int lumi, const std::string& dataFilePathName, const std::string& transferDestinationStr, const std::string& mergeTypeStr, evf::FastMonitoringService *fms)
 {
   namespace bpt = boost::property_tree;
   namespace bfs = boost::filesystem;
+  
+  bpt::ptree pt;
+
   int hostnameReturn;
   char host[32];
   hostnameReturn = gethostname(host ,sizeof(host));
   if (hostnameReturn == -1)
-    throw cms::Exception("DQMFileSaver")
+    throw cms::Exception("fillJson")
           << "Internal error, cannot get host name";
   
   int pid = getpid();
   std::ostringstream oss_pid;
   oss_pid << pid;
 
+  int nProcessed = fms ? (fms->getEventsProcessedForLumi(lumi)) : -1;
+
   // Stat the data file: if not there, throw
+  std::string dataFileName;
   struct stat dataFileStat;
-  if (stat(dataFilePathName.c_str(), &dataFileStat) != 0)
-    throw cms::Exception("DQMFileSaver")
-          << "Internal error, cannot get data file: "
-          << dataFilePathName;
-  // Extract only the data file name from the full path
-  std::string dataFileName = bfs::path(dataFilePathName).filename().string();
+  dataFileStat.st_size=0;
+  if (nProcessed) {
+    if (stat(dataFilePathName.c_str(), &dataFileStat) != 0)
+      throw cms::Exception("fillJson")
+            << "Internal error, cannot get data file: "
+            << dataFilePathName;
+    // Extract only the data file name from the full path
+    dataFileName = bfs::path(dataFilePathName).filename().string();
+  }
   // The availability test of the FastMonitoringService was done in the ctor.
   bpt::ptree data;
-  bpt::ptree processedEvents, acceptedEvents, errorEvents, bitmask, fileList, fileSize, inputFiles, fileAdler32;
+  bpt::ptree processedEvents, acceptedEvents, errorEvents, bitmask, fileList, fileSize, inputFiles, fileAdler32, transferDestination, mergeType, hltErrorEvents;
 
-  processedEvents.put("", fms_ ? (fms_->getEventsProcessedForLumi(lumi)) : -1); // Processed events
-  acceptedEvents.put("", fms_ ? (fms_->getEventsProcessedForLumi(lumi)) : -1); // Accepted events, same as processed for our purposes
+  processedEvents.put("", nProcessed); // Processed events
+  acceptedEvents.put("", nProcessed); // Accepted events, same as processed for our purposes
 
   errorEvents.put("", 0); // Error events
   bitmask.put("", 0); // Bitmask of abs of CMSSW return code
@@ -274,6 +306,9 @@ DQMFileSaver::fillJson(int run, int lumi, const std::string& dataFilePathName, b
   fileSize.put("", dataFileStat.st_size); // Size in bytes of the data file
   inputFiles.put("", ""); // We do not care about input files!
   fileAdler32.put("", -1); // placeholder to match output json definition
+  transferDestination.put("", transferDestinationStr); // SM Transfer destination field
+  mergeType.put("", mergeTypeStr); // Merging type for merger and transfer services
+  hltErrorEvents.put("", 0); // Error events
 
   data.push_back(std::make_pair("", processedEvents));
   data.push_back(std::make_pair("", acceptedEvents));
@@ -283,10 +318,13 @@ DQMFileSaver::fillJson(int run, int lumi, const std::string& dataFilePathName, b
   data.push_back(std::make_pair("", fileSize));
   data.push_back(std::make_pair("", inputFiles));
   data.push_back(std::make_pair("", fileAdler32));
+  data.push_back(std::make_pair("", transferDestination));
+  data.push_back(std::make_pair("", mergeType));
+  data.push_back(std::make_pair("", hltErrorEvents));
 
   pt.add_child("data", data);
 
-  if (fakeFilterUnitMode_) {
+  if (fms == nullptr) {
     pt.put("definition", "/fakeDefinition.jsn");
   } else {
     // The availability test of the EvFDaqDirector Service was done in the ctor.
@@ -298,6 +336,8 @@ DQMFileSaver::fillJson(int run, int lumi, const std::string& dataFilePathName, b
   char sourceInfo[64]; //host and pid information
   sprintf(sourceInfo, "%s_%d", host, pid);
   pt.put("source", sourceInfo);
+
+  return pt;
 }
 
 void
@@ -305,7 +345,6 @@ DQMFileSaver::saveForFilterUnit(const std::string& rewrite, int run, int lumi,  
 {
   // get from DAQ2 services where to store the files according to their format
   namespace bpt = boost::property_tree;
-  bpt::ptree pt;
 
   std::string openJsonFilePathName;
   std::string jsonFilePathName;
@@ -337,42 +376,42 @@ DQMFileSaver::saveForFilterUnit(const std::string& rewrite, int run, int lumi,  
     }
   }
 
-  if (fileFormat == ROOT)
-  {
-    // Save the file with the full directory tree,
-    // modifying it according to @a rewrite,
-    // but not looking for MEs inside the DQMStore, as in the online case,
-    // nor filling new MEs, as in the offline case.
-    dbe_->save(openHistoFilePathName,
-               "",
-               "^(Reference/)?([^/]+)",
-               rewrite,
-	             enableMultiThread_ ? run : 0,
-               lumi,
-               (DQMStore::SaveReferenceTag) saveReference_,
-               saveReferenceQMin_,
-               fileUpdate_ ? "UPDATE" : "RECREATE",
-               true);
-  }
-  else if (fileFormat == PB)
-  {
-    // Save the file in the open directory.
-    dbe_->savePB(openHistoFilePathName,
-                 filterName_,
-    	           enableMultiThread_ ? run : 0,
-                 lumi,
-                 true);
-  }
-  else
-    throw cms::Exception("DQMFileSaver")
-          << "Internal error, can save files"
-          << " only in ROOT or ProtocolBuffer format.";
+  if (fms_ ? fms_->getEventsProcessedForLumi(lumi) : true) {
+    if (fileFormat == ROOT)
+    {
+      // Save the file with the full directory tree,
+      // modifying it according to @a rewrite,
+      // but not looking for MEs inside the DQMStore, as in the online case,
+      // nor filling new MEs, as in the offline case.
+      dbe_->save(openHistoFilePathName,
+             "",
+             "^(Reference/)?([^/]+)",
+             rewrite,
+             enableMultiThread_ ? run : 0,
+             lumi,
+             (DQMStore::SaveReferenceTag) saveReference_,
+             saveReferenceQMin_,
+             fileUpdate_ ? "UPDATE" : "RECREATE");
+    }
+    else if (fileFormat == PB)
+    {
+      // Save the file in the open directory.
+      dbe_->savePB(openHistoFilePathName,
+        filterName_,
+        enableMultiThread_ ? run : 0,
+        lumi);
+    }
+    else
+      throw cms::Exception("DQMFileSaver")
+        << "Internal error, can save files"
+        << " only in ROOT or ProtocolBuffer format.";
 
-  // Now move the the data and json files into the output directory.
-  rename(openHistoFilePathName.c_str(), histoFilePathName.c_str());
+    // Now move the the data and json files into the output directory.
+    rename(openHistoFilePathName.c_str(), histoFilePathName.c_str());
+  }
 
   // Write the json file in the open directory.
-  fillJson(run, lumi, histoFilePathName, pt);
+  bpt::ptree pt = fillJson(run, lumi, histoFilePathName, transferDestination_, mergeType_, fms_);
   write_json(openJsonFilePathName, pt);
   rename(openJsonFilePathName.c_str(), jsonFilePathName.c_str());
 }
@@ -606,6 +645,12 @@ DQMFileSaver::beginJob()
   
   // Determine if we are running multithreading asking to the DQMStore. Not to be moved in the ctor
   enableMultiThread_ = dbe_->enableMultiThread_;
+
+  if ((convention_ == FilterUnit) && (!fakeFilterUnitMode_))
+  {
+    transferDestination_ = edm::Service<evf::EvFDaqDirector>()->getStreamDestinations(stream_label_);
+    mergeType_ = edm::Service<evf::EvFDaqDirector>()->getStreamMergeType(stream_label_,evf::MergeTypePB);
+  } 
 }
 
 std::shared_ptr<saverDetails::NoCache>
@@ -678,7 +723,7 @@ DQMFileSaver::globalEndLuminosityBlock(const edm::LuminosityBlock & iLS, const e
     // by testing the pointer to FastMonitoringService: if not null, i.e. in real FU mode,
     // we check that the events are not 0; otherwise, we skip the test, so we store at every lumi transition. 
     // TODO(diguida): allow fake FU mode to skip file creation at empty lumi sections.
-    if (convention_ == FilterUnit && (fms_ ? (fms_->getEventsProcessedForLumi(ilumi) > 0) : !fms_))
+    if (convention_ == FilterUnit && (fms_ ? fms_->shouldWriteFiles(ilumi) : !fms_))
     {
       char rewrite[128];
       sprintf(rewrite, "\\1Run %d/\\2/By Lumi Section %d-%d", irun, ilumi, ilumi);
@@ -697,7 +742,7 @@ DQMFileSaver::globalEndLuminosityBlock(const edm::LuminosityBlock & iLS, const e
     }
 
     // after saving per LS, delete the old LS global histograms.
-    dbe_->markForDeletion(enableMultiThread_ ? irun : 0, ilumi);
+    dbe_->deleteUnusedLumiHistograms(enableMultiThread_ ? irun : 0, ilumi);
   }
 }
 
@@ -771,7 +816,7 @@ DQMFileSaver::globalEndRun(const edm::Run & iRun, const edm::EventSetup &) const
 }
 
 void
-DQMFileSaver::endJob(void)
+DQMFileSaver::endJob()
 {
   if (saveAtJobEnd_)
     {
@@ -784,29 +829,4 @@ DQMFileSaver::endJob(void)
 	  << "Internal error.  Can only save files at the end of the"
 	  << " job in Offline mode.";
     }
-  
-  // save JobReport once per job
-  char suffix[64];
-  sprintf(suffix, "R%09d", irun_.load());
-  std::string filename = onlineOfflineFileName(fileBaseName_, suffix, workflow_, child_, fileFormat_);
-  saveJobReport(filename);
-}
-
-void
-DQMFileSaver::postForkReacquireResources(unsigned int childIndex, unsigned int numberOfChildren)
-{
-  // this is copied from IOPool/Output/src/PoolOutputModule.cc, for consistency
-  unsigned int digits = 0;
-  while (numberOfChildren != 0) {
-    ++digits;
-    numberOfChildren /= 10;
-  }
-  // protect against zero numberOfChildren
-  if (digits == 0) {
-    digits = 3;
-  }
-
-  char buffer[digits + 2];
-  snprintf(buffer, digits + 2, "_%0*d", digits, childIndex);
-  child_ = std::string(buffer);
 }

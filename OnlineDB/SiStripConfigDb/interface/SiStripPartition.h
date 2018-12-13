@@ -39,7 +39,7 @@ class SiStripPartition {
   
   ~SiStripPartition();
 
-  static std::string defaultPartitionName_;
+  static const std::string defaultPartitionName_;
 
   typedef std::pair<uint32_t,uint32_t> Versions; 
 
@@ -94,6 +94,8 @@ class SiStripPartition {
   Versions apvCalibVersion() const;
 
   Versions pedestalsVersion() const;
+
+  Versions pedsFullNoiseVersion() const;
 
   Versions apvLatencyVersion() const;
 
@@ -169,6 +171,8 @@ class SiStripPartition {
 
   Versions pedestalsV_;
 
+  Versions pedsFullNoiseV_;
+
   Versions apvLatencyV_;
 
   Versions fineDelayV_;
@@ -210,6 +214,7 @@ inline SiStripPartition::Versions SiStripPartition::optoScanVersion() const { re
 inline SiStripPartition::Versions SiStripPartition::vpspScanVersion() const { return vpspScanV_; }
 inline SiStripPartition::Versions SiStripPartition::apvCalibVersion() const { return apvCalibV_; }
 inline SiStripPartition::Versions SiStripPartition::pedestalsVersion() const { return pedestalsV_; }
+inline SiStripPartition::Versions SiStripPartition::pedsFullNoiseVersion() const { return pedsFullNoiseV_; }
 inline SiStripPartition::Versions SiStripPartition::apvLatencyVersion() const { return apvLatencyV_; }
 inline SiStripPartition::Versions SiStripPartition::fineDelayVersion() const { return fineDelayV_; }
 

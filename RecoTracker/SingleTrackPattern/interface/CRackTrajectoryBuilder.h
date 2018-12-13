@@ -48,8 +48,8 @@
      const GeomDet* detPos1 = _tracker.idToDet(rh1->geographicalId());
      const GeomDet* detPos2 = _tracker.idToDet(rh2->geographicalId());
 
-     GlobalPoint gp1 = detPos1->position();
-     GlobalPoint gp2 = detPos2->position();
+     const GlobalPoint& gp1 = detPos1->position();
+     const GlobalPoint& gp2 = detPos2->position();
      
      if (gp1.y()>gp2.y())
        return true;
@@ -73,8 +73,8 @@
      const GeomDet* detPos1 = _tracker.idToDet(rh1->geographicalId());
      const GeomDet* detPos2 = _tracker.idToDet(rh2->geographicalId());
 
-     GlobalPoint gp1 = detPos1->position();
-     GlobalPoint gp2 = detPos2->position();
+     const GlobalPoint& gp1 = detPos1->position();
+     const GlobalPoint& gp2 = detPos2->position();
      
      if (gp1.y()<gp2.y())
        return true;
@@ -238,7 +238,6 @@ class CRackTrajectoryBuilder
  private:
    edm::ESHandle<MagneticField> magfield;
    edm::ESHandle<TrackerGeometry> tracker;
-   edm::ParameterSet conf_;
    
    PropagatorWithMaterial  *thePropagator;
    PropagatorWithMaterial  *thePropagatorOp;
@@ -264,6 +263,7 @@ class CRackTrajectoryBuilder
    TransientTrackingRecHit::RecHitContainer  hits;
    bool seed_plus;
    std::string geometry;
+   std::string theBuilderName;
 //   TransientInitialStateEstimator*  theInitialState;
 };
 

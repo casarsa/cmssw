@@ -1,9 +1,11 @@
 #!/usr/bin/env python
+from __future__ import print_function
 VERSION='2.00'
 import os, sys
 import coral
 import optparse
 from RecoLuminosity.LumiDB import sessionManager,csvSelectionParser,selectionParser,lumiCorrections,lumiCalcAPI
+import six
 
 beamChoices=['PROTPHYS','IONPHYS']
 
@@ -57,11 +59,11 @@ def fillPileupHistogram (bxlumiinfo,pileupHistName,maxPileupBin,
                 mean = bxvalue * p.minBiasXsec * p.rotationTime
             if mean > 100:
                 if runNumber:
-                    print "mean number of pileup events > 100 for run %d, lum %d : m %f l %f" % \
-                          (runNumber, lumiSection, mean, bxvalue)
+                    print("mean number of pileup events > 100 for run %d, lum %d : m %f l %f" % \
+                          (runNumber, lumiSection, mean, bxvalue))
                 else:
-                    print "mean number of pileup events > 100 for lum %d: m %f l %f" % \
-                          (cmslsnum, mean, bxvalue)
+                    print("mean number of pileup events > 100 for lum %d: m %f l %f" % \
+                          (cmslsnum, mean, bxvalue))
             totalProb = 0
             for obs in range (upper):
                 prob = ROOT.TMath.Poisson (obs, mean)
@@ -69,9 +71,9 @@ def fillPileupHistogram (bxlumiinfo,pileupHistName,maxPileupBin,
                 hist.Fill (obs, prob * xingIntLumi)
             if debug:
                 xing=bxidx[idx]
-                print "ls", lumiSection, "xing", xing, "inst", bxvalue, \
-                      "mean", mean, "totalProb", totalProb, 1 - totalProb
-                print "  hist mean", hist.GetMean()
+                print("ls", lumiSection, "xing", xing, "inst", bxvalue, \
+                      "mean", mean, "totalProb", totalProb, 1 - totalProb)
+                print("  hist mean", hist.GetMean())
             if totalProb < 1:
                 hist.Fill (obs, (1 - totalProb) * xingIntLumi)
     return hist
@@ -140,14 +142,14 @@ if __name__ == '__main__':
     # parse arguments
     try:
         (options, args) = parser.parse_args()
-    except Exception , e:
-        print e
+    except Exception as e:
+        print(e)
     if not args:
         parser.print_usage()
         sys.exit()
     if len (args) != 1:
         parser.print_usage()
-        raise RuntimeError, "Exactly one output file must be given"
+        raise RuntimeError("Exactly one output file must be given")
     output = args[0]
     finecorrections=None
     # get database session hooked up
@@ -203,7 +205,7 @@ if __name__ == '__main__':
                 inputfilecontent = f.read()
                 inputRange =  selectionParser.selectionParser (inputfilecontent).runsandls()
         if not inputRange:
-            print 'failed to parse the input file', options.inputfile
+            print('failed to parse the input file', options.inputfile)
             raise
         if not options.withoutFineCorrection:
             rruns=inputRange.keys()
@@ -233,7 +235,7 @@ if __name__ == '__main__':
                       options.maxPileupBin + 1,
                       -0.5, options.maxPileupBin + 0.5)
     histList = []
-    for runNumber, lumiList in sorted( runDict.iteritems() ):
+    for runNumber, lumiList in sorted( six.iteritems(runDict) ):
         if options.saveRuns:
             hist = fillPileupHistogram (lumiList,options.pileupHistName,options.maxPileupBin,
                                         runNumber = runNumber,
@@ -246,8 +248,7 @@ if __name__ == '__main__':
                                  debug = options.debugLumi)            
     histFile = ROOT.TFile.Open (output, 'recreate')
     if not histFile:
-        raise RuntimeError, \
-              "Could not open '%s' as an output root file" % output
+        raise RuntimeError("Could not open '%s' as an output root file" % output)
     pileupHist.Write()
     for hist in histList:
         hist.Write()

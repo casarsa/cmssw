@@ -19,22 +19,23 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "L1Trigger/L1TCalorimeter/interface/Stage1Layer2HFBitCountAlgorithm.h"
-//#include "CondFormats/L1TObjects/interface/CaloParams.h"
-#include "L1Trigger/L1TCalorimeter/interface/CaloParamsStage1.h"
+#include "L1Trigger/L1TCalorimeter/interface/CaloParamsHelper.h"
 
 
 namespace l1t {
 
-  class Stage1Layer2CentralityAlgorithm : public Stage1Layer2HFBitCountAlgorithm {
+  class Stage1Layer2HFMinimumBias : public Stage1Layer2HFBitCountAlgorithm {
   public:
-    Stage1Layer2CentralityAlgorithm(CaloParamsStage1* params);
-    virtual ~Stage1Layer2CentralityAlgorithm();
-    virtual void processEvent(const std::vector<l1t::CaloRegion> & regions,
+    Stage1Layer2HFMinimumBias(CaloParamsHelper const* );
+    ~Stage1Layer2HFMinimumBias() override = default;
+    void processEvent(const std::vector<l1t::CaloRegion> & regions,
 			      const std::vector<l1t::CaloEmCand> & EMCands,
-			      std::vector<l1t::CaloSpare> * spares);
+			      l1t::CaloSpare * spare) override;
 
   private:
+
   };
+
 }
 
 #endif

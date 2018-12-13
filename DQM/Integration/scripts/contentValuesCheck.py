@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 from contentValuesLib import *
 
 class OptionParser(optparse.OptionParser):
@@ -18,7 +19,7 @@ if __name__ == "__main__":
 
   # Check if at least one root file defined (can be many!)
   if len(args) == 0:
-    print "At least one ROOT file must be priovided, use --help for hit"
+    print("At least one ROOT file must be priovided, use --help for hit")
     sys.exit(1)
 
   # Check if all files exists and are accessible
@@ -26,7 +27,7 @@ if __name__ == "__main__":
     try:
       os.stat(rfile)
     except:
-      print "File [", rfile, "] not exists or is not accessible?"
+      print("File [", rfile, "] not exists or is not accessible?")
       sys.exit(2)
 
   ss = opts['subsystem']
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     (run_number, values) = getSummaryValues(file_name = rfile, shift_type = None, translate = False, filters = None)
 
     if values == None or len(values) == 0:
-      print "No content summary values found. Skipping file: %s" % rfile
+      print("No content summary values found. Skipping file: %s" % rfile)
       continue
 
     messages = []
@@ -46,7 +47,7 @@ if __name__ == "__main__":
       if not ss == None and not sub == ss:
         continue
 
-      if not values.has_key(sub):
+      if sub not in values:
         messages.append("%s: missing subsystem!" % sub)
         continue
 
@@ -55,7 +56,7 @@ if __name__ == "__main__":
 
       for folder in FOLDERS.keys():
 
-        if not values[sub].has_key(folder):
+        if folder not in values[sub]:
           messages.append("%s: missing folder EventInfo/%s" % (sub, folder))
           continue
 
@@ -65,13 +66,13 @@ if __name__ == "__main__":
 
         sfolders.append(folder)
 
-        if not values[sub][folder].has_key('Summary'):
+        if 'Summary' not in values[sub][folder]:
           messages.append("%s: missing summary value EventInfo/%s" % (sub, FOLDERS[folder][1]))
 
         for key in values[sub][folder].keys():
           if key == 'Summary':
             continue
-          if not skeys.has_key(key):
+          if key not in skeys:
             skeys[key] = []
           skeys[key].append(folder)
           
@@ -83,8 +84,8 @@ if __name__ == "__main__":
           messages.append("%s: value (%s)/%s not found in (%s)" % (sub, ','.join(skeys[key]), key, ','.join(nfound)))
 
     if not opts['silent']:
-      for message in sorted(messages):  print message          
-      print "%d errors found" % len(messages)
+      for message in sorted(messages):  print(message)          
+      print("%d errors found" % len(messages))
 
     if len(messages) > 0: sys.exit(1)
 

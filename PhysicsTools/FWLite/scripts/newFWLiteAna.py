@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+from __future__ import print_function
 import optparse
 import os
 import sys
@@ -14,9 +15,8 @@ def extractBuildFilePiece (buildfile, copy, target = 'dummy'):
     try:
         build = open (buildfile, 'r')
     except:        
-        raise RuntimeError, \
-              "Could not open BuildFile '%s' for reading. Aboring." \
-              % buildfile
+        raise RuntimeError("Could not open BuildFile '%s' for reading. Aboring." \
+              % buildfile)
     # make my regex
     startBinRE = re.compile (r'<\s*bin\s+name=(\S+)')
     endBinRE   = re.compile (r'<\s*/bin>')
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     base         = os.environ.get ('CMSSW_BASE')
     release_base = os.environ.get ('CMSSW_RELEASE_BASE')
     if not base or not release_base:
-        print "Error: You must have already setup a CMSSW release.  Aborting."
+        print("Error: You must have already setup a CMSSW release.  Aborting.")
         sys.exit()
     # setup the options
     parser = optparse.OptionParser('usage: %prog [options] '
@@ -130,21 +130,21 @@ if __name__ == '__main__':
             found = True
             # Is there a Buildfile too?
             if not os.path.exists (build):
-                print "Error: Found '%s', but no accompying " % name, \
-                      "Buildfile '%s'. Aborting" % build
+                print("Error: Found '%s', but no accompying " % name, \
+                      "Buildfile '%s'. Aborting" % build)
                 sys.exit()
             fullName = name
             fullBuild = build
             break
     if not found:
-        print "Error: Did not find '%s' to copy.  Aborting." % copy
+        print("Error: Did not find '%s' to copy.  Aborting." % copy)
         sys.exit()
     if len (args) != 1:
         parser.print_usage()
         sys.exit()
     pieces = args[0].split('/')
     if len (pieces) != 3:
-        print "Error: Need to provide 'Package/SubPackage/name'"
+        print("Error: Need to provide 'Package/SubPackage/name'")
         sys.exit()    
     target = pieces[2]
     match = ccRE.match (target)
@@ -152,7 +152,7 @@ if __name__ == '__main__':
         target = match.group (1)    
     buildPiece = extractBuildFilePiece (fullBuild, copy, target)
     if not buildPiece:
-        print "Error: Could not extract necessary info from Buildfile. Aborting."
+        print("Error: Could not extract necessary info from Buildfile. Aborting.")
         sys.exit()
     # print buildPiece
     firstDir  = base + '/src/' + pieces[0]
@@ -163,13 +163,13 @@ if __name__ == '__main__':
         bin = '/bin'
     if not os.path.exists (secondDir) and \
        not options.newPackage:
-        raise RuntimeError, "%s does not exist.  Use '--newPackage' to create" \
-              % ("/".join (pieces[0:2]) )
+        raise RuntimeError("%s does not exist.  Use '--newPackage' to create" \
+              % ("/".join (pieces[0:2]) ))
     dirList = [firstDir, secondDir, secondDir + bin]
     targetCC = dirList[2] + '/' + target + '.cc'
     targetBuild = dirList[2] + '/BuildFile'
     if os.path.exists (targetCC):
-        print 'Error: "%s" already exists.  Aborting.' % targetCC
+        print('Error: "%s" already exists.  Aborting.' % targetCC)
         sys.exit()
     # Start making directory structure
     for currDir in dirList:
@@ -177,13 +177,13 @@ if __name__ == '__main__':
             os.mkdir (currDir)
     # copy the file over
     shutil.copyfile (fullName, targetCC)
-    print "Copied:\n   %s\nto:\n   %s.\n" % (fullName, targetCC)
+    print("Copied:\n   %s\nto:\n   %s.\n" % (fullName, targetCC))
     createBuildFile (targetBuild)
     if extractBuildFilePiece (targetBuild, target):
-        print "Buildfile already has '%s'.  Skipping" % target
+        print("Buildfile already has '%s'.  Skipping" % target)
     else :
         # we don't already have a piece here
         if addBuildPiece (targetBuild, buildPiece):
-            print "Added info to:\n   %s." % targetBuild
+            print("Added info to:\n   %s." % targetBuild)
         else:
-            print "Unable to modify Buildfile.  Sorry."
+            print("Unable to modify Buildfile.  Sorry.")

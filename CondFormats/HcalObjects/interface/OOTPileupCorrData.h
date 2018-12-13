@@ -54,7 +54,7 @@ public:
                       double chargeLimit, int requireFirstTS,
                       int requireNTS, bool readjustTiming);
 
-    inline virtual ~OOTPileupCorrData() {}
+    inline ~OOTPileupCorrData() override {}
 
     // Main correction function
     void apply(const HcalDetId& id,
@@ -63,10 +63,10 @@ public:
                unsigned firstTimeSlice, unsigned nTimeSlices,
                double* correctedCharge, unsigned lenCorrectedCharge,
                bool* pulseShapeCorrApplied, bool* leakCorrApplied,
-               bool* readjustTiming) const;
+               bool* readjustTiming) const override;
 
     // Are we using charge or energy?
-    inline bool inputIsEnergy() const {return false;}
+    inline bool inputIsEnergy() const override {return false;}
 
     // Simplified correction function which does actual work
     inline void apply(const HcalDetId& id, double* ts, const int tsTrig) const
@@ -87,9 +87,24 @@ public:
         }
     }
 
+    inline const OOTPileupCorrDataFcn& getCorrectionByID(const HcalDetId& id) const
+    {
+        const unsigned nLimits = iEtaLimits_.size();
+        unsigned which(0U);
+        if (nLimits)
+        {
+	    const uint32_t uEta = std::abs(id.ieta());
+	    const uint32_t* limits(&iEtaLimits_[0]);
+	    for (; which<nLimits; ++which)
+	        if (uEta < limits[which])
+	            break;
+        }
+        return corrs_.at(which);
+    }
+
 protected:
     // Comparison function must be implemented
-    inline bool isEqual(const AbsOOTPileupCorrection& otherBase) const
+    inline bool isEqual(const AbsOOTPileupCorrection& otherBase) const override
     {
         const OOTPileupCorrData& r = 
             static_cast<const OOTPileupCorrData&>(otherBase);

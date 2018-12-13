@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import ROOT
 from ROOT import TCanvas,TH1F,gROOT,TFile,gStyle,gDirectory,TDatime,TLegend
@@ -7,7 +8,7 @@ try:
     import Tkinter as Tk
     root=Tk.Tk()
 except ImportError:
-    print 'unable to import GUI backend, switch to batch only mode'
+    print('unable to import GUI backend, switch to batch only mode')
     batchonly=True
 
 def destroy(e) :
@@ -59,7 +60,7 @@ class batchRender():
         self.__canvas.SaveAs(self.__outfile)
 if __name__=='__main__':
       
-    da = TDatime(2010,03,30,13,10,00)
+    da = TDatime(2010,3,30,13,10,00)
     h1f = TH1F("Luminposity","",1000,0.,1000)
     h1f.GetXaxis().SetNdivisions(-503)
     h1f.GetXaxis().SetTimeDisplay(1)

@@ -12,7 +12,7 @@
  *
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -26,16 +26,16 @@
 
 #include <string>
 
-class Type0PFMETcorrInputProducer : public edm::EDProducer  
+class Type0PFMETcorrInputProducer : public edm::stream::EDProducer<>  
 {
  public:
 
   explicit Type0PFMETcorrInputProducer(const edm::ParameterSet&);
-  ~Type0PFMETcorrInputProducer();
+  ~Type0PFMETcorrInputProducer() override;
     
  private:
 
-  void produce(edm::Event&, const edm::EventSetup&);
+  void produce(edm::Event&, const edm::EventSetup&) override;
 
   std::string moduleLabel_;
 

@@ -35,9 +35,27 @@ namespace edm {
       
     public:
       EDAnalyzer() = default;
-      
+// We do this only in the case of the intel compiler as this might
+// end up creating a lot of code bloat due to inline symbols being generated 
+// in each DSO which uses this header.
+#ifdef __INTEL_COMPILER
+      virtual ~EDAnalyzer() {}
+#endif
       // ---------- const member functions ---------------------
-      
+      bool wantsGlobalRuns() const final {
+        return WantsGlobalRunTransitions<T...>::value;
+      }
+      bool wantsGlobalLuminosityBlocks() const final {
+        return WantsGlobalLuminosityBlockTransitions<T...>::value;
+      }
+
+      bool wantsStreamRuns() const final {
+        return WantsStreamRunTransitions<T...>::value;
+      }
+      bool wantsStreamLuminosityBlocks() const final {
+        return WantsStreamLuminosityBlockTransitions<T...>::value;
+      }
+
       // ---------- static member functions --------------------
       
       // ---------- member functions ---------------------------

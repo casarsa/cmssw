@@ -1,9 +1,7 @@
-#include <assert.h>
+#include <cassert>
 #include <algorithm>
 #include <string>
 #include <memory>
-
-#include <boost/shared_ptr.hpp>
 
 #include "FWCore/Utilities/interface/Exception.h"
 #include "FWCore/Utilities/interface/EDMException.h"
@@ -18,10 +16,8 @@
 namespace PhysicsTools {
 
 namespace {
-	template<typename T>
-	struct deleter : public std::unary_function<T*, void> {
-		inline void operator() (T *ptr) const { delete ptr; }
-	};
+    template<typename T>
+    inline void deleter (T *ptr) { delete ptr; }
 }
 
 // MVATrainerLooper::Trainer implementation
@@ -64,7 +60,7 @@ MVATrainerLooper::TrainerContainer::~TrainerContainer()
 
 void MVATrainerLooper::TrainerContainer::clear()
 {
-	std::for_each(begin(), end(), deleter<Trainer>());
+	std::for_each(begin(), end(), deleter<Trainer>);
 	content.clear();
 }
 

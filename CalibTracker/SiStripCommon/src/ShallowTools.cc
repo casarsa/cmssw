@@ -1,4 +1,3 @@
-
 #include "CalibTracker/SiStripCommon/interface/ShallowTools.h"
 
 #include "FWCore/Framework/interface/Event.h"
@@ -6,20 +5,19 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "CondFormats/SiStripObjects/interface/SiStripLorentzAngle.h"
 #include "Geometry/TrackerGeometryBuilder/interface/StripGeomDetUnit.h"
-#include "boost/foreach.hpp"
 
 
 namespace shallow {
 
 CLUSTERMAP 
-make_cluster_map( const edm::Event& iEvent, edm::InputTag& clusterLabel) {
+make_cluster_map( const edm::Event& iEvent, const edm::EDGetTokenT< edmNew::DetSetVector<SiStripCluster> > & cluster_token) {
   CLUSTERMAP clustermap;
   edm::Handle<edmNew::DetSetVector<SiStripCluster> > clusters;
-  iEvent.getByLabel(clusterLabel, clusters);
+  iEvent.getByToken(cluster_token, clusters);
   
   unsigned int clusterindex = 0;  
-  BOOST_FOREACH(const edmNew::DetSet<SiStripCluster>& ds, *clusters)
-    BOOST_FOREACH(const SiStripCluster& cluster, ds)
+  for(auto const& ds : *clusters)
+    for(auto const& cluster : ds)
     clustermap.insert( std::make_pair( std::make_pair(ds.detId(),cluster.firstStrip()),
 				       clusterindex++));
   return clustermap;

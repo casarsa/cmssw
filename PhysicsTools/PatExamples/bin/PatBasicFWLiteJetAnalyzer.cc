@@ -14,9 +14,9 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "FWCore/ParameterSet/interface/ProcessDesc.h"
-#include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+#include "FWCore/FWLite/interface/FWLiteEnabler.h"
 #include "PhysicsTools/FWLite/interface/TFileService.h"
-#include "FWCore/PythonParameterSet/interface/PythonProcessDesc.h"
+#include "FWCore/ParameterSetReader/interface/ProcessDescImpl.h"
 
 
 int main(int argc, char* argv[])
@@ -24,14 +24,14 @@ int main(int argc, char* argv[])
   // ----------------------------------------------------------------------
   // First Part:
   //
-  //  * enable the AutoLibraryLoader
+  //  * enable FWLite
   //  * book the histograms of interest
   //  * open the input file
   // ----------------------------------------------------------------------
 
   // load framework libraries
   gSystem->Load( "libFWCoreFWLite" );
-  AutoLibraryLoader::enable();
+  FWLiteEnabler::enable();
 
   // only allow one argument for this simple example which should be the
   // the python cfg file
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
   }
  
   // get the python configuration
-  PythonProcessDesc builder(argv[1]);
+  ProcessDescImpl builder(argv[1]);
   const edm::ParameterSet& fwliteParameters = builder.processDesc()->getProcessPSet()->getParameter<edm::ParameterSet>("FWLiteParams");
 
   // now get each parameter
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
   edm::InputTag jets_  ( fwliteParameters.getParameter<edm::InputTag>("jets") );
 
   // book a set of histograms
-  fwlite::TFileService fs = fwlite::TFileService(output_.c_str());
+  fwlite::TFileService fs = fwlite::TFileService(output_);
   TFileDirectory theDir = fs.mkdir("analyzeBasicPat");
   TH1F* jetPt_  = theDir.make<TH1F>("jetPt", "pt",    100,  0.,300.);
   TH1F* jetEta_ = theDir.make<TH1F>("jetEta","eta",   100, -3.,  3.);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
       jetPhi_->Fill( (*jets)[i].phi() );
       // access tag infos
       reco::SecondaryVertexTagInfo const *svTagInfos = (*jets)[i].tagInfoSecondaryVertex("secondaryVertex");
-      if( svTagInfos != 0 ) {
+      if( svTagInfos != nullptr ) {
 	if( svTagInfos->nVertices() > 0 ){
 	  disc_->Fill( svTagInfos->flightDistance(0).value() );
 	}

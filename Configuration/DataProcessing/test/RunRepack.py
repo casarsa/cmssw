@@ -5,6 +5,7 @@ _RunRepack_
 Test/Debugging harness for the repack configuration builder
 
 """
+from __future__ import print_function
 
 import sys
 import getopt
@@ -21,7 +22,7 @@ class RunRepack:
     def __call__(self):
         if self.inputLFN == None:
             msg = "No --lfn specified"
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         outputs = []
         outputs.append( { 'moduleLabel' : "write_PrimDS1_RAW" } )
@@ -32,10 +33,10 @@ class RunRepack:
 
         try:
             process = repackProcess(outputs = outputs)
-        except Exception, ex:
+        except Exception as ex:
             msg = "Error creating process for Repack:\n"
             msg += str(ex)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
 
         process.source.fileNames.append(self.inputLFN)
 
@@ -47,7 +48,7 @@ class RunRepack:
         psetFile.write(process.dumpPython())
         psetFile.close()
         cmsRun = "cmsRun -e RunRepackCfg.py"
-        print "Now do:\n%s" % cmsRun
+        print("Now do:\n%s" % cmsRun)
         
                 
 
@@ -69,9 +70,9 @@ python RunRepack.py --select-events HLT:path1,HLT:path2 --lfn /store/whatever
 """
     try:
         opts, args = getopt.getopt(sys.argv[1:], "", valid)
-    except getopt.GetoptError, ex:
-        print usage
-        print str(ex)
+    except getopt.GetoptError as ex:
+        print(usage)
+        print(str(ex))
         sys.exit(1)
 
 

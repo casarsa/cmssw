@@ -16,16 +16,23 @@ class DQMFileSaver : public edm::global::EDAnalyzer<edm::RunCache<saverDetails::
 {
 public:
   DQMFileSaver(const edm::ParameterSet &ps);
+
+
+  // used by the JsonWritingTimedPoolOutputModule,
+  // fms will be nullptr in such case
+  static boost::property_tree::ptree fillJson(
+      int run, int lumi, const std::string &dataFilePathName, const std::string& transferDestinationStr,
+      const std::string& mergeTypeStr, evf::FastMonitoringService *fms);
+
   
 protected:
-  virtual void beginJob(void);
-  virtual std::shared_ptr<saverDetails::NoCache> globalBeginRun(const edm::Run &, const edm::EventSetup &) const;
-  virtual std::shared_ptr<saverDetails::NoCache> globalBeginLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) const;
-  virtual void analyze(edm::StreamID, const edm::Event &e, const edm::EventSetup &) const;
-  virtual void globalEndLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) const;
-  virtual void globalEndRun(const edm::Run &, const edm::EventSetup &) const;
-  virtual void endJob(void);
-  virtual void postForkReacquireResources(unsigned int childIndex, unsigned int numberOfChildren);
+  void beginJob() override;
+  std::shared_ptr<saverDetails::NoCache> globalBeginRun(const edm::Run &, const edm::EventSetup &) const override;
+  std::shared_ptr<saverDetails::NoCache> globalBeginLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) const override;
+  void analyze(edm::StreamID, const edm::Event &e, const edm::EventSetup &) const override;
+  void globalEndLuminosityBlock(const edm::LuminosityBlock &, const edm::EventSetup &) const override;
+  void globalEndRun(const edm::Run &, const edm::EventSetup &) const override;
+  void endJob() override;
 
 public:
   enum Convention
@@ -50,7 +57,6 @@ private:
 
   void saveForFilterUnit(const std::string& rewrite, int run, int lumi, const FileFormat fileFormat) const;
   void saveJobReport(const std::string &filename) const;
-  void fillJson(int run, int lumi, const std::string& dataFilePathName, boost::property_tree::ptree& pt) const;
 
   Convention	convention_;
   FileFormat    fileFormat_;
@@ -87,6 +93,8 @@ private:
 
   static const std::string streamPrefix_;
   static const std::string streamSuffix_;
+  std::string transferDestination_;
+  std::string mergeType_;
 };
 
 #endif // DQMSERVICES_COMPONEntS_DQMFILESAVER_H

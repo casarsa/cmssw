@@ -11,7 +11,6 @@
 <use   name="MagneticField/Engine"/>
 <use   name="SimDataFormats/Vertex"/>
 <use   name="TrackingTools/PatternTools"/>
-<use   name="rootcintex"/>
 <use   name="root"/>
 <library   file="TrackAnalyzer.cc" name="TrackAnalyzer">
   <flags   EDM_PLUGIN="1"/>
@@ -43,3 +42,8 @@
   <use   name="TrackingTools/GsfTracking"/>
   <flags   EDM_PLUGIN="1"/>
 </library>
+<library   file="FakeCPEFiller.cc" name="FakeCPEFiller">
+  <use   name="SimTracker/TrackerHitAssociation"/>
+  <flags   EDM_PLUGIN="1"/>
+</library>
+

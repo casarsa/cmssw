@@ -9,7 +9,7 @@ class CSCFitAFEBThr;
 
 CSCAFEBThrAnalysis::CSCAFEBThrAnalysis() {
 
-hist_file=0; // set to null
+hist_file=nullptr; // set to null
 
 nmbev=0;
 nmbev_no_wire=0;
@@ -239,11 +239,7 @@ void CSCAFEBThrAnalysis::done() {
   float x,y;
 
   //This is for DB transfer
-  CSCobject *cn = new CSCobject();
-  // Unused variable dbon caused compiler warning.
-  //condbon *dbon = new condbon();
-  new condbon(); 
-  // Note:  cn and dbon pointers are never freed, I think. This leaks memory!!!
+  CSCobject cn{};
   
   std::map<int, std::vector<std::vector<int> > >::iterator mwiredacIt;
   std::map<int, std::vector<std::vector<float> > >::iterator mresfordbIt;
@@ -389,7 +385,7 @@ fitAnodeThr->ThresholdNoise(inputx,inputy,npulses,vecDacOccup,mypar,ermypar,erco
       
       //This is for DB transfer
       int size = (*mresfordbIt).second.size();
-      cn->obj[idlayer].resize(size);
+      cn.obj[idlayer].resize(size);
       
       for (unsigned int i=0;i<(*mresfordbIt).second.size();i++) { 
 	std::cout<<idlayer<<" "<<i+1<<"    ";
@@ -399,11 +395,11 @@ fitAnodeThr->ThresholdNoise(inputx,inputy,npulses,vecDacOccup,mypar,ermypar,erco
 	std::cout<<std::endl;
 	
 	//This is for DB transfer
-	cn->obj[idlayer][i].resize(4);
-	cn->obj[idlayer][i][0] = (*mresfordbIt).second[i][0];
-	cn->obj[idlayer][i][1] = (*mresfordbIt).second[i][1];
-	cn->obj[idlayer][i][2] = (*mresfordbIt).second[i][2];
-	cn->obj[idlayer][i][3] = (*mresfordbIt).second[i][3];
+	cn.obj[idlayer][i].resize(4);
+	cn.obj[idlayer][i][0] = (*mresfordbIt).second[i][0];
+	cn.obj[idlayer][i][1] = (*mresfordbIt).second[i][1];
+	cn.obj[idlayer][i][2] = (*mresfordbIt).second[i][2];
+	cn.obj[idlayer][i][3] = (*mresfordbIt).second[i][3];
       }
   }
   
@@ -412,10 +408,10 @@ fitAnodeThr->ThresholdNoise(inputx,inputy,npulses,vecDacOccup,mypar,ermypar,erco
   //std::cout<<"Last AFEB thresholds run "<<run<<" for run file "<<myname<<" saved "<<myTime<<std::endl;
   //if(debug) dbon->cdbon_write(cn,"afeb_thresholds",run+1,myTime);
   
-  if(hist_file!=0) { // if there was a histogram file...
+  if(hist_file!=nullptr) { // if there was a histogram file...
     hist_file->Write(); // write out the histrograms
     delete hist_file; // close and delete the file
-    hist_file=0; // set to zero to clean up
+    hist_file=nullptr; // set to zero to clean up
     std::cout << "Hist. file was closed\n";
   }
 

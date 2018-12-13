@@ -48,12 +48,12 @@ Tau::Tau(const reco::BaseTau & aTau) :
     ,embeddedIsolationPFGammaCands_(false)
 {
     const reco::PFTau * pfTau = dynamic_cast<const reco::PFTau *>(&aTau);
-    if (pfTau != 0){
+    if (pfTau != nullptr){
       pfSpecific_.push_back(pat::tau::TauPFSpecific(*pfTau));
       pfEssential_.push_back(pat::tau::TauPFEssential(*pfTau));
     }
     const reco::CaloTau * caloTau = dynamic_cast<const reco::CaloTau *>(&aTau);
-    if (caloTau != 0) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
+    if (caloTau != nullptr) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
 }
 
 /// constructor from ref to reco::BaseTau
@@ -75,12 +75,12 @@ Tau::Tau(const edm::RefToBase<reco::BaseTau> & aTauRef) :
     ,embeddedIsolationPFGammaCands_(false)
 {
     const reco::PFTau * pfTau = dynamic_cast<const reco::PFTau *>(aTauRef.get());
-    if (pfTau != 0){
+    if (pfTau != nullptr){
       pfSpecific_.push_back(pat::tau::TauPFSpecific(*pfTau));
       pfEssential_.push_back(pat::tau::TauPFEssential(*pfTau));
     }
     const reco::CaloTau * caloTau = dynamic_cast<const reco::CaloTau *>(aTauRef.get());
-    if (caloTau != 0) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
+    if (caloTau != nullptr) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
 }
 
 /// constructor from ref to reco::BaseTau
@@ -102,12 +102,12 @@ Tau::Tau(const edm::Ptr<reco::BaseTau> & aTauRef) :
     ,embeddedIsolationPFGammaCands_(false)
 {
     const reco::PFTau * pfTau = dynamic_cast<const reco::PFTau *>(aTauRef.get());
-    if (pfTau != 0){
+    if (pfTau != nullptr){
       pfSpecific_.push_back(pat::tau::TauPFSpecific(*pfTau));
       pfEssential_.push_back(pat::tau::TauPFEssential(*pfTau));
     }
     const reco::CaloTau * caloTau = dynamic_cast<const reco::CaloTau *>(aTauRef.get());
-    if (caloTau != 0) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
+    if (caloTau != nullptr) caloSpecific_.push_back(pat::tau::TauCaloSpecific(*caloTau));
 }
 
 /// destructor
@@ -217,7 +217,7 @@ void Tau::setGenJet(const reco::GenJetRef& gj) {
 
 /// return the matched generated jet
 const reco::GenJet * Tau::genJet() const {
-  return (genJet_.size() > 0 ? &genJet_.front() : 0);
+  return (!genJet_.empty() ? &genJet_.front() : nullptr);
 }
 
 
@@ -260,30 +260,36 @@ const pat::tau::TauCaloSpecific & Tau::caloSpecific() const {
   return caloSpecific_[0]; 
 }
 
-const reco::Candidate::LorentzVector& Tau::p4Jet() const
+reco::Candidate::LorentzVector Tau::p4Jet() const
 {
   if ( isCaloTau() ) return caloSpecific().p4Jet_;
-  if ( isPFTau()   ) return pfEssential().p4Jet_;
+  if ( isPFTau()   ) return reco::Candidate::LorentzVector(pfEssential().p4Jet_);
   throw cms::Exception("Type Error") << "Requesting a CaloTau/PFTau-specific information from a pat::Tau which wasn't made from either a CaloTau or a PFTau.\n";
 }
 
-double Tau::dxy_Sig() const
+float Tau::dxy_Sig() const
 {
   if ( pfEssential().dxy_error_ != 0 ) return (pfEssential().dxy_/pfEssential().dxy_error_);
   else return 0.;
 }
 
-reco::PFTauTransverseImpactParameter::CovMatrix Tau::flightLengthCov() const
+pat::tau::TauPFEssential::CovMatrix Tau::flightLengthCov() const
 {
-  reco::PFTauTransverseImpactParameter::CovMatrix cov;
-  const reco::PFTauTransverseImpactParameter::CovMatrix& sv = secondaryVertexCov();
-  const reco::PFTauTransverseImpactParameter::CovMatrix& pv = primaryVertexCov();
+  pat::tau::TauPFEssential::CovMatrix cov;
+  const pat::tau::TauPFEssential::CovMatrix& sv = secondaryVertexCov();
+  const pat::tau::TauPFEssential::CovMatrix& pv = primaryVertexCov();
   for ( int i = 0; i < dimension; ++i ) {
     for ( int j = 0; j < dimension; ++j ) {
       cov(i,j) = sv(i,j) + pv(i,j);
     }
   }
   return cov;
+}
+
+float Tau::ip3d_Sig() const
+{
+	if( pfEssential().ip3d_error_ != 0 ) return (pfEssential().ip3d_/pfEssential().ip3d_error_);
+	else return 0.;
 }
 
 float Tau::etaetaMoment() const
@@ -432,7 +438,7 @@ void Tau::embedIsolationPFGammaCands() {
 
 reco::PFRecoTauChargedHadronRef Tau::leadTauChargedHadronCandidate() const {
   if(!isPFTau() ) throw cms::Exception("Type Error") << "Requesting content that is not stored in miniAOD.\n";
-  if ( pfSpecific().signalTauChargedHadronCandidates_.size() > 0 ) {
+  if ( !pfSpecific().signalTauChargedHadronCandidates_.empty() ) {
     return reco::PFRecoTauChargedHadronRef(&pfSpecific().signalTauChargedHadronCandidates_,0);
   } else {
     return reco::PFRecoTauChargedHadronRef();

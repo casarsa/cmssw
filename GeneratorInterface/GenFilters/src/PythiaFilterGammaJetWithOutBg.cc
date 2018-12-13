@@ -38,7 +38,7 @@ namespace{
 
 
 PythiaFilterGammaJetWithOutBg::PythiaFilterGammaJetWithOutBg(const edm::ParameterSet& iConfig) :
-label_(iConfig.getUntrackedParameter("moduleLabel",std::string("generator"))),
+token_(consumes<edm::HepMCProduct>(edm::InputTag(iConfig.getUntrackedParameter("moduleLabel",std::string("generator")),"unsmeared"))),
 etaMax(iConfig.getUntrackedParameter<double>("MaxPhotonEta", 2.8)),
 ptSeed(iConfig.getUntrackedParameter<double>("PhotonSeedPt", 5.)),
 ptMin(iConfig.getUntrackedParameter<double>("MinPhotonPt")),
@@ -70,7 +70,7 @@ bool PythiaFilterGammaJetWithOutBg::filter(edm::Event& iEvent, const edm::EventS
 
   bool accepted = false;
   edm::Handle<edm::HepMCProduct> evt;
-  iEvent.getByLabel(label_, evt);
+  iEvent.getByToken(token_, evt);
 
   std::list<const HepMC::GenParticle *> seeds;
   const HepMC::GenEvent * myGenEvent = evt->GetEvent();
@@ -144,10 +144,10 @@ bool PythiaFilterGammaJetWithOutBg::filter(edm::Event& iEvent, const edm::EventS
 //       std::cout<<"Reject eta"<<std::endl;
        continue;
     }
-    bool inEB(0);
+    bool inEB(false);
     double tgx(0);
     double tgy(0);
-    if( std::abs(etaPhoton)<ebEtaMax) inEB=1;
+    if( std::abs(etaPhoton)<ebEtaMax) inEB=true;
     else{
       tgx=(*is)->momentum().px()/(*is)->momentum().pz();
       tgy=(*is)->momentum().py()/(*is)->momentum().pz();

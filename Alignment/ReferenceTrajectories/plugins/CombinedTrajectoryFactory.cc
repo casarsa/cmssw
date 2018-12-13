@@ -28,18 +28,18 @@ class CombinedTrajectoryFactory : public TrajectoryFactoryBase
 public:
 
   CombinedTrajectoryFactory(const edm::ParameterSet &config);
-  virtual ~CombinedTrajectoryFactory();
+  ~CombinedTrajectoryFactory() override;
 
-  virtual const ReferenceTrajectoryCollection trajectories(const edm::EventSetup &setup,
+  const ReferenceTrajectoryCollection trajectories(const edm::EventSetup &setup,
 							   const ConstTrajTrackPairCollection &tracks,
 							   const reco::BeamSpot &beamSpot) const override;
 
-  virtual const ReferenceTrajectoryCollection trajectories(const edm::EventSetup &setup,
+  const ReferenceTrajectoryCollection trajectories(const edm::EventSetup &setup,
 							   const ConstTrajTrackPairCollection &tracks,
 							   const ExternalPredictionCollection &external,
 							   const reco::BeamSpot &beamSpot) const override;
 
-  virtual CombinedTrajectoryFactory* clone() const override { return new CombinedTrajectoryFactory(*this); }
+  CombinedTrajectoryFactory* clone() const override { return new CombinedTrajectoryFactory(*this); }
 
 private:
 
@@ -61,7 +61,7 @@ CombinedTrajectoryFactory::CombinedTrajectoryFactory( const edm::ParameterSet & 
   for ( itFactoryName = factoryNames.begin(); itFactoryName != factoryNames.end(); ++itFactoryName )
   {
     // auto_ptr to avoid missing a delete due to throw...
-    std::auto_ptr<TObjArray> namePset(TString((*itFactoryName).c_str()).Tokenize(","));
+    std::unique_ptr<TObjArray> namePset(TString((*itFactoryName).c_str()).Tokenize(","));
     if (namePset->GetEntriesFast() != 2) {
       throw cms::Exception("BadConfig") << "@SUB=CombinedTrajectoryFactory"
                                         << "TrajectoryFactoryNames must contain 2 comma "

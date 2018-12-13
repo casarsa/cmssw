@@ -12,8 +12,7 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/CaloTopology/interface/EcalBarrelHardcodedTopology.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "RecoEcal/EgammaCoreTools/interface/EcalEtaPhiRegion.h"
-#include "RecoEcal/EgammaCoreTools/interface/PositionCalc.h"
+#include "DataFormats/Math/interface/RectangularEtaPhiRegion.h"
 #include "RecoEcal/EgammaCoreTools/interface/BremRecoveryPhiRoadAlgo.h"
 #include "RecoEcal/EgammaCoreTools/interface/SuperClusterShapeAlgo.h"
 
@@ -24,11 +23,6 @@
 #include <set>
 
 class EcalSeverityLevelAlgo;
-
-//Less than operator for sorting EcalRecHits according to energy.
-struct less_mag : public std::binary_function<EcalRecHit, EcalRecHit, bool> {
-  bool operator()(EcalRecHit x, EcalRecHit y) { return x.energy() > y.energy() ; }
-};
 
 class HybridClusterAlgo
 {
@@ -163,7 +157,7 @@ class HybridClusterAlgo
 		    reco::BasicClusterCollection &basicClusters,
                     const EcalSeverityLevelAlgo * sevLv,
 		    bool regional = false,
-		    const std::vector<EcalEtaPhiRegion>& regions = std::vector<EcalEtaPhiRegion>()
+		    const std::vector<RectangularEtaPhiRegion>& regions = std::vector<RectangularEtaPhiRegion>()
 		    );
 
   //Make superclusters from the references to the BasicClusters in the event.

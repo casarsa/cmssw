@@ -3,7 +3,7 @@
 #include "RecoLocalTracker/SiStripClusterizer/interface/StripClusterizerAlgorithmFactory.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Utilities/interface/transform.h"
-#include "boost/foreach.hpp"
+
 
 SiStripClusterizer::
 SiStripClusterizer(const edm::ParameterSet& conf) 
@@ -16,7 +16,7 @@ SiStripClusterizer(const edm::ParameterSet& conf)
 void SiStripClusterizer::
 produce(edm::Event& event, const edm::EventSetup& es)  {
 
-  std::auto_ptr< edmNew::DetSetVector<SiStripCluster> > output(new edmNew::DetSetVector<SiStripCluster>());
+  auto output = std::make_unique<edmNew::DetSetVector<SiStripCluster>>();
   output->reserve(10000,4*10000);
 
   edm::Handle< edm::DetSetVector<SiStripDigi> >     inputOld;  
@@ -24,7 +24,7 @@ produce(edm::Event& event, const edm::EventSetup& es)  {
 
   algorithm->initialize(es);  
 
-  BOOST_FOREACH( const edm::EDGetTokenT< edm::DetSetVector<SiStripDigi> >& token, inputTokens) {
+  for(auto const& token : inputTokens) {
     if(      findInput( token, inputOld, event) ) algorithm->clusterize(*inputOld, *output); 
 //     else if( findInput( tag, inputNew, event) ) algorithm->clusterize(*inputNew, *output);
     else edm::LogError("Input Not Found") << "[SiStripClusterizer::produce] ";// << tag;
@@ -33,7 +33,7 @@ produce(edm::Event& event, const edm::EventSetup& es)  {
   LogDebug("Output") << output->dataSize() << " clusters from " 
 		     << output->size()     << " modules";
   output->shrink_to_fit();
-  event.put(output);
+  event.put(std::move(output));
 }
 
 template<class T>

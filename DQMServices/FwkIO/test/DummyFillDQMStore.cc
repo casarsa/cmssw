@@ -39,6 +39,7 @@
 namespace {
   class FillerBase {
   public:
+    virtual ~FillerBase()  = default;
     virtual void fill() = 0;
     virtual void reset() = 0;
   };
@@ -223,7 +224,7 @@ DummyFillDQMStore::analyze(edm::Event const& iEvent, edm::EventSetup const& iSet
 
    //Use the ExampleData to create an ExampleData2 which 
    // is put into the Event
-   std::auto_ptr<ExampleData2> pOut(new ExampleData2(*pIn));
+   std::unique_ptr<ExampleData2> pOut(new ExampleData2(*pIn));
    iEvent.put(pOut);
 */
 

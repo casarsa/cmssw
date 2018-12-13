@@ -167,14 +167,14 @@ int LMFDefFabric::getRunTagID(std::string tag, int version) const {
 }
 
 void LMFDefFabric::initialize() 
-  throw (std::runtime_error) {
+  noexcept(false) {
   _lmfColors.clear();
   _lmfTrigTypes.clear();
   _lmfRunTags.clear();
   _lmfPrimVersions.clear();
   _lmfSeqVersions.clear();
   _lmfCorrVersions.clear();
-  if ((m_env != NULL) && (m_conn != NULL)) {
+  if ((m_env != nullptr) && (m_conn != nullptr)) {
     boost::ptr_list<LMFUnique> listOfObjects;
     boost::ptr_list<LMFUnique>::const_iterator i;
     boost::ptr_list<LMFUnique>::const_iterator e;
@@ -182,7 +182,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFColor *c = (LMFColor*)&(*i);
+      const LMFColor *c = static_cast<const LMFColor*>(&(*i));
       _lmfColors.push_back(*c);
       i++;
     }
@@ -191,7 +191,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFTrigType *c = (LMFTrigType*)&(*i);
+      const LMFTrigType *c = static_cast<const LMFTrigType*>(&(*i));
       _lmfTrigTypes.push_back(*c);
       i++;
     }
@@ -200,7 +200,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFRunTag *c = (LMFRunTag*)&(*i);
+      const LMFRunTag *c = static_cast<const LMFRunTag*>(&(*i));
       _lmfRunTags.push_back(*c);
       i++;
     }
@@ -209,7 +209,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFPrimVers *c = (LMFPrimVers*)&(*i);
+      const LMFPrimVers *c = static_cast<const LMFPrimVers*>(&(*i));
       _lmfPrimVersions.push_back(*c);
       i++;
     }
@@ -218,7 +218,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFCorrVers *c = (LMFCorrVers*)&(*i);
+      const LMFCorrVers *c = static_cast<const LMFCorrVers*>(&(*i));
       _lmfCorrVersions.push_back(*c);
       i++;
     }
@@ -227,7 +227,7 @@ void LMFDefFabric::initialize()
     i = listOfObjects.begin();
     e = listOfObjects.end();
     while (i != e) {
-      LMFSeqVers *c = (LMFSeqVers*)&(*i);
+      const LMFSeqVers *c = static_cast<const LMFSeqVers*>(&(*i));
       _lmfSeqVersions.push_back(*c);
       i++;
     }

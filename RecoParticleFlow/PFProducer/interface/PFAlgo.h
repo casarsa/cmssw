@@ -63,7 +63,7 @@ class PFAlgo {
   void setAlgo( int algo ) {algo_ = algo;}
   void setPFMuonAlgo(PFMuonAlgo* algo) {pfmu_ =algo;}
   void setMuonHandle(const edm::Handle<reco::MuonCollection>&);
-  void setDebug( bool debug ) {debug_ = debug; connector_.setDebug(debug_);}
+  void setDebug( bool debug ) {debug_ = debug; connector_.setDebug(debug_); if (pfegamma_) pfegamma_->setDebug(debug); }
 
   void setParameters(double nSigmaECAL,
                      double nSigmaHCAL, 
@@ -85,7 +85,9 @@ class PFAlgo {
 
 
   void setPFMuonAndFakeParameters(const edm::ParameterSet& pset);
-  
+
+  void setBadHcalTrackParams(const edm::ParameterSet& pset);
+   
   PFMuonAlgo*  getPFMuonAlgo();
   
   void setPFEleParameters(double mvaEleCut,
@@ -125,12 +127,14 @@ class PFAlgo {
 			   unsigned int ele_missinghits,
 			   bool useProtectionsForJetMET,
 			   const edm::ParameterSet& ele_protectionsForJetMET,
+			   const edm::ParameterSet& ele_protectionsForBadHcal,
 			   double ph_MinEt,
 			   double ph_combIso,
 			   double ph_HoE,
 			   double ph_sietaieta_eb,
 			   double ph_sietaieta_ee,
-			   const edm::ParameterSet& ph_protectionsForJetMET);
+			   const edm::ParameterSet& ph_protectionsForJetMET,
+			   const edm::ParameterSet& ph_protectionsForBadHcal);
 
   
   void setEGammaCollections(const edm::View<reco::PFCandidate> & pfEgammaCandidates,
@@ -193,40 +197,40 @@ class PFAlgo {
   void setPhotonExtraRef(const edm::OrphanHandle<reco::PFCandidatePhotonExtraCollection >& pf_extrah);	
 
   /// \return collection of candidates
-  const std::auto_ptr< reco::PFCandidateCollection >& pfCandidates() const {
+  const std::unique_ptr<reco::PFCandidateCollection>& pfCandidates() const {
     return pfCandidates_;
   }
 
   /// \return the unfiltered electron collection
-  std::auto_ptr< reco::PFCandidateCollection> transferElectronCandidates()  {
-    return pfElectronCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection> transferElectronCandidates() {
+    return std::move(pfElectronCandidates_);
   }
 
   /// \return the unfiltered electron extra collection
-  // done this way because the pfElectronExtra is needed later in the code to create the Refs and with an auto_ptr, it would be destroyed
-  std::auto_ptr< reco::PFCandidateElectronExtraCollection> transferElectronExtra()  {
-    std::auto_ptr< reco::PFCandidateElectronExtraCollection> result(new reco::PFCandidateElectronExtraCollection);
+  // done this way because the pfElectronExtra is needed later in the code to create the Refs and with a unique_ptr, it would be destroyed
+  std::unique_ptr<reco::PFCandidateElectronExtraCollection> transferElectronExtra() {
+    auto result = std::make_unique<reco::PFCandidateElectronExtraCollection>();
     result->insert(result->end(),pfElectronExtra_.begin(),pfElectronExtra_.end());
     return result;
   }
 
 
   /// \return the unfiltered photon extra collection
-  // done this way because the pfPhotonExtra is needed later in the code to create the Refs and with an auto_ptr, it would be destroyed
-  std::auto_ptr< reco::PFCandidatePhotonExtraCollection> transferPhotonExtra()  {
-    std::auto_ptr< reco::PFCandidatePhotonExtraCollection> result(new reco::PFCandidatePhotonExtraCollection);
+  // done this way because the pfPhotonExtra is needed later in the code to create the Refs and with a unique_ptr, it would be destroyed
+  std::unique_ptr< reco::PFCandidatePhotonExtraCollection> transferPhotonExtra()  {
+    auto result = std::make_unique<reco::PFCandidatePhotonExtraCollection>();
     result->insert(result->end(),pfPhotonExtra_.begin(),pfPhotonExtra_.end());
     return result;
   }
 
 
   /// \return collection of cleaned HF candidates
-  std::auto_ptr< reco::PFCandidateCollection >& transferCleanedCandidates() {
-    return pfCleanedCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection> transferCleanedCandidates() {
+    return std::move(pfCleanedCandidates_);
   }
   
-    /// \return auto_ptr to the collection of candidates (transfers ownership)
-  std::auto_ptr< reco::PFCandidateCollection >  transferCandidates() {
+    /// \return unique_ptr to the collection of candidates (transfers ownership)
+  std::unique_ptr< reco::PFCandidateCollection> transferCandidates() {
     return connector_.connect(pfCandidates_);
   }
   
@@ -263,6 +267,7 @@ class PFAlgo {
 			       double particleY=0.,
 			       double particleZ=0.);
 
+  void setHcalDepthInfo(reco::PFCandidate & cand, const reco::PFCluster& cluster) const ;
 
   /// \return calibrated energy of a photon
   // double gammaCalibratedEnergy( double clusterEnergy ) const;
@@ -281,13 +286,13 @@ class PFAlgo {
   double nSigmaHCAL( double clusterEnergy, 
 		     double clusterEta ) const;
 
-  std::auto_ptr< reco::PFCandidateCollection >    pfCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection>    pfCandidates_;
   /// the unfiltered electron collection 
-  std::auto_ptr< reco::PFCandidateCollection >    pfElectronCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection>    pfElectronCandidates_;
   /// the unfiltered photon collection 
-  std::auto_ptr< reco::PFCandidateCollection >    pfPhotonCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection>    pfPhotonCandidates_;
   // the post-HF-cleaned candidates
-  std::auto_ptr< reco::PFCandidateCollection >    pfCleanedCandidates_;
+  std::unique_ptr<reco::PFCandidateCollection>    pfCleanedCandidates_;
 
   /// the unfiltered electron collection 
   reco::PFCandidateElectronExtraCollection    pfElectronExtra_;
@@ -394,6 +399,23 @@ class PFAlgo {
   double nSigmaTRACK_;
   double ptError_;
   std::vector<double> factors45_;
+
+  /// Variables for track cleaning in bad HCal areas
+  float goodTrackDeadHcal_ptErrRel_;
+  float goodTrackDeadHcal_chi2n_;
+  int   goodTrackDeadHcal_layers_;
+  float goodTrackDeadHcal_validFr_;
+  float goodTrackDeadHcal_dxy_;
+
+  float goodPixelTrackDeadHcal_minEta_;
+  float goodPixelTrackDeadHcal_maxPt_;
+  float goodPixelTrackDeadHcal_ptErrRel_;
+  float goodPixelTrackDeadHcal_chi2n_;
+  int   goodPixelTrackDeadHcal_maxLost3Hit_;
+  int   goodPixelTrackDeadHcal_maxLost4Hit_;
+  float goodPixelTrackDeadHcal_dxy_;
+  float goodPixelTrackDeadHcal_dz_;
+
 
   // Parameters for post HF cleaning
   bool postHFCleaning_;

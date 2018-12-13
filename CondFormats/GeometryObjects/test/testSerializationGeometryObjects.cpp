@@ -1,6 +1,6 @@
 #include "CondFormats/Serialization/interface/Test.h"
 
-#include "../src/headers.h"
+#include "CondFormats/GeometryObjects/src/headers.h"
 
 int main()
 {
@@ -14,12 +14,10 @@ int main()
     testSerialization<std::vector<PGeometricDet::Item>>();
     testSerialization<std::vector<PGeometricDetExtra::Item>>();
     testSerialization<PTrackerParameters>();
-    testSerialization<PTrackerParameters::PxbItem>();
-    testSerialization<PTrackerParameters::PxfItem>();
-    testSerialization<PTrackerParameters::TECItem>();
-    testSerialization<PTrackerParameters::TIBItem>();
-    testSerialization<PTrackerParameters::TIDItem>();
-    testSerialization<PTrackerParameters::TOBItem>();
+    testSerialization<PTrackerParameters::Item>();
+    testSerialization<HcalParameters>();
+    testSerialization<PHGCalParameters>();
+    testSerialization<PMTDParameters>();
 
     return 0;
 }

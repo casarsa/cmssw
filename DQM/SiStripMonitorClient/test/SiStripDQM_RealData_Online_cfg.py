@@ -35,7 +35,7 @@ process.load("Configuration.StandardSequences.MagneticField_AutoFromDBCurrent_cf
 #-------------------------------------------------
 # Geometry
 #-------------------------------------------------
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 #-------------------------------------------------
 # Calibration
@@ -112,7 +112,8 @@ process.load("DQM.Integration.test.environment_playback_cfi")
 process.dqmEnv.subSystemFolder    = "SiStrip"
 process.dqmSaver.saveByMinute     = 120
 process.dqmSaver.dirName  = cms.untracked.string(".")
-process.dqmEnvTr = cms.EDAnalyzer("DQMEventInfo",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.dqmEnvTr = DQMEDAnalyzer('DQMEventInfo',
                        subSystemFolder = cms.untracked.string('Tracking'),
                        eventRateWindow = cms.untracked.double(0.5),
                        eventInfoFolder = cms.untracked.string('EventInfo')

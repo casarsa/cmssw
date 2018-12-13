@@ -30,12 +30,11 @@
 #include "Geometry/CSCGeometry/interface/CSCGeometry.h" 
 #include "Alignment/MuonAlignment/interface/MuonScenarioBuilder.h"
 #include "Alignment/CommonAlignment/interface/Alignable.h" 
-#include "Geometry/TrackingGeometryAligner/interface/GeometryAligner.h"
+#include "Geometry/CommonTopologies/interface/GeometryAligner.h"
 #include "Geometry/Records/interface/MuonGeometryRecord.h"
 #include "Geometry/DTGeometryBuilder/src/DTGeometryBuilderFromDDD.h"
 #include "Geometry/CSCGeometryBuilder/src/CSCGeometryBuilderFromDDD.h"
 
-#include <boost/shared_ptr.hpp>
 #include <memory>
 
 
@@ -47,11 +46,11 @@ public:
   MisalignedMuonESProducer( const edm::ParameterSet & p );
   
   /// Destructor
-  virtual ~MisalignedMuonESProducer(); 
+  ~MisalignedMuonESProducer() override; 
   
   /// Produce the misaligned Muon geometry and store it
-  edm::ESProducts< boost::shared_ptr<DTGeometry>,
- 				   boost::shared_ptr<CSCGeometry> > produce( const MuonGeometryRecord&  );
+  edm::ESProducts< std::unique_ptr<DTGeometry>,
+                   std::unique_ptr<CSCGeometry> > produce( const MuonGeometryRecord&  );
 
   /// Save alignemnts and error to database
   void saveToDB();
@@ -62,14 +61,11 @@ private:
 
   std::string theDTAlignRecordName, theDTErrorRecordName;
   std::string theCSCAlignRecordName, theCSCErrorRecordName;
-  
-  boost::shared_ptr<DTGeometry> theDTGeometry;
-  boost::shared_ptr<CSCGeometry> theCSCGeometry;
 
   Alignments*      dt_Alignments;
-  AlignmentErrors* dt_AlignmentErrors;
+  AlignmentErrorsExtended* dt_AlignmentErrorsExtended;
   Alignments*      csc_Alignments;
-  AlignmentErrors* csc_AlignmentErrors;
+  AlignmentErrorsExtended* csc_AlignmentErrorsExtended;
 
 };
 
@@ -83,9 +79,9 @@ MisalignedMuonESProducer::MisalignedMuonESProducer(const edm::ParameterSet& p) :
   theSaveToDB(p.getUntrackedParameter<bool>("saveToDbase")),
   theScenario(p.getParameter<edm::ParameterSet>("scenario")),
   theDTAlignRecordName( "DTAlignmentRcd" ),
-  theDTErrorRecordName( "DTAlignmentErrorRcd" ),
+  theDTErrorRecordName( "DTAlignmentErrorExtendedRcd" ),
   theCSCAlignRecordName( "CSCAlignmentRcd" ),
-  theCSCErrorRecordName( "CSCAlignmentErrorRcd" )
+  theCSCErrorRecordName( "CSCAlignmentErrorExtendedRcd" )
 {
   
   setWhatProduced(this);
@@ -98,7 +94,7 @@ MisalignedMuonESProducer::~MisalignedMuonESProducer() {}
 
 
 //__________________________________________________________________________________________________
-edm::ESProducts< boost::shared_ptr<DTGeometry>, boost::shared_ptr<CSCGeometry> >
+edm::ESProducts< std::unique_ptr<DTGeometry>, std::unique_ptr<CSCGeometry> >
 MisalignedMuonESProducer::produce( const MuonGeometryRecord& iRecord )
 { 
 
@@ -115,11 +111,10 @@ MisalignedMuonESProducer::produce( const MuonGeometryRecord& iRecord )
   DTGeometryBuilderFromDDD  DTGeometryBuilder;
   CSCGeometryBuilderFromDDD CSCGeometryBuilder;
 
-  theDTGeometry = boost::shared_ptr<DTGeometry>(new DTGeometry );
-  DTGeometryBuilder.build(theDTGeometry,  &(*cpv), *mdc );
-  theCSCGeometry  = boost::shared_ptr<CSCGeometry>( new CSCGeometry );
-  CSCGeometryBuilder.build( theCSCGeometry,  &(*cpv), *mdc );
-
+  auto theDTGeometry = std::make_unique<DTGeometry>();
+  DTGeometryBuilder.build(*theDTGeometry,  &(*cpv), *mdc);
+  auto theCSCGeometry  = std::make_unique<CSCGeometry>();
+  CSCGeometryBuilder.build(*theCSCGeometry,  &(*cpv), *mdc);
 
   // Create the alignable hierarchy
   AlignableMuon* theAlignableMuon = new AlignableMuon( &(*theDTGeometry) , &(*theCSCGeometry) );
@@ -130,9 +125,9 @@ MisalignedMuonESProducer::produce( const MuonGeometryRecord& iRecord )
   
   // Get alignments and errors
   dt_Alignments = theAlignableMuon->dtAlignments() ;
-  dt_AlignmentErrors = theAlignableMuon->dtAlignmentErrors();
+  dt_AlignmentErrorsExtended = theAlignableMuon->dtAlignmentErrorsExtended();
   csc_Alignments = theAlignableMuon->cscAlignments();
-  csc_AlignmentErrors = theAlignableMuon->cscAlignmentErrors();
+  csc_AlignmentErrorsExtended = theAlignableMuon->cscAlignmentErrorsExtended();
 
  
   // Misalign the EventSetup geometry
@@ -140,11 +135,11 @@ MisalignedMuonESProducer::produce( const MuonGeometryRecord& iRecord )
 
   aligner.applyAlignments<DTGeometry>( &(*theDTGeometry),
                                        dt_Alignments, 
-				       dt_AlignmentErrors,
+				       dt_AlignmentErrorsExtended,
 				       AlignTransform() );
   aligner.applyAlignments<CSCGeometry>( &(*theCSCGeometry ),
                                         csc_Alignments,
-					csc_AlignmentErrors,
+					csc_AlignmentErrorsExtended,
 					AlignTransform() );  
 
   // Write alignments to DB
@@ -152,8 +147,7 @@ MisalignedMuonESProducer::produce( const MuonGeometryRecord& iRecord )
 
   edm::LogInfo("MisalignedMuon") << "Producer done";
 
-  return edm::es::products( theDTGeometry, theCSCGeometry ); 
-  
+  return edm::es::products( std::move(theDTGeometry), std::move(theCSCGeometry) );
 }
 
 
@@ -168,11 +162,11 @@ void MisalignedMuonESProducer::saveToDB( void )
 
   // Store DT alignments and errors
   poolDbService->writeOne<Alignments>( &(*dt_Alignments), poolDbService->beginOfTime(), theDTAlignRecordName);
-  poolDbService->writeOne<AlignmentErrors>( &(*dt_AlignmentErrors), poolDbService->beginOfTime(), theDTErrorRecordName);
+  poolDbService->writeOne<AlignmentErrorsExtended>( &(*dt_AlignmentErrorsExtended), poolDbService->beginOfTime(), theDTErrorRecordName);
 
   // Store CSC alignments and errors
   poolDbService->writeOne<Alignments>( &(*csc_Alignments), poolDbService->beginOfTime(), theCSCAlignRecordName);
-  poolDbService->writeOne<AlignmentErrors>( &(*csc_AlignmentErrors), poolDbService->beginOfTime(), theCSCErrorRecordName);
+  poolDbService->writeOne<AlignmentErrorsExtended>( &(*csc_AlignmentErrorsExtended), poolDbService->beginOfTime(), theCSCErrorRecordName);
 
 }
 //__________________________________________________________________________________________________

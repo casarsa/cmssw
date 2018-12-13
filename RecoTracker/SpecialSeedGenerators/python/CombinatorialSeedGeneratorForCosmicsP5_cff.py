@@ -26,17 +26,17 @@ from RecoTracker.SpecialSeedGenerators.CombinatorialSeedGeneratorForCosmics_cfi 
 # seeding layers
 combinatorialcosmicseedingtripletsP5 = cms.EDProducer("SeedingLayersEDProducer",
     layerInfo,
-    layerList = cms.vstring('TOB4+TOB5+TOB6', 
-        'TOB3+TOB5+TOB6', 
-        'TOB3+TOB4+TOB5', 
-        'TOB2+TOB4+TOB5', 
-        'TOB3+TOB4+TOB6', 
-        'TOB2+TOB4+TOB6')
+    layerList = cms.vstring('MTOB4+MTOB5+MTOB6', 
+        'MTOB3+MTOB5+MTOB6', 
+        'MTOB3+MTOB4+MTOB5', 
+        'TOB2+MTOB4+MTOB5', 
+        'MTOB3+MTOB4+MTOB6', 
+        'TOB2+MTOB4+MTOB6')
 )
 combinatorialcosmicseedingpairsTOBP5 = cms.EDProducer("SeedingLayersEDProducer",
     layerInfo,
-    layerList = cms.vstring('TOB5+TOB6', 
-        'TOB4+TOB5')
+    layerList = cms.vstring('MTOB5+MTOB6', 
+        'MTOB4+MTOB5')
 )
 combinatorialcosmicseedingpairsTECposP5 = cms.EDProducer("SeedingLayersEDProducer",
     layerList = cms.vstring('TEC1_pos+TEC2_pos', 
@@ -52,6 +52,7 @@ combinatorialcosmicseedingpairsTECposP5 = cms.EDProducer("SeedingLayersEDProduce
         matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
         useRingSlector = cms.bool(True),
         TTRHBuilder = cms.string('WithTrackAngle'),
+        clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutNone')),
         rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit"),
         maxRing = cms.int32(7)
     )
@@ -70,6 +71,7 @@ combinatorialcosmicseedingpairsTECnegP5 = cms.EDProducer("SeedingLayersEDProduce
         matchedRecHits = cms.InputTag("siStripMatchedRecHits","matchedRecHit"),
         useRingSlector = cms.bool(True),
         TTRHBuilder = cms.string('WithTrackAngle'),
+        clusterChargeCut = cms.PSet(refToPSet_ = cms.string('SiStripClusterChargeCutNone')),
         rphiRecHits = cms.InputTag("siStripMatchedRecHits","rphiRecHit"),
         maxRing = cms.int32(7)
     )

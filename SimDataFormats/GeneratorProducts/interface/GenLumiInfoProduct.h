@@ -1,6 +1,8 @@
 #ifndef SimDataFormats_GeneratorProducts_GenLumiInfoProduct_h
 #define SimDataFormats_GeneratorProducts_GenLumiInfoProduct_h
 
+#include <vector>
+
 /** \class GenLumiInfoProduct
  *
  */
@@ -146,8 +148,8 @@ class GenLumiInfoProduct {
 
   // methods used by EDM
   virtual bool mergeProduct(const GenLumiInfoProduct &other);
+  void swap(GenLumiInfoProduct& other);
   virtual bool isProductEqual(const GenLumiInfoProduct &other) const;
-  virtual bool samePhysics(const GenLumiInfoProduct &other) const;
  private:
   // cross sections
   int     hepidwtup_;

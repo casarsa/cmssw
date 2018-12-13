@@ -21,17 +21,20 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+namespace edm {
+  class HepMCProduct;
+}
 
 class PythiaFilterEMJet : public edm::EDFilter {
    public:
       explicit PythiaFilterEMJet(const edm::ParameterSet&);
-      ~PythiaFilterEMJet();
+      ~PythiaFilterEMJet() override;
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
 
    private:
       
-       std::string label_;
+       edm::EDGetTokenT<edm::HepMCProduct> token_;
        double etaMin;
        double eTSumMin;
        double pTMin;

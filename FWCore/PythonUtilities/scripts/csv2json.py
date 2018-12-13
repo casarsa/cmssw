@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 import sys
 import optparse
 import re
@@ -20,7 +21,7 @@ if __name__ == '__main__':
     # required parameters
     (options, args) = parser.parse_args()
     if len (args) != 1:
-        raise RuntimeError, "Must provide exactly one input file"
+        raise RuntimeError("Must provide exactly one input file")
 
     sepRE = re.compile (r'[\s,;:]+')
     runLumiDict = {}    
@@ -40,4 +41,4 @@ if __name__ == '__main__':
     if options.output:
         jsonList.writeJSON (options.output)
     else:
-        print jsonList
+        print(jsonList)

@@ -21,7 +21,7 @@
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/TrackReco/interface/Track.h"
-#include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerDefs.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
 
 namespace trigger {
@@ -34,15 +34,15 @@ class MET;
 
 class DQMStore;
 class MonitorElement;
-class EwkMuLumiMonitorDQM : public thread_unsafe::DQMEDAnalyzer {
+class EwkMuLumiMonitorDQM : public DQMEDAnalyzer {
  public:
   EwkMuLumiMonitorDQM(const edm::ParameterSet&);
-  virtual void analyze(const edm::Event&, const edm::EventSetup&);
+  void analyze(const edm::Event&, const edm::EventSetup&) override;
   //Book histograms
   void bookHistograms(DQMStore::IBooker &,
     edm::Run const &, edm::EventSetup const &) override;
-  virtual void dqmBeginRun(const edm::Run&, const edm::EventSetup&);
-  virtual void endRun(const edm::Run&, const edm::EventSetup&);
+  void dqmBeginRun(const edm::Run&, const edm::EventSetup&) override;
+  void endRun(const edm::Run&, const edm::EventSetup&) override;
 
   void init_histograms();
   double muIso(const reco::Muon&);

@@ -5,6 +5,7 @@ Adapted from PhysicsTools/MVATrainer/test/testWriteMVAComputerCondDB_cfg.py
 Original author: Christopher Saout
 Modifications by Evan Friis
 '''
+from __future__ import print_function
 
 import FWCore.ParameterSet.Config as cms
 import RecoTauTag.TauTagTools.TauMVAConfigurations_cfi
@@ -28,22 +29,22 @@ options.parseArguments()
 
 # Make sure we are only dealing w/ one algorithm...
 if len(myTauAlgorithms) > 1:
-   raise RuntimeError, "ERROR: more than one tau algorithm is defined in MVASteering.py; this feature should be used only for algorithm evaluation.  \
-         Please modify it so that it only includeds the algorithm on which the TaNC is to be used."
+   raise RuntimeError("ERROR: more than one tau algorithm is defined in MVASteering.py; this feature should be used only for algorithm evaluation.  \
+         Please modify it so that it only includeds the algorithm on which the TaNC is to be used.")
 
 algorithm = myTauAlgorithms[0]
 myconnect   = cms.string(options.db)  #or frontier, etc
 mytag       = cms.string(options.tag)
 mytimetype  = cms.untracked.string('runnumber')
-print ""
-print "***************************************************"
-print "******  Upload Tau Neural Classifier to DB   ******"
-print "***************************************************"
-print "*  Using the %s algorithm                         " % algorithm
-print "*  DB tag:       %s                               " % mytag.value()
-print "*  Database:     %s                               " % myconnect.value()
-print "*  Timetype:     %s                               " % mytimetype.value()
-print "* ----------------------------------------------- "
+print("")
+print("***************************************************")
+print("******  Upload Tau Neural Classifier to DB   ******")
+print("***************************************************")
+print("*  Using the %s algorithm                         " % algorithm)
+print("*  DB tag:       %s                               " % mytag.value())
+print("*  Database:     %s                               " % myconnect.value())
+print("*  Timetype:     %s                               " % mytimetype.value())
+print("* ----------------------------------------------- ")
 
 # Unpack the TaNC neural nets into a parameter set
 tempPSet   = cms.PSet()
@@ -55,11 +56,11 @@ for aNeuralNet in RecoTauTag.TauTagTools.TauMVAConfigurations_cfi.TaNC.value():
    # Make sure we have the .mva training done
    mvaFileLocation = GetTrainingFile(neuralNetName, algorithm)
    if not os.path.exists(mvaFileLocation):
-      raise IOError, "Expected trained .mva file at %s, it doesn't exist!" % mvaFileLocation
+      raise IOError("Expected trained .mva file at %s, it doesn't exist!" % mvaFileLocation)
    # god bless you, python
    tempPSet.__setattr__(aNeuralNet.computerName.value(), cms.string(mvaFileLocation))
    toCopyList.append(neuralNetName)
-   print "* %-20s %-20s      " % (neuralNetName, mvaFileLocation )
+   print("* %-20s %-20s      " % (neuralNetName, mvaFileLocation ))
 
 process = cms.Process("TaNCCondUpload")
 

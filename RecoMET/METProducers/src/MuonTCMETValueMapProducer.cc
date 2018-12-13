@@ -38,6 +38,8 @@
 #include "TVector3.h"
 #include "TMath.h"
 
+#include <algorithm>
+
 //____________________________________________________________________________||
 typedef math::XYZPoint Point;
 
@@ -61,7 +63,10 @@ MuonTCMETValueMapProducer::MuonTCMETValueMapProducer(const edm::ParameterSet& iC
   maxpt_eta25_            = iConfig.getParameter<double>   ("maxpt_eta25");
 
   // get configuration parameters
-  maxTrackAlgo_    = iConfig.getParameter<int>("trackAlgo_max");
+  std::vector<std::string> algos = iConfig.getParameter<std::vector<std::string> >("trackAlgos");
+  std::transform(algos.begin(), algos.end(), std::back_inserter(trkAlgos_), [](const std::string& a) {
+      return reco::TrackBase::algoByName(a);
+    });
   maxd0cut_        = iConfig.getParameter<double>("d0_max"       );
   minpt_           = iConfig.getParameter<double>("pt_min"       );
   maxpt_           = iConfig.getParameter<double>("pt_max"       );
@@ -71,7 +76,10 @@ MuonTCMETValueMapProducer::MuonTCMETValueMapProducer(const edm::ParameterSet& iC
   maxPtErr_        = iConfig.getParameter<double>("ptErr_max"    );
 
   trkQuality_      = iConfig.getParameter<std::vector<int> >("track_quality");
-  trkAlgos_        = iConfig.getParameter<std::vector<int> >("track_algos"  );
+  algos = iConfig.getParameter<std::vector<std::string> >("track_algos");
+  std::transform(algos.begin(), algos.end(), std::back_inserter(trkAlgos_), [](const std::string& a) {
+      return reco::TrackBase::algoByName(a);
+    });
   maxchi2_tight_   = iConfig.getParameter<double>("chi2_max_tight");
   minhits_tight_   = iConfig.getParameter<double>("nhits_min_tight");
   maxPtErr_tight_  = iConfig.getParameter<double>("ptErr_max_tight");
@@ -91,7 +99,7 @@ MuonTCMETValueMapProducer::MuonTCMETValueMapProducer(const edm::ParameterSet& iC
   useCaloMuons_ = iConfig.getParameter<bool>("useCaloMuons");
   muonMinValidStaHits_ = iConfig.getParameter<int>("muonMinValidStaHits");
 
-  response_function = 0;
+  response_function = nullptr;
   tcmetAlgo_=new TCMETAlgo();
 
   if( rfType_ == 1 )
@@ -131,7 +139,7 @@ void MuonTCMETValueMapProducer::produce(edm::Event& iEvent, const edm::EventSetu
   iSetup.get<IdealMagneticFieldRecord>().get(theMagField);
   bField = theMagField.product();
 
-  std::auto_ptr<edm::ValueMap<reco::MuonMETCorrectionData> > vm_muCorrData(new edm::ValueMap<reco::MuonMETCorrectionData>());
+  auto vm_muCorrData = std::make_unique<edm::ValueMap<reco::MuonMETCorrectionData>>();
 
   std::vector<reco::MuonMETCorrectionData> v_muCorrData;
 
@@ -187,7 +195,7 @@ void MuonTCMETValueMapProducer::produce(edm::Event& iEvent, const edm::EventSetu
   dataFiller.insert( muons_, v_muCorrData.begin(), v_muCorrData.end());
   dataFiller.fill();
     
-  iEvent.put(vm_muCorrData, "muCorrData");
+  iEvent.put(std::move(vm_muCorrData), "muCorrData");
 }
   
 //____________________________________________________________________________||
@@ -265,7 +273,7 @@ bool MuonTCMETValueMapProducer::isGoodCaloMuon( const reco::Muon* muon, const un
 //____________________________________________________________________________||
 bool MuonTCMETValueMapProducer::isGoodTrack( const reco::Muon* muon )
 {
-  double d0    = -999;
+  double d0;
 
   const reco::TrackRef siTrack = muon->innerTrack();
   if (!siTrack.isNonnull())
@@ -278,8 +286,6 @@ bool MuonTCMETValueMapProducer::isGoodTrack( const reco::Muon* muon )
       const Point pvtx = Point(vertices_->begin()->x(),
 			       vertices_->begin()->y(), 
 			       vertices_->begin()->z());
-            
-      d0 = -1 * siTrack->dxy( pvtx );
             
       double dz = siTrack->dz( pvtx );
             
@@ -310,7 +316,7 @@ bool MuonTCMETValueMapProducer::isGoodTrack( const reco::Muon* muon )
       d0 = -1 * siTrack->dxy( bspot );
     }
 
-  if( siTrack->algo() < maxTrackAlgo_ )
+  if(std::find(trackAlgos_.begin(), trackAlgos_.end(), siTrack->algo()) != trackAlgos_.end())
     {
       //1st 4 tracking iterations (pT-dependent d0 cut)
        
@@ -347,7 +353,7 @@ bool MuonTCMETValueMapProducer::isGoodTrack( const reco::Muon* muon )
   if( !( (siTrack->qualityMask() & cut) == cut ) ) return false;
 	  
   bool isGoodAlgo = false;
-  if( trkAlgos_.size() == 0 ) isGoodAlgo = true;
+  if( trkAlgos_.empty() ) isGoodAlgo = true;
   for( unsigned int i = 0; i < trkAlgos_.size(); i++ )
     {
       if( siTrack->algo() == trkAlgos_.at(i) ) isGoodAlgo = true;

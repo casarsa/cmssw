@@ -3,8 +3,7 @@
 
 #include "DataFormats/Common/interface/RefHolderBase.h"
 #include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Utilities/interface/HideStdSharedPtrFromRoot.h"
-
+#include <stddef.h>
 #include <memory>
 
 namespace edm {
@@ -47,9 +46,9 @@ namespace edm {
       struct const_iterator : public std::iterator <std::random_access_iterator_tag, void*>{
         typedef std::shared_ptr<RefHolderBase> value_type;
         typedef std::ptrdiff_t difference_type;
-        const_iterator() : i(0) { }
+        const_iterator() : i(nullptr) { }
         const_iterator(const_iterator_imp* it) : i(it) { }
-        const_iterator(const_iterator const& it) : i(it.isValid() ? it.i->clone() : 0) { }
+        const_iterator(const_iterator const& it) : i(it.isValid() ? it.i->clone() : nullptr) { }
         ~const_iterator() { delete i; }
         const_iterator& operator=(const_iterator const& it) {
           if(isInvalid()) i = it.i;
@@ -146,8 +145,8 @@ namespace edm {
           i->increase(d);
           return *this;
         }
-        bool isValid() const { return i != 0; }
-        bool isInvalid() const { return i == 0; }
+        bool isValid() const { return i != nullptr; }
+        bool isInvalid() const { return i == nullptr; }
 
       private:
         const_iterator_imp* i;
@@ -156,8 +155,6 @@ namespace edm {
       virtual const_iterator begin() const = 0;
       virtual const_iterator end() const = 0;
       template<typename T> RefToBase<T> getRef(size_t idx) const;
-      virtual void const* product() const = 0;
-      virtual void reallyFillView(void const*, ProductID const&, std::vector<void const*>&) = 0;
       virtual size_t keyForIndex(size_t idx) const = 0;
 
       /// Checks if product collection is in memory or available

@@ -6,23 +6,22 @@
 
 #include <map>
 #include <iostream>
-#include <boost/bind.hpp>
+#include <memory>
+#include <functional>
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Framework/interface/ConstProductRegistry.h"
 #include "FWCore/Framework/interface/ModuleContextSentry.h"
 #include "FWCore/ServiceRegistry/interface/InternalContext.h"
 #include "FWCore/ServiceRegistry/interface/ModuleCallingContext.h"
 #include "FWCore/ServiceRegistry/interface/ParentContext.h"
-#include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include "DataFormats/Provenance/interface/Provenance.h"
-#include "DataFormats/Provenance/interface/BranchDescription.h"
 //
 //
+#include "SimDataFormats/CrossingFrame/interface/CrossingFramePlaybackInfoNew.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataMixingModule.h"
-
+#include "SimGeneral/MixingModule/interface/PileUpEventPrincipal.h"
 
 using namespace std;
 
@@ -30,7 +29,8 @@ namespace edm
 {
 
   // Constructor 
-  DataMixingModule::DataMixingModule(const edm::ParameterSet& ps) : BMixingModule(ps),
+  DataMixingModule::DataMixingModule(const edm::ParameterSet& ps, MixingCache::Config const* globalConf) :
+    BMixingModule(ps, globalConf),
     EBPileInputTag_(ps.getParameter<edm::InputTag>("EBPileInputTag")),
     EEPileInputTag_(ps.getParameter<edm::InputTag>("EEPileInputTag")),
     ESPileInputTag_(ps.getParameter<edm::InputTag>("ESPileInputTag")),
@@ -38,18 +38,17 @@ namespace edm
     HOPileInputTag_(ps.getParameter<edm::InputTag>("HOPileInputTag")),
     HFPileInputTag_(ps.getParameter<edm::InputTag>("HFPileInputTag")),
     ZDCPileInputTag_(ps.getParameter<edm::InputTag>("ZDCPileInputTag")),
+    QIE10PileInputTag_(ps.getParameter<edm::InputTag>("QIE10PileInputTag")),
+    QIE11PileInputTag_(ps.getParameter<edm::InputTag>("QIE11PileInputTag")),
 							    label_(ps.getParameter<std::string>("Label"))
   {  
-    // prepare for data access in DataMixingEcalDigiWorkerProd
-    tok_eb_ = consumes<EBDigitizerTraits::DigiCollection>(EBPileInputTag_);
-    tok_ee_ = consumes<EEDigitizerTraits::DigiCollection>(EEPileInputTag_);
-    tok_es_ = consumes<ESDigitizerTraits::DigiCollection>(ESPileInputTag_);
-
     // prepare for data access in DataMixingHcalDigiWorkerProd
     tok_hbhe_ = consumes<HBHEDigitizerTraits::DigiCollection>(HBHEPileInputTag_);
     tok_ho_ = consumes<HODigitizerTraits::DigiCollection>(HOPileInputTag_);
     tok_hf_ = consumes<HFDigitizerTraits::DigiCollection>(HFPileInputTag_);
     tok_zdc_ = consumes<ZDCDigitizerTraits::DigiCollection>(ZDCPileInputTag_);
+    tok_qie10_ = consumes<HcalQIE10DigitizerTraits::DigiCollection>(QIE10PileInputTag_);
+    tok_qie11_ = consumes<HcalQIE11DigitizerTraits::DigiCollection>(QIE11PileInputTag_);
 
     // get the subdetector names
     this->getSubdetectorNames();  //something like this may be useful to check what we are supposed to do...
@@ -59,78 +58,14 @@ namespace edm
 
     // Check to see if we are working in Full or Fast Simulation
 
-    DoFastSim_ = (ps.getParameter<std::string>("IsThisFastSim")).compare("YES") == 0;
-    MergeEMDigis_ = (ps.getParameter<std::string>("EcalMergeType")).compare("Digis") == 0;
-    MergeHcalDigis_ = (ps.getParameter<std::string>("HcalMergeType")).compare("Digis") == 0;
+    MergeTrackerDigis_ = (ps.getParameter<std::string>("TrackerMergeType")) == "Digis";
+    MergeEMDigis_ = (ps.getParameter<std::string>("EcalMergeType")) == "Digis";
+    MergeHcalDigis_ = (ps.getParameter<std::string>("HcalMergeType")) == "Digis";
     if(MergeHcalDigis_) MergeHcalDigisProd_ = (ps.getParameter<std::string>("HcalDigiMerge")=="FullProd");
-
-    addMCDigiNoise_ = false;
-
-    addMCDigiNoise_ = ps.getUntrackedParameter<bool>("addMCDigiNoise");  // for Sim on Sim mixing
-
-    
 
     // Put Fast Sim Sequences here for Simplification: Fewer options!
 
-    if(DoFastSim_) {
-
-    // declare the products to produce
-
-      //Ecal:
-
-      EBRecHitCollectionDM_        = ps.getParameter<std::string>("EBRecHitCollectionDM");
-      EERecHitCollectionDM_        = ps.getParameter<std::string>("EERecHitCollectionDM");
-      ESRecHitCollectionDM_        = ps.getParameter<std::string>("ESRecHitCollectionDM");
-
-      produces< EBRecHitCollection >(EBRecHitCollectionDM_);
-      produces< EERecHitCollection >(EERecHitCollectionDM_);
-      produces< ESRecHitCollection >(ESRecHitCollectionDM_);
-
-      EMWorker_ = new DataMixingEMWorker(ps, consumesCollector() );
-
-      //Hcal:
-
-      HBHERecHitCollectionDM_ = ps.getParameter<std::string>("HBHERecHitCollectionDM");
-      HORecHitCollectionDM_   = ps.getParameter<std::string>("HORecHitCollectionDM");
-      HFRecHitCollectionDM_   = ps.getParameter<std::string>("HFRecHitCollectionDM");
-      ZDCRecHitCollectionDM_  = ps.getParameter<std::string>("ZDCRecHitCollectionDM");
-
-      produces< HBHERecHitCollection >(HBHERecHitCollectionDM_);
-      produces< HORecHitCollection >(HORecHitCollectionDM_);
-      produces< HFRecHitCollection >(HFRecHitCollectionDM_);
-      produces< ZDCRecHitCollection >(ZDCRecHitCollectionDM_);
-
-      HcalWorker_ = new DataMixingHcalWorker(ps, consumesCollector());
-
-      //Muons:
-
-      DTDigiCollectionDM_  = ps.getParameter<std::string>("DTDigiCollectionDM");
-      RPCDigiCollectionDM_ = ps.getParameter<std::string>("RPCDigiCollectionDM");
-      CSCStripDigiCollectionDM_ = ps.getParameter<std::string>("CSCStripDigiCollectionDM");
-      CSCWireDigiCollectionDM_  = ps.getParameter<std::string>("CSCWireDigiCollectionDM");
-      CSCComparatorDigiCollectionDM_  = ps.getParameter<std::string>("CSCComparatorDigiCollectionDM");
-
-      produces< DTDigiCollection >();
-      produces< RPCDigiCollection >();
-      produces< CSCStripDigiCollection >(CSCStripDigiCollectionDM_);
-      produces< CSCWireDigiCollection >(CSCWireDigiCollectionDM_);
-      produces< CSCComparatorDigiCollection >(CSCComparatorDigiCollectionDM_);
-
-      MuonWorker_ = new DataMixingMuonWorker(ps, consumesCollector());
-
-      //Tracks:
-
-      GeneralTrackCollectionDM_  = ps.getParameter<std::string>("GeneralTrackDigiCollectionDM");
-      produces< reco::TrackCollection >(GeneralTrackCollectionDM_);
-      GeneralTrackWorker_ = new DataMixingGeneralTrackWorker(ps, consumesCollector());
-
-    }
-    else{  // Full Simulation options
-
-      //cout<<"FastSim False!!!"<<endl;
-
-    // declare the products to produce
-    // Start with EM
+    
     if(MergeEMDigis_) {
 
       // cout<<"EM Digis TRUE!!!"<<endl;
@@ -145,14 +80,7 @@ namespace edm
       produces< ESDigiCollection >(ESDigiCollectionDM_);
 
 
-      if(addMCDigiNoise_ ) {
-	edm::ConsumesCollector iC(consumesCollector());
-        EcalDigiWorkerProd_ = new DataMixingEcalDigiWorkerProd(ps, iC);
-        EcalDigiWorkerProd_->setEBAccess(tok_eb_);
-        EcalDigiWorkerProd_->setEEAccess(tok_ee_);
-        EcalDigiWorkerProd_->setESAccess(tok_es_);
-      }
-      else { EMDigiWorker_ = new DataMixingEMDigiWorker(ps, consumesCollector()); }
+      EMDigiWorker_ = new DataMixingEMDigiWorker(ps, consumesCollector());
     }
     else { // merge RecHits 
       EBRecHitCollectionDM_        = ps.getParameter<std::string>("EBRecHitCollectionDM");
@@ -169,29 +97,30 @@ namespace edm
     // Hcal next
 
     if(MergeHcalDigis_){
-      //       cout<<"Hcal Digis TRUE!!!"<<endl;
-
       HBHEDigiCollectionDM_ = ps.getParameter<std::string>("HBHEDigiCollectionDM");
       HODigiCollectionDM_   = ps.getParameter<std::string>("HODigiCollectionDM");
       HFDigiCollectionDM_   = ps.getParameter<std::string>("HFDigiCollectionDM");
       ZDCDigiCollectionDM_  = ps.getParameter<std::string>("ZDCDigiCollectionDM");
+      QIE10DigiCollectionDM_  = ps.getParameter<std::string>("QIE10DigiCollectionDM");
+      QIE11DigiCollectionDM_  = ps.getParameter<std::string>("QIE11DigiCollectionDM");
 
       produces< HBHEDigiCollection >();
       produces< HODigiCollection >();
       produces< HFDigiCollection >();
       produces< ZDCDigiCollection >();
 
-      produces<HBHEUpgradeDigiCollection>("HBHEUpgradeDigiCollection");
-      produces<HFUpgradeDigiCollection>("HFUpgradeDigiCollection");
+      produces<QIE10DigiCollection>("HFQIE10DigiCollection");
+      produces<QIE11DigiCollection>("HBHEQIE11DigiCollection");
 
-
-      if(MergeHcalDigisProd_) {
-	//        edm::ConsumesCollector iC(consumesCollector());
-	HcalDigiWorkerProd_ = new DataMixingHcalDigiWorkerProd(ps, consumesCollector());
+      if(ps.getParameter<bool>("debugCaloSamples")){
+        produces<CaloSamplesCollection>("HcalSamples");
       }
-      else {HcalDigiWorker_ = new DataMixingHcalDigiWorker(ps, consumesCollector());
+      if(ps.getParameter<bool>("injectTestHits")){
+        produces<edm::PCaloHitContainer>("HcalHits");
       }
 
+      if(MergeHcalDigisProd_) HcalDigiWorkerProd_ = new DataMixingHcalDigiWorkerProd(ps, consumesCollector());
+      else HcalDigiWorker_ = new DataMixingHcalDigiWorker(ps, consumesCollector());
 
     }
     else{
@@ -225,6 +154,7 @@ namespace edm
 
     MuonWorker_ = new DataMixingMuonWorker(ps, consumesCollector());
 
+
     // Si-Strips
 
     useSiStripRawDigi_ = ps.exists("SiStripRawDigiSource")?
@@ -241,14 +171,8 @@ namespace edm
     } else {
 
       produces< edm::DetSetVector<SiStripDigi> > (SiStripDigiCollectionDM_);
-      SiStripWorker_ = new DataMixingSiStripWorker(ps, consumesCollector());
 
-      if( addMCDigiNoise_ ) {
-	SiStripMCDigiWorker_ = new DataMixingSiStripMCDigiWorker(ps, consumesCollector());
-      }
-      else {
-	SiStripWorker_ = new DataMixingSiStripWorker(ps, consumesCollector());
-      }
+      SiStripWorker_ = new DataMixingSiStripWorker(ps, consumesCollector());
     }
 
     // Pixels
@@ -259,7 +183,6 @@ namespace edm
 
     SiPixelWorker_ = new DataMixingSiPixelWorker(ps, consumesCollector());
 
-    }
 
     // Pileup Information: if doing pre-mixing, we have to save the pileup information from the Secondary stream
 
@@ -267,11 +190,17 @@ namespace edm
 
     if(MergePileup_) {
       produces< std::vector<PileupSummaryInfo> >();
-      produces<CrossingFramePlaybackInfoExtended>();
+      produces< int >("bunchSpacing");
+      produces<CrossingFramePlaybackInfoNew>();
+
+      std::vector<edm::InputTag> GenPUProtonsInputTags;
+      GenPUProtonsInputTags = ps.getParameter<std::vector<edm::InputTag> >("GenPUProtonsInputTags");
+      for(std::vector<edm::InputTag>::const_iterator it_InputTag = GenPUProtonsInputTags.begin(); 
+                                                     it_InputTag != GenPUProtonsInputTags.end(); ++it_InputTag) 
+         produces< std::vector<reco::GenParticle> >( it_InputTag->label() );
 
       PUWorker_ = new DataMixingPileupCopy(ps, consumesCollector());
     }
-
   }
 
   void DataMixingModule::getSubdetectorNames() {
@@ -312,29 +241,21 @@ namespace edm
 	       
 
   void DataMixingModule::initializeEvent(const edm::Event &e, const edm::EventSetup& ES) { 
-
-    if( addMCDigiNoise_ ) {
-      SiStripMCDigiWorker_->initializeEvent( e, ES );
-      EcalDigiWorkerProd_->initializeEvent( e, ES );
-    }
-    if( addMCDigiNoise_ && MergeHcalDigisProd_) {
-      HcalDigiWorkerProd_->initializeEvent( e, ES );
-    }
   }
+  
 
   void DataMixingModule::beginRun(edm::Run const& run, const edm::EventSetup& ES) { 
     BMixingModule::beginRun( run, ES);
-    if( addMCDigiNoise_ ) {
-      EcalDigiWorkerProd_->beginRun( ES );
-      HcalDigiWorkerProd_->beginRun( run, ES );
-    }
+  }
+
+  void DataMixingModule::endRun(edm::Run const& run, const edm::EventSetup& ES) { 
+    BMixingModule::endRun( run, ES);
   }
 
   // Virtual destructor needed.
   DataMixingModule::~DataMixingModule() { 
     if(MergeEMDigis_){ 
-      if(addMCDigiNoise_ ) {delete EcalDigiWorkerProd_;}
-      else {delete EMDigiWorker_;}
+      delete EMDigiWorker_;
     }    
     else {delete EMWorker_;}
     if(MergeHcalDigis_) { 
@@ -342,16 +263,10 @@ namespace edm
       else { delete HcalDigiWorker_; }}
     else {delete HcalWorker_;}
     if(MuonWorker_) delete MuonWorker_;
-    if(DoFastSim_){
-      delete GeneralTrackWorker_;
-    }else{
-      if(useSiStripRawDigi_)
-	delete SiStripRawWorker_;
-      else if(addMCDigiNoise_ ) delete SiStripMCDigiWorker_;
-      else delete SiStripWorker_;
-
-      delete SiPixelWorker_;
-    }
+    if(useSiStripRawDigi_)
+      delete SiStripRawWorker_;
+    else delete SiStripWorker_;
+    delete SiPixelWorker_;
     if(MergePileup_) { delete PUWorker_;}
   }
 
@@ -362,8 +277,7 @@ namespace edm
 
     // Ecal
     if(MergeEMDigis_) { 
-      if(addMCDigiNoise_ ){ EcalDigiWorkerProd_->addEcalSignals(e, ES);}
-      else {EMDigiWorker_->addEMSignals(e, ES); }
+      EMDigiWorker_->addEMSignals(e, ES);
     }
     else{ EMWorker_->addEMSignals(e);}
 
@@ -381,19 +295,13 @@ namespace edm
     // Muon
     MuonWorker_->addMuonSignals(e);
 
-    if(DoFastSim_){
-       GeneralTrackWorker_->addGeneralTrackSignals(e);
-    }else{
     // SiStrips
     if(useSiStripRawDigi_) SiStripRawWorker_->addSiStripSignals(e);
-    else if(addMCDigiNoise_ ) SiStripMCDigiWorker_->addSiStripSignals(e);
     else SiStripWorker_->addSiStripSignals(e);
 
     // SiPixels
     SiPixelWorker_->addSiPixelSignals(e);
-    }    
     AddedPileup_ = false;
-
   } // end of addSignals
 
   
@@ -411,12 +319,23 @@ namespace edm
     // Note:  setupPileUpEvent may modify the run and lumi numbers of the EventPrincipal to match that of the primary event.
     setupPileUpEvent(ES);
 
+    // check and see if we need to copy the pileup information from 
+    // secondary stream to the output stream  
+    // We only have the pileup event here, so pick the first time and store the info
+
+
+    if(MergePileup_ && !AddedPileup_){
+      
+      PUWorker_->addPileupInfo(&ep, eventNr, &moduleCallingContext);
+
+      AddedPileup_ = true;
+    }
+
     // fill in maps of hits; same code as addSignals, except now applied to the pileup events
 
     // Ecal
     if(MergeEMDigis_) {  
-      if(addMCDigiNoise_ ) { EcalDigiWorkerProd_->addEcalPileups(bcr, &ep, eventNr, ES, &moduleCallingContext);}
-      else { EMDigiWorker_->addEMPileups(bcr, &ep, eventNr, ES, &moduleCallingContext);}
+      EMDigiWorker_->addEMPileups(bcr, &ep, eventNr, ES, &moduleCallingContext);
     }
     else {EMWorker_->addEMPileups(bcr, &ep, eventNr, &moduleCallingContext); }
 
@@ -433,37 +352,22 @@ namespace edm
     // Muon
     MuonWorker_->addMuonPileups(bcr, &ep, eventNr, &moduleCallingContext);
 
-    if(DoFastSim_){
-      GeneralTrackWorker_->addGeneralTrackPileups(bcr, &ep, eventNr, &moduleCallingContext);
-    }else{
-      
-      // SiStrips
-      if(useSiStripRawDigi_) SiStripRawWorker_->addSiStripPileups(bcr, &ep, eventNr, &moduleCallingContext);
-      else if(addMCDigiNoise_ ) SiStripMCDigiWorker_->addSiStripPileups(bcr, &ep, eventNr, &moduleCallingContext);
-      else SiStripWorker_->addSiStripPileups(bcr, &ep, eventNr, &moduleCallingContext);
-      
-      // SiPixels
-      SiPixelWorker_->addSiPixelPileups(bcr, &ep, eventNr, &moduleCallingContext);
-    }
+    // SiStrips
+    if(useSiStripRawDigi_) SiStripRawWorker_->addSiStripPileups(bcr, &ep, eventNr, &moduleCallingContext);
+    else SiStripWorker_->addSiStripPileups(bcr, &ep, eventNr, &moduleCallingContext);
 
-    // check and see if we need to copy the pileup information from 
-    // secondary stream to the output stream  
-    // We only have the pileup event here, so pick the first time and store the info
-
-    if(MergePileup_ && !AddedPileup_){
-      
-      PUWorker_->addPileupInfo(&ep, eventNr, &moduleCallingContext);
-
-      AddedPileup_ = true;
-    }
-
+    // SiPixels
+    //whoops this should be for the MC worker ????? SiPixelWorker_->setPileupInfo(ps,bunchSpacing);
+    SiPixelWorker_->addSiPixelPileups(bcr, &ep, eventNr, &moduleCallingContext);
   }
 
 
   
   void DataMixingModule::doPileUp(edm::Event &e, const edm::EventSetup& ES)
   {
-    std::vector<edm::EventID> recordEventID;
+    using namespace std::placeholders;
+
+    std::vector<edm::SecondaryEventIDAndFileInfo> recordEventID;
     std::vector<int> PileupList;
     PileupList.clear();
     TrueNumInteractions_.clear();
@@ -472,7 +376,7 @@ namespace edm
 
     for (int bunchCrossing=minBunch_;bunchCrossing<=maxBunch_;++bunchCrossing) {
       for (unsigned int isource=0;isource<maxNbSources_;++isource) {
-        boost::shared_ptr<PileUp> source = inputSources_[isource];
+        std::shared_ptr<PileUp> source = inputSources_[isource];
         if (!source || !(source->doPileUp(bunchCrossing))) 
           continue;
 
@@ -490,11 +394,11 @@ namespace edm
         source->readPileUp(
                 e.id(),
                 recordEventID,
-                boost::bind(&DataMixingModule::pileWorker, boost::ref(*this),
-                            _1, bunchCrossing, _2, boost::cref(ES), mcc),
+                std::bind(&DataMixingModule::pileWorker, std::ref(*this),
+			  _1, bunchCrossing, _2, std::cref(ES), mcc),
 		NumPU_Events,
                 e.streamID()
-                );
+			   );
       }
     }
 
@@ -505,10 +409,19 @@ namespace edm
 
     // individual workers...
 
+    // move pileup first so we have access to the information for the put step
+
+    std::vector<PileupSummaryInfo> ps;
+    int bunchSpacing=10000;
+
+    if(MergePileup_) { 
+      PUWorker_->getPileupInfo(ps,bunchSpacing);      
+      PUWorker_->putPileupInfo(e);
+    }
+
     // Ecal
     if(MergeEMDigis_) {
-      if(addMCDigiNoise_ ) {EcalDigiWorkerProd_->putEcal(e,ES);}
-      else { EMDigiWorker_->putEM(e,ES);}
+      EMDigiWorker_->putEM(e,ES);
     }
     else {EMWorker_->putEM(e);}
 
@@ -526,21 +439,20 @@ namespace edm
     // Muon
     MuonWorker_->putMuon(e);
 
-    if(DoFastSim_){
-       GeneralTrackWorker_->putGeneralTrack(e);
-    }else{
-       // SiStrips
-      if(useSiStripRawDigi_) SiStripRawWorker_->putSiStrip(e);
-      else if(addMCDigiNoise_ ) SiStripMCDigiWorker_->putSiStrip(e, ES);
-      else SiStripWorker_->putSiStrip(e);
-       
-       // SiPixels
-       SiPixelWorker_->putSiPixel(e);
-    }
+    // SiStrips
+    if(useSiStripRawDigi_) SiStripRawWorker_->putSiStrip(e);
+    else SiStripWorker_->putSiStrip(e);
 
-    if(MergePileup_) { PUWorker_->putPileupInfo(e);}
+    // SiPixels
+    SiPixelWorker_->putSiPixel(e);
+  }
 
+  void DataMixingModule::beginLuminosityBlock(LuminosityBlock const& l1, EventSetup const& c) {
+    BMixingModule::beginLuminosityBlock(l1, c);
+  }
 
+  void DataMixingModule::endLuminosityBlock(LuminosityBlock const& l1, EventSetup const& c) {
+    BMixingModule::endLuminosityBlock(l1, c);
   }
 
 

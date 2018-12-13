@@ -13,6 +13,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "DQMServices/Core/interface/DQMEDAnalyzer.h"
+#include "SimTracker/TrackerHitAssociation/interface/TrackerHitAssociator.h"
 
 #include <string>
 
@@ -31,13 +32,13 @@ class SiPixelRecHitsValid : public DQMEDAnalyzer {
 	SiPixelRecHitsValid(const edm::ParameterSet& conf);
 
 	//Destructor
-	~SiPixelRecHitsValid();
+	~SiPixelRecHitsValid() override;
 
    protected:
 
-	virtual void analyze(const edm::Event& e, const edm::EventSetup& c);
-	void beginJob();
-	void bookHistograms(DQMStore::IBooker & ibooker,const edm::Run& run, const edm::EventSetup& es);
+	void analyze(const edm::Event& e, const edm::EventSetup& c) override;
+	void beginJob() override;
+	void bookHistograms(DQMStore::IBooker & ibooker,const edm::Run& run, const edm::EventSetup& es) override;
 
    private:
 	void fillBarrel(const SiPixelRecHit &,const PSimHit &, DetId, const PixelGeomDetUnit *,	
@@ -113,7 +114,7 @@ class SiPixelRecHitsValid : public DQMEDAnalyzer {
 	MonitorElement* recHitYPullDisk1Plaquettes[7];
 	MonitorElement* recHitYPullDisk2Plaquettes[7];
 
-        edm::ParameterSet conf_;
+        TrackerHitAssociator::Config trackerHitAssociatorConfig_;
         edm::EDGetTokenT<SiPixelRecHitCollection> siPixelRecHitCollectionToken_;
 };
 

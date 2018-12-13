@@ -1,132 +1,69 @@
-<library   file="HcalChannelQualityPyWrapper.cc" name="HcalChannelQualityPyInterface">
+<library   file="HcalGains_PayloadInspector.cc" name="HcalGains_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalGainsPyWrapper.cc" name="HcalGainsPyInterface">
+
+<library   file="HcalPedestals_PayloadInspector.cc" name="HcalPedestals_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalPedestalsPyWrapper.cc" name="HcalPedestalsPyInterface">
+
+<library   file="HcalPedestalWidths_PayloadInspector.cc" name="HcalPedestalWidths_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalTimeCorrsPyWrapper.cc" name="HcalTimeCorrsPyInterface">
+
+<library   file="HcalRespCorrs_PayloadInspector.cc" name="HcalRespCorrs_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalRespCorrsPyWrapper.cc" name="HcalRespCorrsPyInterface">
+
+<library   file="HcalChannelQuality_PayloadInspector.cc" name="HcalChannelQuality_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalPFCorrsPyWrapper.cc" name="HcalPFCorrsPyInterface">
+
+<library   file="HcalL1TriggerObjects_PayloadInspector.cc" name="HcalL1TriggerObjects_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalGainWidthsPyWrapper.cc" name="HcalGainWidthsPyInterface">
+
+<library   file="HcalRecoParams_PayloadInspector.cc" name="HcalRecoParams_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalLUTCorrsPyWrapper.cc" name="HcalLUTCorrsPyInterface">
+<library   file="HcalSiPMCharacteristics_PayloadInspector.cc" name="HcalSiPMCharacteristics_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>
-<library   file="HcalValidationCorrsPyWrapper.cc" name="HcalValidationCorrsPyInterface">
+<library   file="HcalSiPMParameters_PayloadInspector.cc" name="HcalSiPMParameters_PayloadInspector">
   <use   name="CondCore/Utilities"/>
+  <use   name="CondCore/CondDB"/>
+  <use   name="CondFormats/Common"/>
   <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
   <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
-</library>
-<library   file="HcalZSThresholdsPyWrapper.cc" name="HcalZSThresholdsPyInterface">
-  <use   name="CondCore/Utilities"/>
-  <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
-  <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
-</library>
-<library   file="HcalLutMetadataPyWrapper.cc" name="HcalLutMetadataPyInterface">
-  <use   name="CondCore/Utilities"/>
-  <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
-  <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
-</library>
-<library   file="HcalQIEDataPyWrapper.cc" name="HcalQIEDataPyInterface">
-  <use   name="CondCore/Utilities"/>
-  <use   name="CondFormats/HcalObjects"/>
-  <use   name="boost"/>
-  <use   name="boost_filesystem"/>
-  <use   name="boost_python"/>
-  <use   name="boost_regex"/>
-  <use   name="root"/>
-  <use   name="rootgraphics"/>
-  <flags   EDM_PLUGIN="1"/>
 </library>

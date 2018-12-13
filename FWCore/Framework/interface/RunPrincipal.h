@@ -19,14 +19,16 @@ is the DataBlock.
 
 #include "DataFormats/Provenance/interface/RunAuxiliary.h"
 #include "DataFormats/Provenance/interface/ProcessHistoryID.h"
+#include "FWCore/Utilities/interface/propagate_const.h"
 #include "FWCore/Utilities/interface/RunIndex.h"
 #include "FWCore/Framework/interface/Principal.h"
 
 namespace edm {
 
   class HistoryAppender;
+  class MergeableRunProductProcesses;
+  class MergeableRunProductMetadata;
   class ModuleCallingContext;
-  class UnscheduledHandler;
 
   class RunPrincipal : public Principal {
   public:
@@ -38,10 +40,12 @@ namespace edm {
         std::shared_ptr<ProductRegistry const> reg,
         ProcessConfiguration const& pc,
         HistoryAppender* historyAppender,
-        unsigned int iRunIndex);
-    ~RunPrincipal() {}
+        unsigned int iRunIndex,
+        bool isForPrimaryProcess=true,
+        MergeableRunProductProcesses const* mergeableRunProductProcesses = nullptr);
+    ~RunPrincipal() override;
 
-    void fillRunPrincipal(ProcessHistoryRegistry const& processHistoryRegistry, DelayedReader* reader = 0);
+    void fillRunPrincipal(ProcessHistoryRegistry const& processHistoryRegistry, DelayedReader* reader = nullptr);
 
     /** Multiple Runs may be processed simultaneously. The
      return value can be used to identify a particular Run.
@@ -86,34 +90,29 @@ namespace edm {
       return aux_->mergeAuxiliary(aux);
     }
 
-    void setUnscheduledHandler(std::shared_ptr<UnscheduledHandler>) {}
-
     void put(
         BranchDescription const& bd,
-        std::unique_ptr<WrapperBase> edp);
+        std::unique_ptr<WrapperBase> edp) const;
 
-    void readImmediate() const;
+    void put(ProductResolverIndex index,
+             std::unique_ptr<WrapperBase> edp) const;
 
-    void setComplete() {
-      complete_ = true;
-    }
+    MergeableRunProductMetadata* mergeableRunProductMetadata() {return mergeableRunProductMetadataPtr_.get();}
+
+    void preReadFile();
 
   private:
 
-    virtual bool isComplete_() const override {return complete_;}
+    unsigned int transitionIndex_() const override;
 
-    virtual bool unscheduledFill(std::string const&,
-                                 ModuleCallingContext const* mcc) const override {return false;}
-
-    virtual unsigned int transitionIndex_() const override;
-
-    void resolveProductImmediate(ProductHolderBase const& phb) const;
-
-    std::shared_ptr<RunAuxiliary> aux_;
+    edm::propagate_const<std::shared_ptr<RunAuxiliary>> aux_;
     ProcessHistoryID m_reducedHistoryID;
     RunIndex index_;
 
-    bool complete_;
+    // For the primary input RunPrincipals created by the EventProcessor,
+    // there should be one MergeableRunProductMetadata object created
+    // per concurrent run. In all other cases, this should just be null.
+    edm::propagate_const<std::unique_ptr<MergeableRunProductMetadata>> mergeableRunProductMetadataPtr_;
   };
 }
 #endif

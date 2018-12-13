@@ -1,17 +1,18 @@
-#include "DetectorDescription/Base/interface/DDdebug.h"
-#include "CLHEP/Units/GlobalSystemOfUnits.h"
+#include <ostream>
+#include <string>
+#include <vector>
+
+#include "DetectorDescription/Core/interface/DDBase.h"
 #include "DetectorDescription/Core/interface/DDMaterial.h"
+#include "DetectorDescription/Core/interface/DDName.h"
 #include "DetectorDescription/Core/src/Material.h"
+#include "DetectorDescription/Core/interface/DDUnits.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 using DDI::Material;
+using namespace dd::operators;
 
-
-//DDBase<DDName,Material*>::StoreT::pointer_type 
-//  DDBase<DDName,Material*>::StoreT::instance_ = 0;
-
-
-DDMaterial::DDMaterial() : DDBase<DDName,Material*>() { }
-
+DDMaterial::DDMaterial() : DDBase< DDName, std::unique_ptr<Material>>() { }
 
 /**
    If a DDMaterial with \a name was already defined, this constructor creates a
@@ -21,11 +22,11 @@ DDMaterial::DDMaterial() : DDBase<DDName,Material*>() { }
    For further details concerning the usage of reference-objects refere
    to the documentation of DDLogicalPart.
 */
-DDMaterial::DDMaterial(const DDName & name) : DDBase<DDName,Material*>()
+DDMaterial::DDMaterial( const DDName & name )
+  : DDBase< DDName, std::unique_ptr<Material>>()
 { 
-  prep_ = StoreT::instance().create(name);
+  create( name );
 }
- 
 
 /** 
    \arg \c z atomic number
@@ -40,12 +41,11 @@ DDMaterial::DDMaterial(const DDName & name) : DDBase<DDName,Material*>()
                           density=2*g/cm3);
    \endcode  
 */
-DDMaterial::DDMaterial(const DDName & name, double z, double a, double d)
- : DDBase<DDName,Material*>()
+DDMaterial::DDMaterial( const DDName & name, double z, double a, double d )
+  : DDBase< DDName, std::unique_ptr<Material>>()
 { 
-  prep_ = StoreT::instance().create(name, new Material(z, a, d));
+  create( name, std::make_unique<Material>( z, a, d ));
 }
-              
 
 /** 
    For a mixture material it is sufficient to specify the \a density of the
@@ -59,68 +59,52 @@ DDMaterial::DDMaterial(const DDName & name, double z, double a, double d)
    For further details concerning the usage of reference-objects refere
    to the documentation of DDLogicalPart.      
 */
-DDMaterial::DDMaterial(const DDName & name, double density)
- : DDBase<DDName,Material*>()
+DDMaterial::DDMaterial( const DDName & name, double density )
+  : DDBase< DDName, std::unique_ptr<Material>>()
 { 
-  prep_ = StoreT::instance().create(name, new Material(0,0,density));
+  create( name, std::make_unique<Material>( 0, 0, density ));
 }
-
 
 /** 
   The fraction-masses of all compounds must sum up to 1
 */
-int DDMaterial::addMaterial(const DDMaterial & m, double fm)
+int
+DDMaterial::addMaterial( const DDMaterial & m, double fm )
 {  
-  if (m.ddname() == ddname()) {
+  if( m.ddname() == ddname()) {
     throw cms::Exception("DDException") << "DDMaterial::addMaterial(..): name-clash\n        trying to add material " << m << " to itself! ";
   }  
-  rep().addMaterial(m,fm);
-  DCOUT('c', std::string(" -> ADDED MATERIAL=") + m.toString() );
+  rep().addMaterial( m, fm );
   return rep().noOfConstituents();
 }
 
-
-int DDMaterial::noOfConstituents() const
+int
+DDMaterial::noOfConstituents() const
 {
    return rep().noOfConstituents();
 }
 
-
-DDMaterial::FractionV::value_type DDMaterial::constituent(int i) const 
+DDMaterial::FractionV::value_type DDMaterial::constituent( int i ) const 
 { 
-  //const DDMaterialImpl::Fraction & f(rep().constituent(i));
-  //return std::make_pair(DDMaterial(f.first,true), f.second);  
-  return rep().constituent(i);
+  return rep().constituent( i );
 }
 
-
-double DDMaterial::a() const
+double
+DDMaterial::a() const
 {
   return rep().a(); 
 }
 
-
-double DDMaterial::z() const
+double
+DDMaterial::z() const
 {
   return rep().z(); 
 }
-
 
 double DDMaterial::density() const
 {
   return rep().density(); 
 }
-
-// void DDMaterial::clear()
-// {
-//   StoreT::instance().clear();
-// }
-// private ctor for internal use
-//DDMaterial::DDMaterial(DDRedirect<DDMaterialImpl>* p, bool dummy)
-// : DDRegistered<DDMaterialImpl>(p,true)
-//{ 
-//  DCOUT_V('C',"DC: (redir) init=" << rep_ ); 
-//}   
 
 namespace {
   std::ostream &doStream(std::ostream & os, const DDMaterial & mat, int level)
@@ -128,8 +112,8 @@ namespace {
     ++level; 
     if (mat) {
       os << '[' << mat.name() <<']' << " z=" << mat.z()
-                       << " a=" << mat.a()/g*mole << "*g/mole"
-                       << " d=" << mat.density()/g*cm3 << "*g/cm3";
+	 << " a=" << CONVERT_TO( mat.a(), g_per_mole ) << "*g/mole"
+	 << " d=" << CONVERT_TO( mat.density(), g_per_cm3 ) << "*g/cm3";
       std::string s(2*level,' ');
       for (int i=0; i<mat.noOfConstituents(); ++i) {
          DDMaterial::FractionV::value_type f = mat.constituent(i);
@@ -147,6 +131,5 @@ namespace {
 
 std::ostream & operator<<(std::ostream & os, const DDMaterial & mat)
 { 
-  return doStream(os, mat, 0);
+  return doStream( os, mat, 0 );
 }
-

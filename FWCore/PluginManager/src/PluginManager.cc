@@ -22,13 +22,13 @@
 #include "TVirtualMutex.h"
 
 // user include files
-#include "FWCore/PluginManager/interface/PluginManager.h"
+#include "FWCore/PluginManager/interface/CacheParser.h"
 #include "FWCore/PluginManager/interface/PluginFactoryBase.h"
 #include "FWCore/PluginManager/interface/PluginFactoryManager.h"
-#include "FWCore/PluginManager/interface/CacheParser.h"
-#include "FWCore/Utilities/interface/Exception.h"
-
+#include "FWCore/PluginManager/interface/PluginManager.h"
 #include "FWCore/PluginManager/interface/standard.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 
 namespace edmplugin {
 //
@@ -61,11 +61,11 @@ PluginManager::PluginManager(const PluginManager::Config& iConfig) :
   searchPath_( iConfig.searchPath() )
 {
     using std::placeholders::_1;
-    const boost::filesystem::path kCacheFile(standard::cachefileName());
+    const boost::filesystem::path& kCacheFile(standard::cachefileName());
     // This is the filename of a file which contains plugins which exist in the
     // base release and which should exists in the local area, otherwise they
     // were removed and we want to catch their usage.
-    const boost::filesystem::path kPoisonedCacheFile(standard::poisonedCachefileName());
+    const boost::filesystem::path& kPoisonedCacheFile(standard::poisonedCachefileName());
     //NOTE: This may not be needed :/
     PluginFactoryManager* pfm = PluginFactoryManager::get();
     pfm->newFactory_.connect(std::bind(std::mem_fn(&PluginManager::newFactory),this,_1));
@@ -109,7 +109,7 @@ PluginManager::PluginManager(const PluginManager::Config& iConfig) :
         readCacheFile(poisonedCacheFile, dir/"poisoned", categoryToInfos_);
       }
     }
-    if(not foundAtLeastOneCacheFile) {
+    if(not foundAtLeastOneCacheFile and iConfig.mustHaveCache()) {
       auto ex = cms::Exception("PluginManagerNoCacheFile")<<"No cache files named '"<<standard::cachefileName()<<"' were found in the directories \n";
       for( auto const& seen : alreadySeen) {
         ex <<" '"<<seen<<"'\n";
@@ -267,7 +267,7 @@ PluginManager::load(const std::string& iCategory,
       {
 	//TEMPORARY: to avoid possible deadlocks from ROOT, we must
 	// take the lock ourselves
-	R__LOCKGUARD2(gCINTMutex);
+	R__LOCKGUARD2(gInterpreterMutex);
 	ptr.reset( new SharedLibrary(p) );
       }
       loadables_[p]=ptr;
@@ -287,7 +287,7 @@ PluginManager::tryToLoad(const std::string& iCategory,
   const boost::filesystem::path& p = loadableFor_(iCategory,iPlugin, ioThrowIfFailElseSucceedStatus);
   
   if( not ioThrowIfFailElseSucceedStatus ) {
-    return 0;
+    return nullptr;
   }
   
 
@@ -307,7 +307,7 @@ PluginManager::tryToLoad(const std::string& iCategory,
       {
 	//TEMPORARY: to avoid possible deadlocks from ROOT, we must
 	// take the lock ourselves
-	R__LOCKGUARD(gCINTMutex);
+	R__LOCKGUARD(gInterpreterMutex);
 	ptr.reset( new SharedLibrary(p) );
       }
       loadables_[p]=ptr;
@@ -325,7 +325,7 @@ PluginManager*
 PluginManager::get()
 {
   PluginManager* manager = singleton();
-  if(0==manager) {
+  if(nullptr==manager) {
     throw cms::Exception("PluginManagerNotConfigured")<<"PluginManager::get() was called before PluginManager::configure.";
   }
   return manager;
@@ -335,11 +335,11 @@ PluginManager&
 PluginManager::configure(const Config& iConfig )
 {
   PluginManager*& s = singleton();
-  if( 0 != s ){
+  if( nullptr != s ){
     throw cms::Exception("PluginManagerReconfigured");
   }
   
-  Config realConfig = iConfig;
+  const Config& realConfig = iConfig;
   if (realConfig.searchPath().empty() ) {
     throw cms::Exception("PluginManagerEmptySearchPath");
   }
@@ -360,20 +360,20 @@ PluginManager::loadingLibraryNamed_()
 {
   //NOTE: pluginLoadMutex() indirectly guards this since this value
   // is only accessible via the Sentry call which us guarded by the mutex
-  [[cms::thread_safe]] static std::string s_name(staticallyLinkedLoadingFileName());
+  CMS_THREAD_SAFE static std::string s_name(staticallyLinkedLoadingFileName());
   return s_name;
 }
 
 PluginManager*& PluginManager::singleton()
 {
-  [[cms::thread_safe]] static PluginManager* s_singleton=0;
+  CMS_THREAD_SAFE static PluginManager* s_singleton=nullptr;
   return s_singleton;
 }
 
 bool
 PluginManager::isAvailable()
 {
-  return 0 != singleton();
+  return nullptr != singleton();
 }
 
 }

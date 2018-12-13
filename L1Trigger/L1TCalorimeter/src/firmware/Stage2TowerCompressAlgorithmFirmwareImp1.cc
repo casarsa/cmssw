@@ -9,9 +9,7 @@
 #include "L1Trigger/L1TCalorimeter/interface/Stage2TowerCompressAlgorithmFirmware.h"
 //#include "DataFormats/Math/interface/LorentzVector.h "
 
-#include "CondFormats/L1TObjects/interface/CaloParams.h"
-
-l1t::Stage2TowerCompressAlgorithmFirmwareImp1::Stage2TowerCompressAlgorithmFirmwareImp1(CaloParams* params) :
+l1t::Stage2TowerCompressAlgorithmFirmwareImp1::Stage2TowerCompressAlgorithmFirmwareImp1(CaloParamsHelper const* params) :
   params_(params)
 {
 
@@ -26,7 +24,7 @@ l1t::Stage2TowerCompressAlgorithmFirmwareImp1::~Stage2TowerCompressAlgorithmFirm
 
 void l1t::Stage2TowerCompressAlgorithmFirmwareImp1::processEvent(const std::vector<l1t::CaloTower> & inTowers,
 								 std::vector<l1t::CaloTower> & outTowers) {
-
+  outTowers.reserve(outTowers.size()+inTowers.size());
   for ( auto tow = inTowers.begin();
 	tow != inTowers.end();
 	++tow ) {
@@ -47,10 +45,15 @@ void l1t::Stage2TowerCompressAlgorithmFirmwareImp1::processEvent(const std::vect
 	if (etEm>=etHad) ratio = (int) std::round(log(float(etEm) / float(etHad))/log(2.));
 	else ratio = (int) std::round(log(float(etHad) / float(etEm))/log(2.));
       }
-      ratio &= params_->towerMaskRatio() ;
+
+      if (ratio >= params_->towerMaskRatio())
+	ratio = params_->towerMaskRatio();
       
       int sum  = etEm + etHad;
-      sum &= params_->towerMaskSum() ;
+
+      // apply 
+      if (sum >= params_->towerMaskSum())
+	sum = params_->towerMaskSum();
       
       int qual = 0;
       qual |= (etEm==0 || etHad==0 ? 0x1 : 0x0 );  // denominator ==0 flag

@@ -38,9 +38,12 @@ namespace l1t {
 	   int qual=0);
 
 
-    ~CaloSpare();
+    ~CaloSpare() override;
 
     void setType(CaloSpareType type);
+
+    int GetRing(unsigned index) const;
+    void SetRing(unsigned index, int value);
 
     CaloSpareType getType() const;
 

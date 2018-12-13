@@ -1,3 +1,4 @@
+from __future__ import print_function
 import json, urllib2, os, sys
 from BeautifulSoup import *
 
@@ -100,10 +101,10 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
         self.mainPageTemplate = str(soup)
         self.mainPageTemplate = self.mainPageTemplate.replace("CSCDQM Framework Guide", "")
         self.mainPageTemplate = self.mainPageTemplate.replace('&lt;','<').replace('&gt;', '>')
-        print "Main page template created..."
+        print("Main page template created...")
 
         self.CreateBuildRefMan()
-        print "RefMan created..."
+        print("RefMan created...")
         
         self.treePageTamplate   = self.ReadFile(self.dataPath + "tree_template.html", pathFlag = False)
         self.classesSource      = self.ReadFile("classes.html")
@@ -113,18 +114,18 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
     def ReadFile(self, fileName, pathFlag = True):
         """This method reads file directly or from path."""
         if pathFlag:
-            print "Read:", self.path + fileName
+            print("Read:", self.path + fileName)
             f = open(self.path + fileName)
         else:
             f = open(fileName)
-            print "Read:", fileName
+            print("Read:", fileName)
         data = f.read()
         f.close()
         return data
     
     def WriteFile(self, fileName, data):
         """This method writes data"""
-        print "Write:", self.path + fileName
+        print("Write:", self.path + fileName)
         f = open(self.path + fileName, "w")
         f.write(data)
         f.close()
@@ -158,10 +159,10 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
     
     def PrepareData(self):
         self.managers = self.ParseJsonFromURL(self.managersURL)
-        print "Managers loaded and parsed..."
+        print("Managers loaded and parsed...")
             
         self.users = self.ParseJsonFromURL(self.usersURL)
-        print "Users loaded and parsed..."
+        print("Users loaded and parsed...")
         
         self.data = {}
         for i in self.managers.keys():
@@ -169,13 +170,13 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
             for j in self.managers[i]:
                 self.data[i]["__DATA__"]["Contact"].append(self.users[j])
         self.domains = self.ParseJsonFromURL(self.CMSSWURL)
-        print "Domains loaded and parsed..."
+        print("Domains loaded and parsed...")
         
         for i in self.domains.keys():
             for j in self.domains[i]:
-                if not self.data[i].has_key(self.__ParseItem(j)):
+                if self.__ParseItem(j) not in self.data[i]:
                     self.data[i][self.__ParseItem(j)] = {}
-                if not self.data[i][self.__ParseItem(j)].has_key(self.__ParseSubItem(j)):
+                if self.__ParseSubItem(j) not in self.data[i][self.__ParseItem(j)]:
                     self.data[i][self.__ParseItem(j)][self.__ParseSubItem(j)] = {}
                 
                 self.data[i][self.__ParseItem(j)][self.__ParseSubItem(j)]["__DATA__"] = {
@@ -191,7 +192,7 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
         for i in li:
             if i.a["href"]:
                 self.packages[i.a.text] = i.a["href"]
-        print "Packages parsed(%d)..." % len(self.packages)
+        print("Packages parsed(%d)..." % len(self.packages))
 
         # for getting items from file.html
         soup        = BeautifulSoup(self.filesSource)
@@ -224,7 +225,7 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
             if flag and i.text != u'interface':
                 self.classes[level1][level2][i.text] = i.a["href"]
                 #self.ZEG = i
-        print "Class hierarchy loaded(%d)..." % len(self.classes)
+        print("Class hierarchy loaded(%d)..." % len(self.classes))
         
 #        self.WriteFile("dbg.json", json.dumps(self.classes, indent = 1))
         
@@ -235,19 +236,19 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
         self.classesURLs = {}
         # add items to self.classesURLs
         for i in td:
-            if i.a and i.a.has_key('href'):
+            if i.a and 'href' in i.a:
                 self.classesURLs[i.a.text] = i.a['href']
-        print "Class URLs was loaded... (%s)" % len(self.classesURLs)
+        print("Class URLs was loaded... (%s)" % len(self.classesURLs))
         
         for i in self.data.keys():
             for j in self.data[i].keys():
-                if not self.classes.has_key(j): continue
+                if j not in self.classes: continue
                 for k in self.data[i][j].keys():
                     if "Package " + j + "/" + k in self.packages:
                         self.data[i][j][k]["__DATA__"]["packageDoc"] = '../' + self.packages["Package " + j + "/" + k]
-                    if not self.classes[j].has_key(k): continue
+                    if k not in self.classes[j]: continue
                     for h in self.classes[j][k]:
-                        if self.classesURLs.has_key(self.GetFileName(h)):
+                        if self.GetFileName(h) in self.classesURLs:
                             self.data[i][j][k][self.GetFileName(h)] = {"__DATA__": '../' + self.classesURLs[self.GetFileName(h)]}
                         else:
                             self.data[i][j][k][self.GetFileName(h) + ".h"] = {"__DATA__": '../' + self.classes[j][k][h]}
@@ -304,8 +305,7 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
         <th class="domain">Domain</th><th class="contact">Contact</th>
         </tr>
         """
-        keysI = self.data.keys()
-        keysI.sort()
+        keysI = sorted(self.data.keys())
         for i in keysI:
             #########################
             if i == 'Other': continue
@@ -341,16 +341,14 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
     
     def __NewTreePage(self, domain):
         
-        if not self.data.has_key(domain): return
+        if domain not in self.data: return
         
         content = ''
-        keysI = self.data[domain].keys()
-        keysI.sort()
+        keysI = sorted(self.data[domain].keys())
         for i in keysI:
             if i == '__DATA__': continue
             content += self.HTMLTreeBegin(i)
-            keysJ = self.data[domain][i].keys()
-            keysJ.sort()
+            keysJ = sorted(self.data[domain][i].keys())
             for j in keysJ:
 #                if len(self.data[domain][i][j].keys()) == 1:
 #                    if self.data[domain][i][j].has_key("__DATA__"):
@@ -358,17 +356,16 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
 #                    else:
 #                        content += self.HTMLTreeAddItem(j)
 #                    continue
-                keysK = self.data[domain][i][j].keys()
-                keysK.sort()
+                keysK = sorted(self.data[domain][i][j].keys())
                 length = len(keysK)
 #                content += "<!-- Begin -->"
                 if length > 1:
-                    if self.data[domain][i][j].has_key("__DATA__"):
+                    if "__DATA__" in self.data[domain][i][j]:
                         content += self.HTMLTreeBegin(j, self.data[domain][i][j]["__DATA__"])
                     else:
                         content += self.HTMLTreeBegin(j)
                 else:
-                    if self.data[domain][i][j].has_key("__DATA__"):
+                    if "__DATA__" in self.data[domain][i][j]:
                         content += self.HTMLTreeAddItem(j, self.data[domain][i][j]["__DATA__"], folder = True)
                     else:
                         content += self.HTMLTreeAddItem(j, folder = True)
@@ -381,10 +378,10 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
                     content += self.HTMLTreeEnd()
 #                content += "<!-- End -->"
             content += self.HTMLTreeEnd()
-        if self.tWikiLinks.has_key(domain):
+        if domain in self.tWikiLinks:
             self.WriteFile("iframes/%s.html" % domain.lower().replace(' ', '_'), self.treePageTamplate % (domain, self.tWikiLinks[domain], content))
         else:
-            print 'Warning: The twiki link of "%s" domain not found...' % domain
+            print('Warning: The twiki link of "%s" domain not found...' % domain)
             self.WriteFile("iframes/%s.html" % domain.lower().replace(' ', '_'), self.treePageTamplate % (domain, '#', content))
     
     def HTMLTreeBegin(self, title, links = {}):
@@ -403,12 +400,12 @@ $(".doctable").find("td").each(function(){ if (this.id.indexOf("hoba_") != -1)it
         if endNode: html = '\t<li class="last">'
         else: html = '\t<li>'
         
-        if type(links) == str or type(links) == type(u''):
+        if isinstance(links, str) or isinstance(links, type(u'')):
             if folder:
                 html = html + '\t<a href="%s" target="_blank" class=""><span class="emptyFolder">%s</span></a>\n' % (links, title)
             else:
                 html = html + '\t<a href="%s" target="_blank" class=""><span class="file">%s</span></a>\n' % (links, title)
-        elif type(links) == dict:
+        elif isinstance(links, dict):
             if folder:
                 html = html + '<span class="emptyFolder">%s ' % title
             else:
@@ -432,4 +429,4 @@ if len(sys.argv) == 5:
     
     l.CreateNewMainPage(OUTF)
 else:
-    print "parameter error. It must be like this: python MainPageGenerator.py DATA_PATH/ CMSSW/doc/html/ CMS_VER OUTPUT_FILE_NAME"
+    print("parameter error. It must be like this: python MainPageGenerator.py DATA_PATH/ CMSSW/doc/html/ CMS_VER OUTPUT_FILE_NAME")

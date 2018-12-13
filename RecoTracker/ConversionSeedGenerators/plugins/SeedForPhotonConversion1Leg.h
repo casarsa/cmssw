@@ -24,13 +24,10 @@ public:
   static const int cotTheta_Max=99999;
   
   SeedForPhotonConversion1Leg( const edm::ParameterSet & cfg):
-    thePropagatorLabel(cfg.getParameter<std::string>("propagator")),
-    theBOFFMomentum(cfg.existsAs<double>("SeedMomentumForBOFF") ? cfg.getParameter<double>("SeedMomentumForBOFF") : 5.0)
+    thePropagatorLabel (cfg.getParameter<std::string>("propagator"))
+    ,theBOFFMomentum   (cfg.getParameter<double>("SeedMomentumForBOFF"))
+    ,TTRHBuilder       (cfg.getParameter<std::string>("TTRHBuilder"))
       {}
-
-  SeedForPhotonConversion1Leg( 
-      const std::string & propagator = "PropagatorWithMaterial", double seedMomentumForBOFF = -5.0) 
-   : thePropagatorLabel(propagator), theBOFFMomentum(seedMomentumForBOFF) { }
 
   //dtor
   ~SeedForPhotonConversion1Leg(){}
@@ -70,14 +67,12 @@ public:
 					   const edm::EventSetup& es) const;
 
   SeedingHitSet::RecHitPointer refitHit( SeedingHitSet::ConstRecHitPointer hit, 
-					 const TrajectoryStateOnSurface &state) const;
+					 const TrajectoryStateOnSurface &state, const TkClonerImpl& cloner) const;
   
 protected:
   std::string thePropagatorLabel;
   double theBOFFMomentum;
-
-  // FIXME (well the whole class needs to be fixed!)      
-  mutable  TkClonerImpl cloner;
+  std::string TTRHBuilder;
 
   std::stringstream * pss;
   PrintRecoObjects po;

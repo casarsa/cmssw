@@ -20,23 +20,24 @@
 #include "RecoEgamma/EgammaIsolationAlgos/interface/PhotonTkIsolation.h"
 
 
-EgammaPhotonTkNumIsolationProducer::EgammaPhotonTkNumIsolationProducer(const edm::ParameterSet& config) : conf_(config)
-{
- // use configuration file to setup input/output collection names
-  photonProducer_               = conf_.getParameter<edm::InputTag>("photonProducer");
+EgammaPhotonTkNumIsolationProducer::EgammaPhotonTkNumIsolationProducer(const edm::ParameterSet& config) :
+
+    // use configuration file to setup input/output collection names
+    photonProducer_       (config.getParameter<edm::InputTag>("photonProducer")),
   
-  trackProducer_           = conf_.getParameter<edm::InputTag>("trackProducer");
-  beamspotProducer_        = conf_.getParameter<edm::InputTag>("BeamspotProducer");
+    trackProducer_        (config.getParameter<edm::InputTag>("trackProducer")),
+    beamspotProducer_     (config.getParameter<edm::InputTag>("BeamspotProducer")),
 
-  ptMin_                = conf_.getParameter<double>("ptMin");
-  intRadiusBarrel_      = conf_.getParameter<double>("intRadiusBarrel");
-  intRadiusEndcap_      = conf_.getParameter<double>("intRadiusEndcap");
-  stripBarrel_          = conf_.getParameter<double>("stripBarrel");
-  stripEndcap_          = conf_.getParameter<double>("stripEndcap");
-  extRadius_            = conf_.getParameter<double>("extRadius");
-  maxVtxDist_           = conf_.getParameter<double>("maxVtxDist");
-  drb_                  = conf_.getParameter<double>("maxVtxDistXY");
+    ptMin_                (config.getParameter<double>("ptMin")),
+    intRadiusBarrel_      (config.getParameter<double>("intRadiusBarrel")),
+    intRadiusEndcap_      (config.getParameter<double>("intRadiusEndcap")),
+    stripBarrel_          (config.getParameter<double>("stripBarrel")),
+    stripEndcap_          (config.getParameter<double>("stripEndcap")),
+    extRadius_            (config.getParameter<double>("extRadius")),
+    maxVtxDist_           (config.getParameter<double>("maxVtxDist")),
+    drb_                  (config.getParameter<double>("maxVtxDistXY"))
 
+{
   //register your products
   produces < edm::ValueMap<int> >();
 }
@@ -51,7 +52,7 @@ EgammaPhotonTkNumIsolationProducer::~EgammaPhotonTkNumIsolationProducer(){}
 
 // ------------ method called to produce the data  ------------
 void
-EgammaPhotonTkNumIsolationProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
+EgammaPhotonTkNumIsolationProducer::produce(edm::StreamID sid, edm::Event& iEvent, const edm::EventSetup& iSetup) const
 {
   
   // Get the  filtered objects
@@ -69,7 +70,7 @@ EgammaPhotonTkNumIsolationProducer::produce(edm::Event& iEvent, const edm::Event
   reco::TrackBase::Point beamspot = beamSpotH->position();
 
   //prepare product
-  std::auto_ptr<edm::ValueMap<int> > isoMap(new edm::ValueMap<int>());
+  auto isoMap = std::make_unique<edm::ValueMap<int>>();
   edm::ValueMap<int>::Filler filler(*isoMap);
   std::vector<int> retV(photonHandle->size(),0);
 
@@ -85,7 +86,7 @@ EgammaPhotonTkNumIsolationProducer::produce(edm::Event& iEvent, const edm::Event
   //fill and insert valuemap
   filler.insert(photonHandle,retV.begin(),retV.end());
   filler.fill();
-  iEvent.put(isoMap);
+  iEvent.put(std::move(isoMap));
 
 
 }

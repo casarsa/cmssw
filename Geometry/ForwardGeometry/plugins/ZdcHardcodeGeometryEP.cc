@@ -21,7 +21,7 @@
 
 
 ZdcHardcodeGeometryEP::ZdcHardcodeGeometryEP( const edm::ParameterSet& ps ) :
-   m_loader   (0),
+   m_loader   (nullptr),
    m_topology () ,
    m_applyAlignment ( ps.getUntrackedParameter<bool>("applyAlignment", false) )
 {
@@ -55,9 +55,5 @@ ZdcHardcodeGeometryEP::produce( const ZDCGeometryRecord& iRecord )
 //   ZdcHardcodeGeometryLoader loader ( m_topology ) ;
    m_loader = new ZdcHardcodeGeometryLoader( m_topology ) ;
 
-   ReturnType ptr ( m_loader->load() ) ;
-
-   return ptr ;
+   return ReturnType(m_loader->load());
 }
-
-

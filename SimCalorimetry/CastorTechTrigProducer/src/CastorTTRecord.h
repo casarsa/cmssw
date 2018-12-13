@@ -1,25 +1,25 @@
 #ifndef CastorTechTrigProducer_CastorTTRecord_h
 #define CastorTechTrigProducer_CastorTTRecord_h
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/one/EDProducer.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 
-class CastorTTRecord : public edm::EDProducer
+class CastorTTRecord : public edm::one::EDProducer<>
 {
 public:
 
     explicit CastorTTRecord(const edm::ParameterSet& ps);
-    virtual ~CastorTTRecord();
+    ~CastorTTRecord() override;
     
-    virtual void produce(edm::Event& e, const edm::EventSetup& c);
+    void produce(edm::Event& e, const edm::EventSetup& c) override;
 
     // get fC from digis and save it to array double energy[16 sectors][14 modules]
     void getEnergy_fC(double energy[16][14], edm::Handle<CastorDigiCollection>& CastorDigiColl,
-    				  edm::Event& e, const edm::EventSetup& c) const;
+    				  edm::Event& e, const edm::EventSetup& c);
 
     // get Trigger decisions | vector needs same SIZE and ORDER as in 'ttpBits_'
     void getTriggerDecisions(std::vector<bool>& decision, double energy[16][14]) const;
@@ -35,6 +35,8 @@ private:
     std::vector<unsigned int> ttpBits_ ;
     std::vector<std::string> TrigNames_ ; 
    	std::vector<double> TrigThresholds_ ;
+
+    double reweighted_gain;
 };
 
 #endif

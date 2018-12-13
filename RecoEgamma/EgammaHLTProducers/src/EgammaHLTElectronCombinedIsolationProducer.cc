@@ -46,7 +46,7 @@ desc.add<std::vector<double> >("CaloIsolationWeight", std::vector<double>());
   descriptions.add("hltEgammaHLTElectronCombinedIsolationProducer", desc);  
 }
 
-void EgammaHLTElectronCombinedIsolationProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void EgammaHLTElectronCombinedIsolationProducer::produce(edm::StreamID sid, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   
   edm::Handle<reco::ElectronCollection> electronHandle;
   iEvent.getByToken(electronProducer_,electronHandle);
@@ -67,7 +67,7 @@ void EgammaHLTElectronCombinedIsolationProducer::produce(edm::Event& iEvent, con
   if(TrackIsolWeight_ != 0) 
     iEvent.getByToken(TrackIsolTag_,TrackIsoMap);
   
-  reco::ElectronIsolationMap TotalIsolMap;
+  reco::ElectronIsolationMap TotalIsolMap(electronHandle);
   double TotalIso=0;
   for(reco::ElectronCollection::const_iterator iElectron = electronHandle->begin(); iElectron != electronHandle->end(); iElectron++){
     TotalIso=0; 
@@ -97,8 +97,7 @@ void EgammaHLTElectronCombinedIsolationProducer::produce(edm::Event& iEvent, con
     
   }
 
-  std::auto_ptr<reco::ElectronIsolationMap> isolMap(new reco::ElectronIsolationMap(TotalIsolMap));
-  iEvent.put(isolMap);
+  iEvent.put(std::make_unique<reco::ElectronIsolationMap>(TotalIsolMap));
 
 }
 

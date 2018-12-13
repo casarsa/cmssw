@@ -34,12 +34,6 @@ parser.add_option("--conditions",
                   default=None,
                   dest="conditions")
 
-parser.add_option("--useCondDBv1",
-                  help="use conditions DB V1",
-                  action="store_false",
-                  default=False,
-                  dest="useCondDBv1")
-
 parser.add_option("--eventcontent",
                   help="What event content to write out. Default=FEVTDEBUG, or FEVT (for cosmics)",
                   default='RECOSIM',
@@ -105,7 +99,7 @@ parser.add_option("--runsScenarioForMC",
                   dest="runsScenarioForMC")
 
 parser.add_option("--runUnscheduled",
-                  help="Enable unscheduled mode",
+                  help="Automatically convert configuration to run unscheduled the EDProducers/EDFilters that were scheduled",
                   action="store_true",
                   default=False,
                   dest="runUnscheduled")
@@ -206,6 +200,11 @@ expertSettings.add_option("--pileup_input",
                           default=None,
                           dest="pileup_input")
 
+expertSettings.add_option("--pileup_dasoption",
+                          help="Additional option for DAS query of pile up",
+                          default="",
+                          dest="pileup_dasoption")
+
 expertSettings.add_option("--datamix",
                   help="What datamix config to use. Default=DataOnSim.",
                   default=defaultOptions.datamix,
@@ -217,12 +216,6 @@ expertSettings.add_option("--gflash",
                   default=defaultOptions.gflash,
                   dest="gflash")
 
-expertSettings.add_option("--himix",
-                 help="Run the Heavy Ions signal mixing.",
-                 action="store_true",
-                 default=defaultOptions.himix,
-                 dest="himix")
-                                                    
 expertSettings.add_option("--python_filename",
                           help="Change the name of the created config file ",
                           default='',
@@ -272,6 +265,11 @@ expertSettings.add_option("--dasquery",
                           help="Allow to define the source.fileNames from the das search command",
                           default='',
                           dest="dasquery")
+
+expertSettings.add_option("--dasoption",
+                          help="Additional option for DAS query",
+                          default='',
+                          dest="dasoption")
 
 expertSettings.add_option("--dbsquery",
                           help="Deprecated. Please use dasquery option. Functions for backward compatibility",
@@ -347,10 +345,16 @@ expertSettings.add_option("--restoreRNDSeeds",
                           )
 threeValued.append( ('--restoreRNDSeeds',True) )
 
-expertSettings.add_option("--slhc",
-                          help="Specify the SLHC scenario version",
+
+expertSettings.add_option("--era",
+                          help="Specify which era to use (e.g. \"run2\")",
                           default=None,
-                          dest="slhc")
+                          dest="era")
+
+expertSettings.add_option("--procModifiers",
+                          help="Specify any process Modifiers to include (in Configuration/ProcessModiers) - comma separated list",
+                          default=None,
+                          dest="procModifiers")
 
 expertSettings.add_option("--evt_type",
                           help="specify the gen fragment",
@@ -377,4 +381,10 @@ expertSettings.add_option("--timeoutOutput",
                           help="use a TimeoutPoolOutputModule instead of a PoolOutputModule (needed for evt. display)",
                           default=False,
                           dest='timeoutOutput'
+                          )
+
+expertSettings.add_option("--nThreads",
+                          help="How many threads should CMSSW use (default is 1)",
+                          default="1",
+                          dest='nThreads'
                           )

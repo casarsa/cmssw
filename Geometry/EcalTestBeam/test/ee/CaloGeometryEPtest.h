@@ -3,7 +3,6 @@
 
 // system include files
 #include <memory>
-#include "boost/shared_ptr.hpp"
 
 // user include files
 #include "FWCore/Framework/interface/ModuleFactory.h"
@@ -30,8 +29,8 @@ class CaloGeometryEPtest : public edm::ESProducer
 {
    public:
 
-      typedef CaloGeometryLoaderTest<T>          LoaderType ;
-      typedef typename LoaderType::PtrType   PtrType    ;
+      using LoaderType = CaloGeometryLoaderTest<T>;
+      using PtrType = typename LoaderType::PtrType;
 
       CaloGeometryEPtest<T>( const edm::ParameterSet& ps ) :
 	 m_applyAlignment ( ps.getParameter<bool>("applyAlignment") )
@@ -41,11 +40,11 @@ class CaloGeometryEPtest : public edm::ESProducer
 			  edm::es::Label( T::producerTag() ) ) ;
       }
 
-      virtual ~CaloGeometryEPtest<T>() {}
+      ~CaloGeometryEPtest<T>() override {}
       PtrType produceAligned( const typename T::AlignedRecord& iRecord ) 
       {
-	 const Alignments* alignPtr  ( 0 ) ;
-	 const Alignments* globalPtr ( 0 ) ;
+	 const Alignments* alignPtr  ( nullptr ) ;
+	 const Alignments* globalPtr ( nullptr ) ;
 	 if( m_applyAlignment ) // get ptr if necessary
 	 {
 	    edm::ESHandle< Alignments >                                      alignments ;
@@ -65,9 +64,7 @@ class CaloGeometryEPtest : public edm::ESProducer
 	 iRecord.template getRecord<IdealGeometryRecord>().get( cpv ) ;
 
 	 LoaderType loader ;
-	 PtrType ptr ( loader.load( &(*cpv), alignPtr, globalPtr ) ) ; // no temporaries for shared+ptr!! 
-
-	 return ptr ; 
+	 return loader.load( &(*cpv), alignPtr, globalPtr);
       }
 
    private:

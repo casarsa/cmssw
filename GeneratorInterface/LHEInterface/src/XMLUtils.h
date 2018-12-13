@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include <xercesc/util/XMLString.hpp>
 #include <xercesc/util/XMLUni.hpp>
@@ -15,32 +16,34 @@
 #include <xercesc/sax2/SAX2XMLReader.hpp>
 #include <lzma.h>
 
+
 class Storage;
 
 namespace lhef {
 
 class StorageWrap {
     public:
-	StorageWrap(Storage *storage);
+	StorageWrap(std::unique_ptr<Storage> storage);
 	~StorageWrap();
 
 	Storage *operator -> () { return storage.get(); }
 	const Storage *operator -> () const { return storage.get(); }
 
     private:
-	std::auto_ptr<Storage>	storage;
+	std::unique_ptr<Storage>	storage;
 };
 
 class XMLDocument {
     public:
 	class Handler : public XERCES_CPP_NAMESPACE_QUALIFIER DefaultHandler {};
 
-	XMLDocument(std::auto_ptr<std::istream> &in, Handler &handler);
-	XMLDocument(std::auto_ptr<StorageWrap> &in, Handler &handler);
+	XMLDocument(std::unique_ptr<std::istream> &in, Handler &handler);
+	XMLDocument(std::unique_ptr<StorageWrap> &in, Handler &handler);
 	virtual ~XMLDocument();
 
 	bool parse();
 
+        static std::shared_ptr<void> platformHandle() { return std::make_shared<XercesPlatform>(); }
     private:
 	class XercesPlatform {
 	    public:
@@ -49,18 +52,18 @@ class XMLDocument {
 
 	    private:
 		// do not make any kind of copies
-		XercesPlatform(const XercesPlatform &orig);
-		XercesPlatform &operator = (const XercesPlatform &orig);
+		XercesPlatform(const XercesPlatform &orig) = delete;
+		XercesPlatform &operator = (const XercesPlatform &orig) = delete;
 
 		static unsigned int instances;
 	};
 
 	void init(Handler &handler);
 
-	std::auto_ptr<XercesPlatform>					platform;
+	std::unique_ptr<XercesPlatform>					platform;
 
-	std::auto_ptr<XERCES_CPP_NAMESPACE_QUALIFIER InputSource>	source;
-	std::auto_ptr<XERCES_CPP_NAMESPACE_QUALIFIER SAX2XMLReader>	parser;
+	std::unique_ptr<XERCES_CPP_NAMESPACE_QUALIFIER InputSource>	source;
+	std::unique_ptr<XERCES_CPP_NAMESPACE_QUALIFIER SAX2XMLReader>	parser;
 
 	XERCES_CPP_NAMESPACE_QUALIFIER XMLPScanToken			token;
 
@@ -113,14 +116,14 @@ class XMLInputSourceWrapper :
     public:
 	typedef typename T::Stream_t Stream_t;
 
-	XMLInputSourceWrapper(std::auto_ptr<Stream_t> &obj) : obj(obj) {}
-	virtual ~XMLInputSourceWrapper() {}
+	XMLInputSourceWrapper(std::unique_ptr<Stream_t> &obj) : obj(std::move(obj)) {}
+	~XMLInputSourceWrapper() override {}
 
-	virtual XERCES_CPP_NAMESPACE_QUALIFIER BinInputStream* makeStream() const
+	XERCES_CPP_NAMESPACE_QUALIFIER BinInputStream* makeStream() const override
 	{ return new T(*obj); }
 
     private:
-	std::auto_ptr<Stream_t>	obj;
+	std::unique_ptr<Stream_t>	obj;
 };
 
 class CBInputStream : public XERCES_CPP_NAMESPACE_QUALIFIER BinInputStream {
@@ -134,12 +137,14 @@ class CBInputStream : public XERCES_CPP_NAMESPACE_QUALIFIER BinInputStream {
 	typedef Reader Stream_t;
 
 	CBInputStream(Reader &in);
-	virtual ~CBInputStream();
+	~CBInputStream() override;
 
-	virtual unsigned int curPos() const { return pos; }
+	XMLFilePos curPos() const override { return pos; }
 
-	virtual unsigned int readBytes(XMLByte *const buf,
-	                               const unsigned int size);
+	XMLSize_t readBytes(XMLByte *const buf,
+				    const XMLSize_t size) override;
+
+        const XMLCh* getContentType() const override { return nullptr; }
 
     private:
 	Reader		&reader;
@@ -152,12 +157,14 @@ class STLInputStream : public XERCES_CPP_NAMESPACE_QUALIFIER BinInputStream {
 	typedef std::istream Stream_t;
 
 	STLInputStream(std::istream &in);
-	virtual ~STLInputStream();
+	~STLInputStream() override;
 
-	virtual unsigned int curPos() const { return pos; }
+	XMLFilePos curPos() const override { return pos; }
 
-	virtual unsigned int readBytes(XMLByte *const buf,
-	                               const unsigned int size);
+	XMLSize_t readBytes(XMLByte *const buf,
+				    const XMLSize_t size) override;
+
+        const XMLCh* getContentType() const override { return nullptr; }
 
     private:
 	std::istream	&in;
@@ -170,12 +177,14 @@ class StorageInputStream :
 	typedef StorageWrap Stream_t;
 
 	StorageInputStream(StorageWrap &in);
-	virtual ~StorageInputStream();
+	~StorageInputStream() override;
 
-	virtual unsigned int curPos() const { return pos; }
+	XMLFilePos curPos() const override { return pos; }
 
-	virtual unsigned int readBytes(XMLByte *const buf,
-	                               const unsigned int size);
+	XMLSize_t readBytes(XMLByte *const buf,
+				    const XMLSize_t size) override;
+
+        const XMLCh* getContentType() const override { return nullptr; }
 
     private:
 	StorageWrap	&in;
@@ -183,6 +192,10 @@ class StorageInputStream :
         lzma_stream     lstr;
         bool            compression_;
         unsigned int    lasttotal_;
+
+        unsigned int buffLoc_ = 0,buffTotal_ = 0;
+        std::vector<uint8_t> buffer_;
+        static constexpr unsigned bufferSize_ = 16*1024*1024;
 };
 
 typedef XMLInputSourceWrapper<CBInputStream> CBInputSource;

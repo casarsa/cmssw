@@ -25,7 +25,6 @@
 #include "RecoTracker/TkTrackingRegions/plugins/GlobalTrackingRegionProducerFromBeamSpot.h"
 
 #include <sstream>
-#include "boost/foreach.hpp"
 
 class PhotonConversionTrajectorySeedProducerFromQuadrupletsAlgo{
 
@@ -65,7 +64,7 @@ class PhotonConversionTrajectorySeedProducerFromQuadrupletsAlgo{
   std::unique_ptr<GlobalTrackingRegionProducerFromBeamSpot> theRegionProducer;
 
 
-  typedef std::vector<TrackingRegion* > Regions;
+  typedef std::vector<std::unique_ptr<TrackingRegion> > Regions;
   typedef Regions::const_iterator IR;
   Regions regions; 
 

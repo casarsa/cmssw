@@ -14,7 +14,7 @@
  *
  */
 
-#include "FWCore/Framework/interface/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -30,17 +30,15 @@ namespace edm {
 }
 
 // Class declaration
-class HLTMETCleanerUsingJetID : public edm::EDProducer {
+class HLTMETCleanerUsingJetID : public edm::stream::EDProducer<> {
   public:
     explicit HLTMETCleanerUsingJetID(const edm::ParameterSet & iConfig);
-    ~HLTMETCleanerUsingJetID();
+    ~HLTMETCleanerUsingJetID() override;
 
     static void fillDescriptions(edm::ConfigurationDescriptions & descriptions);
-    virtual void produce(edm::Event& iEvent, const edm::EventSetup & iSetup);
+    void produce(edm::Event& iEvent, const edm::EventSetup & iSetup) override;
 
   private:
-    /// Use pt; otherwise, use et.
-    bool            usePt_;
 
     /// Minimum pt requirement for jets
     double          minPt_;

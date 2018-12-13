@@ -121,13 +121,13 @@ class MVAComputer {
 			processor(processor), nOutput(nOutput) {}
 
 		inline Processor(const Processor &orig)
-		{ processor = orig.processor; nOutput = orig.nOutput; }
+		{ processor = std::move(orig.processor); nOutput = orig.nOutput; }
 
 		inline Processor &operator = (const Processor &orig)
-		{ processor = orig.processor; nOutput = orig.nOutput; return *this; }
+		{ processor = std::move(orig.processor); nOutput = orig.nOutput; return *this; }
 
 		/// owned variable processor instance
-		mutable std::auto_ptr<VarProcessor>	processor;
+		mutable std::unique_ptr<VarProcessor>	processor;
 
 		/// number of output variables
 		unsigned int				nOutput;
@@ -139,8 +139,9 @@ class MVAComputer {
 
 		inline void eval(const VarProcessor *proc, int *outConf,
 		                 double *output, int *loop,
+                                 VarProcessor::LoopCtx& ctx,
 		                 unsigned int offset, unsigned int out) const
-		{ proc->eval(values_, conf_, output, outConf, loop, offset); }
+                { proc->eval(values_, conf_, output, outConf, loop, ctx, offset); }
 
 		inline double output(unsigned int output) const
 		{ return values_[conf_[output]]; }
@@ -158,7 +159,8 @@ class MVAComputer {
 		DerivContext() : n_(0) {}
 
 		void eval(const VarProcessor *proc, int *outConf,
-		          double *output, int *loop,
+		          double *output, int *loop, 
+                          VarProcessor::LoopCtx& ctx,
 		          unsigned int offset, unsigned int out) const;
 
 		double output(unsigned int output,
@@ -197,7 +199,7 @@ class MVAComputer {
 	unsigned int		output;
 
 	/// in case calibration object is owned by the MVAComputer
-	std::auto_ptr<Calibration::MVAComputer> owned;
+	std::unique_ptr<Calibration::MVAComputer> owned;
 };
 
 } // namespace PhysicsTools

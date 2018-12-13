@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("RecHitsValidationRelVal")
 process.load("Configuration.StandardSequences.Reconstruction_cff")
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 
 process.load("DQMServices.Core.DQM_cfg")
@@ -19,7 +19,8 @@ process.source = cms.Source("PoolSource",
       )
 )
 
-process.hcalRecoAnalyzer = cms.EDAnalyzer("HcalRecHitsValidation",
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+process.hcalRecoAnalyzer = DQMEDAnalyzer('HcalRecHitsValidation',
     eventype = cms.untracked.string('multi'),
     outputFile = cms.untracked.string('HcalRecHitsValidationALL_RelVal.root'),
     ecalselector = cms.untracked.string('yes'),

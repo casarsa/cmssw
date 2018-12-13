@@ -14,21 +14,20 @@
 #include "CondFormats/Alignment/interface/AlignmentErrors.h"
 #include "Geometry/HcalTowerAlgo/interface/HcalGeometry.h"
 #include "CondFormats/AlignmentRecord/interface/HcalAlignmentRcd.h"
-#include "CondFormats/AlignmentRecord/interface/HcalAlignmentErrorRcd.h"
+#include "CondFormats/AlignmentRecord/interface/HcalAlignmentErrorExtendedRcd.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 
 class HcalAlignmentEP : public edm::ESProducer {
 
 public:
 
-  typedef boost::shared_ptr<Alignments>      ReturnAli    ;
-  typedef boost::shared_ptr<AlignmentErrors> ReturnAliErr ;
+  using ReturnAli = std::unique_ptr<Alignments>;
 
   typedef AlignTransform::Translation Trl ;
   typedef AlignTransform::Rotation    Rot ;
 
   HcalAlignmentEP(const edm::ParameterSet&);
-  ~HcalAlignmentEP();
+  ~HcalAlignmentEP() override;
 
 //-------------------------------------------------------------------
  

@@ -90,24 +90,8 @@ L1GTDigiToRaw::L1GTDigiToRaw(const edm::ParameterSet& pSet) :
 
 }
 
-// destructor
-L1GTDigiToRaw::~L1GTDigiToRaw()
-{
-
-    // empty now
-
-}
 
 // member functions
-
-// beginning of job stuff
-void L1GTDigiToRaw::beginJob()
-{
-
-    // empty now
-
-}
-
 
 // method called to produce the data
 void L1GTDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
@@ -115,7 +99,7 @@ void L1GTDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
 
     // define new FEDRawDataCollection
     // it contains ALL FEDs in an event
-    std::auto_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
+    std::unique_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
 
     FEDRawData& gtRawData = allFedRawData->FEDData(m_daqGtFedId);
 
@@ -162,7 +146,7 @@ void L1GTDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
         }
 
         // put the raw data in the event
-        iEvent.put(allFedRawData);
+        iEvent.put(std::move(allFedRawData));
 
         return;
     }
@@ -476,10 +460,10 @@ void L1GTDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
                                     << "\nQuit packing this event" << std::endl;
                         }
 
-                        std::auto_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
+                        std::unique_ptr<FEDRawDataCollection> allFedRawData(new FEDRawDataCollection);
 
                         // put the raw data in the event
-                        iEvent.put(allFedRawData);
+                        iEvent.put(std::move(allFedRawData));
 
                         return;
                     }
@@ -508,7 +492,7 @@ void L1GTDigiToRaw::produce(edm::Event& iEvent, const edm::EventSetup& evSetup)
     packTrailer(ptrGt, ptrGtBegin, gtDataSize);
 
     // put the raw data in the event
-    iEvent.put(allFedRawData);
+    iEvent.put(std::move(allFedRawData));
 }
 
 
@@ -880,14 +864,6 @@ void L1GTDigiToRaw::packTrailer(unsigned char* ptrGt, unsigned char* ptrGtBegin,
     FEDTrailer gtFEDTrailer(ptrGt);
     gtFEDTrailer.set(ptrGt, lengthVal, crcVal, evtStatusVal, ttsBitsVal, moreTrailersVal);
 
-}
-
-
-//
-void L1GTDigiToRaw::endJob()
-{
-
-    // empty now
 }
 
 

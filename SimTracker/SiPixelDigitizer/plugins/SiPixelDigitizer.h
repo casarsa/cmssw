@@ -20,12 +20,11 @@
 
 #include "SimGeneral/MixingModule/interface/DigiAccumulatorMixMod.h"
 #include "FWCore/Framework/interface/ESHandle.h"
+#include "DataFormats/Provenance/interface/EventID.h"
 
 namespace edm {
   class ConsumesCollector;
-  namespace one {
-    class EDProducerBase;
-  }
+  class ProducerBase;
   class Event;
   class EventSetup;
   class ParameterSet;
@@ -48,34 +47,34 @@ namespace cms {
   class SiPixelDigitizer : public DigiAccumulatorMixMod {
   public:
 
-    explicit SiPixelDigitizer(const edm::ParameterSet& conf, edm::one::EDProducerBase& mixMod, edm::ConsumesCollector& iC);
+    explicit SiPixelDigitizer(const edm::ParameterSet& conf, edm::ProducerBase& mixMod, edm::ConsumesCollector& iC);
 
-    virtual ~SiPixelDigitizer();
+    ~SiPixelDigitizer() override;
 
-    virtual void initializeEvent(edm::Event const& e, edm::EventSetup const& c) override;
-    virtual void accumulate(edm::Event const& e, edm::EventSetup const& c) override;
-    virtual void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c, edm::StreamID const&) override;
-    virtual void finalizeEvent(edm::Event& e, edm::EventSetup const& c) override;
+    void initializeEvent(edm::Event const& e, edm::EventSetup const& c) override;
+    void accumulate(edm::Event const& e, edm::EventSetup const& c) override;
+    void accumulate(PileUpEventPrincipal const& e, edm::EventSetup const& c, edm::StreamID const&) override;
+    void finalizeEvent(edm::Event& e, edm::EventSetup const& c) override;
 
     virtual void beginJob() {}
 
-    virtual void StorePileupInformation( std::vector<int> &numInteractionList,
+    void StorePileupInformation( std::vector<int> &numInteractionList,
 					 std::vector<int> &bunchCrossingList,
-					 std::vector<float> &TrueInteractionList, int bunchSpacing){
-      PileupInfo_ = new PileupMixingContent(numInteractionList, bunchCrossingList, TrueInteractionList, bunchSpacing);
+					 std::vector<float> &TrueInteractionList, 
+					 std::vector<edm::EventID> &eventInfoList, int bunchSpacing) override{
+      PileupInfo_ = std::make_unique<PileupMixingContent>(numInteractionList, bunchCrossingList, TrueInteractionList, eventInfoList, bunchSpacing);
     }
 
-    virtual PileupMixingContent* getEventPileupInfo() { return PileupInfo_; }
+    PileupMixingContent* getEventPileupInfo() override { return PileupInfo_.get(); }
 
   private:
     void accumulatePixelHits(edm::Handle<std::vector<PSimHit> >,
 			     size_t globalSimHitIndex,
 			     const unsigned int tofBin,
-			     CLHEP::HepRandomEngine*,
 			     edm::EventSetup const& c);
-    CLHEP::HepRandomEngine* randomEngine(edm::StreamID const& streamID);
 
-    bool first;
+    bool firstInitializeEvent_;
+    bool firstFinalizeEvent_;
     std::unique_ptr<SiPixelDigitizerAlgorithm>  _pixeldigialgo;
     /** @brief Offset to add to the index of each sim hit to account for which crossing it's in.
 *
@@ -94,9 +93,9 @@ namespace cms {
     edm::ESHandle<TrackerGeometry> pDD;
     edm::ESHandle<MagneticField> pSetup;
     std::map<unsigned int, PixelGeomDetUnit const *> detectorUnits;
-    std::vector<CLHEP::HepRandomEngine*> randomEngines_;
+    CLHEP::HepRandomEngine* randomEngine_ = nullptr;
 
-    PileupMixingContent* PileupInfo_;
+    std::unique_ptr<PileupMixingContent> PileupInfo_;
     
     const bool pilotBlades; // Default = false
     const int NumberOfEndcapDisks; // Default = 2

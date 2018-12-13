@@ -1,8 +1,10 @@
-
 /*
  *  See header file for a description of this class.
  *
  *  \author G. Cerminara - INFN Torino
+ *
+ *  threadsafe version (//-) oct/nov 2014 - WATWanAbdullah ncpp-um-my
+ *
  */
 
 
@@ -33,52 +35,48 @@ using namespace edm;
 
 
 
-DTDAQInfo::DTDAQInfo(const ParameterSet& pset) {}
+DTDAQInfo::DTDAQInfo(const ParameterSet& pset) {
 
-
-
+  bookingdone = false;
+  checkUros = pset.getUntrackedParameter<bool>("checkUros",true);
+}
 
 DTDAQInfo::~DTDAQInfo() {}
 
+  void DTDAQInfo::dqmEndLuminosityBlock(DQMStore::IBooker & ibooker, DQMStore::IGetter & igetter, edm::LuminosityBlock const & lumiSeg, 
+                                   edm::EventSetup const & setup) {
 
+  if (!bookingdone) {
+  // retrieve the mapping
+  setup.get<DTReadOutMappingRcd>().get(mapping);
 
-void DTDAQInfo::beginJob(){
-  // get the DQMStore
-  theDbe = Service<DQMStore>().operator->();
-  
   // book the ME
   // global fraction
-  theDbe->setCurrentFolder("DT/EventInfo");
-  totalDAQFraction = theDbe->bookFloat("DAQSummary");  
+
+  ibooker.setCurrentFolder("DT/EventInfo");
+
+  totalDAQFraction = ibooker.bookFloat("DAQSummary");  
   totalDAQFraction->Fill(-1);
 
   // map
-  daqMap = theDbe->book2D("DAQSummaryMap","DT Certification Summary Map",12,1,13,5,-2,3);
+  daqMap = ibooker.book2D("DAQSummaryMap","DT Certification Summary Map",12,1,13,5,-2,3);
   daqMap->setAxisTitle("sector",1);
   daqMap->setAxisTitle("wheel",2);
 
-
   // Wheel "fractions" -> will be 0 or 1
-  theDbe->setCurrentFolder("DT/EventInfo/DAQContents");
+
+  ibooker.setCurrentFolder("DT/EventInfo/DAQContents");
   for(int wheel = -2; wheel != 3; ++wheel) {
     stringstream streams;
     streams << "DT_Wheel" << wheel;
-    daqFractions[wheel] = theDbe->bookFloat(streams.str());
+
+    daqFractions[wheel] = ibooker.bookFloat(streams.str());
     daqFractions[wheel]->Fill(-1);
   }
+  bookingdone = true; 
+  }  //booking done
 
-  //
-
-}
-
-
-
-void DTDAQInfo::beginLuminosityBlock(const LuminosityBlock& lumi, const  EventSetup& setup) {
-  // create a record key for RunInfoRcd
-  eventsetup::EventSetupRecordKey recordKey(eventsetup::EventSetupRecordKey::TypeTag::findType("RunInfoRcd"));
-
-
-  if(setup.find(recordKey) != 0) { 
+  if(auto runInfoRec = setup.tryToGet<RunInfoRcd>()) {
     // reset to 0
     totalDAQFraction->Fill(0.);
     daqFractions[-2]->Fill(0.);
@@ -87,17 +85,20 @@ void DTDAQInfo::beginLuminosityBlock(const LuminosityBlock& lumi, const  EventSe
     daqFractions[1]->Fill(0.);
     daqFractions[2]->Fill(0.);
 
-    daqMap->Reset();
 
+    daqMap->Reset();
     //get fed summary information
     ESHandle<RunInfo> sumFED;
-    setup.get<RunInfoRcd>().get(sumFED);    
+    runInfoRec->get(sumFED);
     vector<int> fedInIDs = sumFED->m_fed_in;   
 
-
     // the range of DT feds
-    static int FEDIDmin = FEDNumbering::MINDTFEDID;
-    static int FEDIDMax = FEDNumbering::MAXDTFEDID;
+    static const int FEDIDmin = FEDNumbering::MINDTFEDID;
+    static const int FEDIDMax = FEDNumbering::MAXDTFEDID; 
+    
+    //FIXME for uROS FEDIDs once mapping has been defined
+    if (checkUros) { LogTrace("DQM|DTMonitorClient|DTDAQInfo")
+            << "Checking uROS FEDs as Legacy FEDs"<< endl;}
 
     // loop on all active feds
     for(vector<int>::const_iterator fed = fedInIDs.begin();
@@ -130,22 +131,4 @@ void DTDAQInfo::beginLuminosityBlock(const LuminosityBlock& lumi, const  EventSe
   }
 }
 
-
-
-
-void DTDAQInfo::endLuminosityBlock(const LuminosityBlock&  lumi, const  EventSetup& setup){}
-
-
-
-void DTDAQInfo::endJob() {}
-
-
-
-void DTDAQInfo::analyze(const Event& event, const EventSetup& setup){}
-
-
-
-void DTDAQInfo::beginRun(const Run& run, const EventSetup& setup) {
-  // retrieve the mapping
-  setup.get<DTReadOutMappingRcd>().get(mapping);
-}
+void DTDAQInfo::dqmEndJob(DQMStore::IBooker & ibooker, DQMStore::IGetter & igetter) {}

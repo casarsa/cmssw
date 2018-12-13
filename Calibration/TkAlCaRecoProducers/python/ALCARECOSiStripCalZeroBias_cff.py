@@ -36,33 +36,41 @@ siStripQualityESProducerUnbiased.ListOfRecordToMerge = cms.VPSet(
 
 
 # Clusterizer #
-import RecoLocalTracker.SiStripClusterizer.SiStripClusterizer_cfi 
+from RecoLocalTracker.SiStripClusterizer.SiStripClusterizer_cfi import *
 
-ZeroBiasClusterizer = cms.PSet(
-    Algorithm = cms.string('ThreeThresholdAlgorithm'),
-    ChannelThreshold = cms.double(2.0),
-    SeedThreshold = cms.double(3.0),
-    ClusterThreshold = cms.double(5.0),
-    MaxSequentialHoles = cms.uint32(0),
-    MaxSequentialBad = cms.uint32(1),
-    MaxAdjacentBad = cms.uint32(0),
-    QualityLabel = cms.string('unbiased'),
-    RemoveApvShots     = cms.bool(True) 
-    )
-
-
-calZeroBiasClusters = RecoLocalTracker.SiStripClusterizer.SiStripClusterizer_cfi.siStripClusters.clone()
-calZeroBiasClusters.Clusterizer = ZeroBiasClusterizer
+calZeroBiasClusters = siStripClusters.clone()
+calZeroBiasClusters.Clusterizer.QualityLabel = 'unbiased'
 
 # Not persistent collections needed by the filters in the AlCaReco DQM
 from DPGAnalysis.SiStripTools.eventwithhistoryproducerfroml1abc_cfi import *
 from DPGAnalysis.SiStripTools.apvcyclephaseproducerfroml1tsDB_cfi import *
 
 # SiStripQuality (only to test the different data labels)#
-qualityStatistics = cms.EDAnalyzer("SiStripQualityStatistics",
-    TkMapFileName = cms.untracked.string(''),
-    dataLabel = cms.untracked.string('unbiased')
-)
+from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+qualityStatistics = DQMEDAnalyzer("SiStripQualityStatistics",
+                                  TkMapFileName = cms.untracked.string(''),
+                                  dataLabel = cms.untracked.string('unbiased')
+                                  )
 
 # Sequence #
 seqALCARECOSiStripCalZeroBias = cms.Sequence(ALCARECOSiStripCalZeroBiasHLT*DCSStatusForSiStripCalZeroBias*calZeroBiasClusters*APVPhases*consecutiveHEs)
+
+## customizations for the pp_on_AA eras
+from Configuration.Eras.Modifier_pp_on_XeXe_2017_cff import pp_on_XeXe_2017
+from Configuration.Eras.Modifier_pp_on_AA_2018_cff import pp_on_AA_2018
+(pp_on_XeXe_2017 | pp_on_AA_2018).toModify(ALCARECOSiStripCalZeroBiasHLT,
+                                           eventSetupPathsKey='SiStripCalZeroBiasHI'
+                                           )
+
+# Select pp-like events based on the pixel cluster multiplicity
+import HLTrigger.special.hltPixelActivityFilter_cfi
+HLTPixelActivityFilterForSiStripCalZeroBias = HLTrigger.special.hltPixelActivityFilter_cfi.hltPixelActivityFilter.clone()
+HLTPixelActivityFilterForSiStripCalZeroBias.maxClusters = 500
+HLTPixelActivityFilterForSiStripCalZeroBias.inputTag    = 'siPixelClusters'
+
+seqALCARECOSiStripCalZeroBiasHI = cms.Sequence(ALCARECOSiStripCalZeroBiasHLT*HLTPixelActivityFilterForSiStripCalZeroBias*DCSStatusForSiStripCalZeroBias*calZeroBiasClusters*APVPhases*consecutiveHEs)
+
+#Specify we want to use our other sequence 
+(pp_on_XeXe_2017 | pp_on_AA_2018).toReplaceWith(seqALCARECOSiStripCalZeroBias,
+                                                seqALCARECOSiStripCalZeroBiasHI
+                                                )

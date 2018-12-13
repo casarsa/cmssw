@@ -18,7 +18,7 @@
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/EDAnalyzer.h"
+#include "FWCore/Framework/interface/one/EDAnalyzer.h"
 
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -42,6 +42,7 @@
 #include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "Geometry/Records/interface/IdealGeometryRecord.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/TrackerNumberingBuilder/interface/CmsTrackerStringToEnum.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "DetectorDescription/Core/interface/DDRoot.h"
@@ -65,13 +66,15 @@
 
 //double PI = 3.141592654;
 
-class ModuleNumbering : public edm::EDAnalyzer {
+class ModuleNumbering : public edm::one::EDAnalyzer<> {
 public:
   explicit ModuleNumbering( const edm::ParameterSet& );
-  ~ModuleNumbering();
+  ~ModuleNumbering() override;
   
-  
-  virtual void analyze( const edm::Event&, const edm::EventSetup& );
+  void beginJob() override {}
+  void analyze(edm::Event const& iEvent, edm::EventSetup const&) override;
+  void endJob() override {}
+
 private:
   // ----------member data ---------------------------
   void fillModuleVariables(const GeometricDet* module, double& polarRadius, double& phiRad, double& z);
@@ -123,7 +126,7 @@ void ModuleNumbering::fillModuleVariables(const GeometricDet* module, double& po
   polarRadius = std::sqrt(module->translation().X()*module->translation().X()+module->translation().Y()*module->translation().Y());
   phiRad = atan2(module->translation().Y(),module->translation().X());
   // tolerance near phi=0
-  if(fabs(phiRad) < tolerance_angle) phiRad=0.0;
+  if(std::abs(phiRad) < tolerance_angle) phiRad=0.0;
   // negative phi: from [-PI,+PI) to [0,2PI)
   if(phiRad < 0) phiRad+=2*M_PI;
   //
@@ -134,7 +137,7 @@ void ModuleNumbering::fillModuleVariables(const GeometricDet* module, double& po
 double ModuleNumbering::changePhiRange_From_ZeroTwoPi_To_MinusPiPlusPi(double phiRad) {
   double new_phiRad = phiRad;
   // tolerance near phi=PI
-  if(fabs(new_phiRad-M_PI) < tolerance_angle) new_phiRad=M_PI;
+  if(std::abs(new_phiRad-M_PI) < tolerance_angle) new_phiRad=M_PI;
   // phi greater than PI: from [0,2PI) to [-PI,+PI)
   if(new_phiRad > M_PI) new_phiRad-=2*M_PI;
   //
@@ -144,7 +147,7 @@ double ModuleNumbering::changePhiRange_From_ZeroTwoPi_To_MinusPiPlusPi(double ph
 double ModuleNumbering::changePhiRange_From_MinusPiPlusPi_To_MinusTwoPiZero(double phiRad) {
   double new_phiRad = phiRad;
   // tolerance near phi=PI
-  if(fabs(fabs(new_phiRad)-M_PI) < tolerance_angle) new_phiRad=M_PI;
+  if(std::abs(std::abs(new_phiRad)-M_PI) < tolerance_angle) new_phiRad=M_PI;
   // phi greater than PI: from [-PI,+PI) to [0,2PI)
   if(new_phiRad > 0) new_phiRad-=2*M_PI;
   //
@@ -154,7 +157,7 @@ double ModuleNumbering::changePhiRange_From_MinusPiPlusPi_To_MinusTwoPiZero(doub
 double ModuleNumbering::changePhiRange_From_MinusPiPlusPi_To_ZeroTwoPi(double phiRad) {
   double new_phiRad = phiRad;
   // tolerance near phi=PI
-  if(fabs(fabs(new_phiRad)-M_PI) < tolerance_angle) new_phiRad=M_PI;
+  if(std::abs(std::abs(new_phiRad)-M_PI) < tolerance_angle) new_phiRad=M_PI;
   // phi greater than PI: from [-PI,+PI) to [0,2PI)
   if(new_phiRad < 0) new_phiRad+=2*M_PI;
   //
@@ -167,7 +170,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 {
   //Retrieve tracker topology from geometry
   edm::ESHandle<TrackerTopology> tTopoHandle;
-  iSetup.get<IdealGeometryRecord>().get(tTopoHandle);
+  iSetup.get<TrackerTopologyRcd>().get(tTopoHandle);
   const TrackerTopology* const tTopo = tTopoHandle.product();
 
 
@@ -203,8 +206,8 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
   std::vector<const GeometricDet*> modules =  (*rDD).deepComponents();
   std::map< uint32_t , const GeometricDet* > mapDetIdToGeometricDet;
   
-  for(unsigned int i=0; i<modules.size();i++){  
-    mapDetIdToGeometricDet[modules[i]->geographicalID().rawId()] = modules[i];
+  for(auto & module : modules){  
+    mapDetIdToGeometricDet[module->geographicalID().rawId()] = module;
   }
   
   // Debug variables
@@ -305,7 +308,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		  GeometricDet::nav_type detNavType = mapDetIdToGeometricDet[myDetId]->navType();
 		  //
 		  Output << "            raw Id = " << rawid << " (" << binary_detid << ")"
-			 << "\t nav type = " << printNavType(Output,&detNavType.front(),detNavType.size()) << std::endl;
+			 << "\t nav type = " << printNavType(&detNavType.front(),detNavType.size()) << std::endl;
 		  
 		  // variables
 		  fillModuleVariables(mapDetIdToGeometricDet[myDetId], polarRadius, phiRad, z);
@@ -334,7 +337,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		  
 		  // module: |z| check
 		  Output << "\t # ";
-		  if( ( fabs(module_z) - fabs(module_z_previous) ) < (0 + tolerance_space) ) {
+		  if( ( std::abs(module_z) - std::abs(module_z_previous) ) < (0 + tolerance_space) ) {
 		    Output << "\t ERROR |z| ordering not respected in module ";
 		    iERROR++;
 		  } else {
@@ -489,7 +492,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		  GeometricDet::nav_type detNavType = mapDetIdToGeometricDet[myDetId]->navType();
 		  //
 		  Output << "            raw Id = " << rawid << " (" << binary_detid << ")"
-			 << "\t nav type = " << printNavType(Output,&detNavType.front(),detNavType.size()) << std::endl;
+			 << "\t nav type = " << printNavType(&detNavType.front(),detNavType.size()) << std::endl;
 		  
 		  // variables
 		  fillModuleVariables(mapDetIdToGeometricDet[myDetId], polarRadius, phiRad, z);
@@ -536,7 +539,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		
 		// part: |z| check
 		Output << "\t ## ";
-		if( ( fabs(part_z) - fabs(part_z_previous) ) < (0 + tolerance_space) ) {
+		if( ( std::abs(part_z) - std::abs(part_z_previous) ) < (0 + tolerance_space) ) {
 		  Output << "\t ERROR |z| ordering (front/back) not respected in ring ";
 		  iERROR++;
 		} else {
@@ -569,7 +572,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 	    
 	    // disk: |z| check
 	    Output << "\t #### ";
-	    if( ( fabs(disk_z) - fabs(disk_z_previous) ) < (0 + tolerance_space) ) {
+	    if( ( std::abs(disk_z) - std::abs(disk_z_previous) ) < (0 + tolerance_space) ) {
 	      Output << "\t ERROR |z| ordering not respected in disk ";
 	      iERROR++;
 	    } else {
@@ -666,7 +669,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		  GeometricDet::nav_type detNavType = mapDetIdToGeometricDet[myDetId]->navType();
 		  //
 		  Output << "            raw Id = " << rawid << " (" << binary_detid << ")"
-			 << "\t nav type = " << printNavType(Output,&detNavType.front(),detNavType.size()) << std::endl;
+			 << "\t nav type = " << printNavType(&detNavType.front(),detNavType.size()) << std::endl;
 		  
 		  // variables
 		  fillModuleVariables(mapDetIdToGeometricDet[myDetId], polarRadius, phiRad, z);
@@ -693,7 +696,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		  
 		  // module: |z| check
 		  Output << "\t # ";
-		  if( ( fabs(module_z) - fabs(module_z_previous) ) < (0 + tolerance_space) ) {
+		  if( ( std::abs(module_z) - std::abs(module_z_previous) ) < (0 + tolerance_space) ) {
 		    Output << "\t ERROR |z| ordering not respected in module ";
 		    iERROR++;
 		  } else {
@@ -877,7 +880,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 		      GeometricDet::nav_type detNavType = mapDetIdToGeometricDet[myDetId]->navType();
 		      //
 		      Output << "            raw Id = " << rawid << " (" << binary_detid << ")"
-			     << "\t nav type = " << printNavType(Output,&detNavType.front(),detNavType.size()) << std::endl;
+			     << "\t nav type = " << printNavType(&detNavType.front(),detNavType.size()) << std::endl;
 		      
 		      // variables
 		      fillModuleVariables(mapDetIdToGeometricDet[myDetId], polarRadius, phiRad, z);
@@ -888,7 +891,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 			// TEC+
 		      case 2:
 			{
-			  phiRad = phiRad;
+                          //do not change phiRad
 			  break;
 			}
 			// TEC-
@@ -1100,7 +1103,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 	      
 	      // part: |z| check
 	      Output << "\t #### ";
-	      if( ( fabs(part_z) - fabs(part_z_previous) ) < (0 + tolerance_space) ) {
+	      if( ( std::abs(part_z) - std::abs(part_z_previous) ) < (0 + tolerance_space) ) {
 		Output << "\t ERROR |z| ordering (front/back) not respected in wheel ";
 		iERROR++;
 	      } else {
@@ -1138,7 +1141,7 @@ ModuleNumbering::analyze( const edm::Event& iEvent, const edm::EventSetup& iSetu
 	    
 	    // wheel: |z| check
 	    Output << "\t ##### ";
-	    if( ( fabs(wheel_z) - fabs(wheel_z_previous) ) < (0 + tolerance_space) ) {
+	    if( ( std::abs(wheel_z) - std::abs(wheel_z_previous) ) < (0 + tolerance_space) ) {
 	      Output << "\t ERROR |z| ordering not respected in wheel ";
 	      iERROR++;
 	    } else {

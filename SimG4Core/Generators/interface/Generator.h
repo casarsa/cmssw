@@ -33,6 +33,9 @@ public:
 private:
 
   bool particlePassesPrimaryCuts(const G4ThreeVector& p) const;
+  bool isExotic(int pdgcode) const;
+  bool isExoticNonDetectable(int pdgcode) const;
+  bool IsInTheFilterList(int pdgcode) const;
   void particleAssignDaughters(G4PrimaryParticle * p, HepMC::GenParticle * hp, 
 			       double length);
   void setGenId(G4PrimaryParticle* p, int id) const 
@@ -43,6 +46,7 @@ private:
   bool   fPtransCut;
   bool   fEtaCuts;
   bool   fPhiCuts;
+  bool   fFiductialCuts;
   double theMinPhiCut;
   double theMaxPhiCut;
   double theMinEtaCut;

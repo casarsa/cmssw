@@ -23,7 +23,7 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 
-process.load("Configuration.StandardSequences.Geometry_cff")
+process.load("Configuration.StandardSequences.GeometryRecoDB_cff")
 
 #process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_noesprefer_cff")
 #process.GlobalTag.connect = "frontier://FrontierProd/CMS_COND_21X_GLOBALTAG"
@@ -95,8 +95,9 @@ process.MySSQ = cms.ESProducer("SiStripQualityESProducer",
 #        ))
 #)
 ###
-#process.stat = cms.EDFilter("SiStripQualityStatistics",
-    #TkMapFileName = cms.untracked.string('TkMaps/TkMapBadComponents_offline.png'),
+#from DQMServices.Core.DQMEDAnalyzer import DQMEDAnalyzer
+#process.stat = DQMEDAnalyzer("SiStripQualityStatistics",
+#    #TkMapFileName = cms.untracked.string('TkMaps/TkMapBadComponents_offline.png'),
 #    TkMapFileName = cms.untracked.string(''),
 #    dataLabel = cms.untracked.string('test')
 #)

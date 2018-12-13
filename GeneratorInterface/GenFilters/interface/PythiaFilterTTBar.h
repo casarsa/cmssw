@@ -55,13 +55,13 @@
 class PythiaFilterTTBar : public edm::EDFilter {
    public:
       explicit PythiaFilterTTBar(const edm::ParameterSet&);
-      ~PythiaFilterTTBar();
+      ~PythiaFilterTTBar() override;
 
-      virtual bool filter(edm::Event&, const edm::EventSetup&);
+      bool filter(edm::Event&, const edm::EventSetup&) override;
 
    private:
 
-      std::string label_;
+      edm::EDGetTokenT<edm::HepMCProduct> token_;
 
       unsigned int decayType_;
 

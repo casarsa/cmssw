@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 VERSION='1.02'
 import os,sys
 import re
@@ -23,9 +24,9 @@ def fillnumForRun(dbsession,c,runnum):
         dbsession.transaction().start(True)
         schema=dbsession.schema(c.runinfoschema)
         if not schema:
-            raise Exception, 'cannot connect to schema '+c.runinfoschema
+            raise Exception('cannot connect to schema '+c.runinfoschema)
         if not schema.existsTable(c.runsessionparameterTable):
-            raise Exception, 'non-existing table '+c.runsessionparameterTable
+            raise Exception('non-existing table '+c.runsessionparameterTable)
 
         fillOutput=coral.AttributeList()
         fillOutput.extend("fillnum","string")
@@ -45,14 +46,14 @@ def fillnumForRun(dbsession,c,runnum):
         query.defineOutput(fillOutput)
         
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             result=cursor.currentRow()['fillnum'].data()
         del query
         dbsession.transaction().commit()
         #print result
         return result
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -65,9 +66,9 @@ def hltkeyForRun(dbsession,c,runnum):
         dbsession.transaction().start(True)
         schema=dbsession.schema(c.runinfoschema)
         if not schema:
-            raise Exception, 'cannot connect to schema '+c.runinfoschema
+            raise Exception('cannot connect to schema '+c.runinfoschema)
         if not schema.existsTable(c.runsessionparameterTable):
-            raise Exception, 'non-existing table '+c.runsessionparameterTable
+            raise Exception('non-existing table '+c.runsessionparameterTable)
 
         hltkeyOutput=coral.AttributeList()
         hltkeyOutput.extend("runnum","unsigned int")
@@ -88,7 +89,7 @@ def hltkeyForRun(dbsession,c,runnum):
         query.defineOutput(hltkeyOutput)
         
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             hltkey=cursor.currentRow()['hltkey'].data()
             result[runnum]=hltkey
@@ -96,8 +97,8 @@ def hltkeyForRun(dbsession,c,runnum):
         dbsession.transaction().commit()
         #print result
         return result
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -110,9 +111,9 @@ def l1keyForRun(dbsession,c,runnum):
         dbsession.transaction().start(True)
         schema=dbsession.schema(c.runinfoschema)
         if not schema:
-            raise Exception, 'cannot connect to schema '+c.runinfoschema
+            raise Exception('cannot connect to schema '+c.runinfoschema)
         if not schema.existsTable(c.runsessionparameterTable):
-            raise Exception, 'non-existing table '+c.runsessionparameterTable
+            raise Exception('non-existing table '+c.runsessionparameterTable)
 
         l1keyOutput=coral.AttributeList()
         l1keyOutput.extend("runnum","unsigned int")
@@ -133,7 +134,7 @@ def l1keyForRun(dbsession,c,runnum):
         query.defineOutput(l1keyOutput)
         
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             runnum=cursor.currentRow()['runnum'].data()
             l1key=cursor.currentRow()['l1key'].data()
             result[runnum]=l1key
@@ -141,8 +142,8 @@ def l1keyForRun(dbsession,c,runnum):
         dbsession.transaction().commit()
         #print result
         return result
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -171,33 +172,33 @@ def main():
     if args.action == 'hltkey':
         p=re.compile(r'^/cdaq/physics/.+')
         result=hltkeyForRun(session,c,runnumber)
-        print 'runnumber hltkey'
+        print('runnumber hltkey')
         for runnum,hltkey in result.items():
             if not args.collisiononly:
-                print runnum,hltkey
+                print(runnum,hltkey)
             if args.collisiononly and re.match(p,hltkey):
                 fillnum=fillnumForRun(session,c,runnumber)
                 if len(fillnum)!=0:
-                    print runnum,hltkey
+                    print(runnum,hltkey)
     if args.action == 'l1key':
         p=re.compile(r'^TSC_.+_collisions_.+')
         result=l1keyForRun(session,c,runnumber)
-        print 'runnumber tsc_key'
+        print('runnumber tsc_key')
         for runnum,l1key in result.items():
             if not args.collisiononly:
-                print runnum,l1key
+                print(runnum,l1key)
             if args.collisiononly and re.match(p,l1key):
                 fillnum=fillnumForRun(session,c,runnumber)
                 if len(fillnum)!=0:
-                    print runnum,l1key
+                    print(runnum,l1key)
     if args.action == 'fill':
         result=fillnumForRun(session,c,runnumber)
-        print 'runnumber fill'
+        print('runnumber fill')
         if not args.collisiononly:
-            print runnumber,result
+            print(runnumber,result)
         else:
             if len(result)!=0:
-                print runnumber,result
+                print(runnumber,result)
     del session
     del svc
         

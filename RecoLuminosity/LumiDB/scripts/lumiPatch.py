@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 VERSION='1.00'
 import os,sys,datetime
 import coral
@@ -47,12 +48,12 @@ def missingTimeRuns(dbsession,c):
         queryOutput.extend('runnum','unsigned int')
         query.defineOutput(queryOutput)
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             result.append(cursor.currentRow()['runnum'].data())
         del query
         dbsession.transaction().commit()
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
     return result
@@ -96,24 +97,24 @@ def getTimeForRun(dbsession,c,runnums):
             startTQuery.setCondition('RUNNUMBER=:runnum AND NAME=:name',startTQueryCondition)
             startTQuery.defineOutput(startTQueryOutput)
             startTCursor=startTQuery.execute()
-            while startTCursor.next():
+            while next(startTCursor):
                 startTime=startTCursor.currentRow()['starttime'].data()           
             stopTQueryCondition['runnum'].setData(int(runnum))
             stopTQueryCondition['name'].setData('CMS.LVL0:STOP_TIME_T')
             stopTQuery.setCondition('RUNNUMBER=:runnum AND NAME=:name',stopTQueryCondition)
             stopTQuery.defineOutput(stopTQueryOutput)
             stopTCursor=stopTQuery.execute()
-            while stopTCursor.next():
+            while next(stopTCursor):
                 stopTime=stopTCursor.currentRow()['stoptime'].data()
             if not startTime or not stopTime:
-                print 'Warning: no startTime or stopTime found for run ',runnum
+                print('Warning: no startTime or stopTime found for run ',runnum)
             else:    
                 result[runnum]=(startTime,stopTime)
             del startTQuery
             del stopTQuery
         dbsession.transaction().commit()
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
     return result
@@ -137,26 +138,25 @@ def addTimeForRun(dbsession,c,runtimedict):
         inputData.extend('starttime','time stamp')
         inputData.extend('stoptime','time stamp')
         inputData.extend('runnum','unsigned int')
-        runs=runtimedict.keys()
-        runs.sort()
+        runs=sorted(runtimedict.keys())
         for runnum in runs:
             (startTimeT,stopTimeT)=runtimedict[runnum]
             inputData['starttime'].setData(startTimeT)
             inputData['stoptime'].setData(stopTimeT)
             inputData['runnum'].setData(int(runnum))
             nchanged=schema.tableHandle(c.runsummarytable).dataEditor().updateRows('STARTTIME=:starttime,STOPTIME=:stoptime','RUNNUM=:runnum',inputData)
-            print 'run '+str(runnum)+' update '+str(nchanged)+' row  with starttime ,stoptime'
-            print startTimeT,stopTimeT
+            print('run '+str(runnum)+' update '+str(nchanged)+' row  with starttime ,stoptime')
+            print(startTimeT,stopTimeT)
             totalchanged=totalchanged+nchanged
         if c.isdryrun:
             dbsession.transaction().rollback()
         else:
             dbsession.transaction().commit()   
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
-    print 'total number of rows changed: ',totalchanged
+    print('total number of rows changed: ',totalchanged)
     
 def recalibrateLumiForRun(dbsession,c,delta,runnums):
     '''
@@ -171,20 +171,20 @@ def recalibrateLumiForRun(dbsession,c,delta,runnums):
         if not schema.existsTable(c.lumisummarytable):
             raise 'non-existing table '+c.lumisummarytable
         runliststring=','.join([str(x) for x in runnums])
-        print 'applying delta '+delta+' on run list '+runliststring
+        print('applying delta '+delta+' on run list '+runliststring)
         nchanged=0
         inputData=coral.AttributeList()
         inputData.extend('delta','float')
         inputData['delta'].setData(float(delta))
         nchanged=schema.tableHandle(c.lumisummarytable).dataEditor().updateRows('INSTLUMI=INSTLUMI*:delta','RUNNUM in ('+runliststring+')',inputData)
-        print 'total number of row changed ',nchanged
+        print('total number of row changed ',nchanged)
         if c.isdryrun:
             dbsession.transaction().rollback()
         else:
             dbsession.transaction().commit()
         return nchanged
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -223,15 +223,15 @@ def GTdeadtimeBeamActiveForRun(dbsession,c,runnum):
         query.defineOutput(deadOutput)
 
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             cmslsnum=cursor.currentRow()['lsnr'].data()
             deadcount=cursor.currentRow()['deadcount'].data()
             result[cmslsnum]=deadcount
             #print 'deadcount',deadcount
         del query
         return result
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -267,15 +267,15 @@ def WBMdeadtimeBeamActiveForRun(dbsession,c,runnum):
         query.defineOutput(deadOutput)
         
         cursor=query.execute()
-        while cursor.next():
+        while next(cursor):
             cmslsnum=cursor.currentRow()['lsnr'].data()
             deadcount=cursor.currentRow()['deadcount'].data()
             result[cmslsnum]=deadcount
             #print 'deadcount',deadcount
         del query
         return result
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -304,12 +304,12 @@ def patchDeadtimeForRun(dbsession,c,runnum,deadtimeDict):
             inputData['runnum'].setData(runnum)
             inputData['lsnum'].setData(lsnum)
             nchanged=schema.tableHandle(c.lumitrgtable).dataEditor().updateRows('DEADTIME=:deadtimebeamactive','RUNNUM=:runnum AND CMSLSNUM=:lsnum',inputData)
-            print 'rows changed for ls ',str(lsnum),str(nchanged)
+            print('rows changed for ls ',str(lsnum),str(nchanged))
             totalchanged+=nchanged
         dbsession.transaction().commit()
         return totalchanged
-    except Exception,e:
-        print str(e)
+    except Exception as e:
+        print(str(e))
         dbsession.transaction().rollback()
         del dbsession
         
@@ -355,59 +355,59 @@ def main():
         if not sourceConnect:
             raise Exception('deadtimeGT action requies -s option for source connection string')
         deadresult=GTdeadtimeBeamActiveForRun(sourcesession,c,runnumber)
-        print 'reading from ',sourceConnect
-        print 'run : ',runnumber
-        print 'LS:deadtimebeamactive'
+        print('reading from ',sourceConnect)
+        print('run : ',runnumber)
+        print('LS:deadtimebeamactive')
         #print deadresult
         if deadresult and len(deadresult)!=0:
             for cmsls,deadtimebeamactive in deadresult.items():
-                print cmsls,deadtimebeamactive
+                print(cmsls,deadtimebeamactive)
         else:
-            print 'no deadtime found for run ',runnumber
-            print 'exit'
+            print('no deadtime found for run ',runnumber)
+            print('exit')
             return
-        print 'total LS: ',len(deadresult)
+        print('total LS: ',len(deadresult))
 #        if len(deadresult)!=max( [ (deadresult[x],x) for x in deadresult] )[1]:
         if len(deadresult)!=max( [ x for x in deadresult.keys() ] ):
-            print 'total ls: ',len(deadresult)
+            print('total ls: ',len(deadresult))
             #print 'max key: ',max( [ x for x in deadresult.keys()])
-            print 'alert: missing Lumi Sections in the middle'
+            print('alert: missing Lumi Sections in the middle')
             for x in range(1,max( [ x for x in deadresult.keys()] ) ):
-                if not deadresult.has_key(x):
-                    print 'filling up LS deadtime with 0: LS : ',x
+                if x not in deadresult:
+                    print('filling up LS deadtime with 0: LS : ',x)
                     deadresult[x]=0
         #print deadresult
         if not args.dryrun:
-            print 'updating ',destConnect
+            print('updating ',destConnect)
             nupdated=patchDeadtimeForRun(destsession,c,int(runnumber),deadresult)
-            print 'number of updated rows ',nupdated
+            print('number of updated rows ',nupdated)
     elif args.action == 'deadtimeWBM':
         if not sourceConnect:
             raise Exception('deadtimeWBM action requies -s option for source connection string')
         deadresult=WBMdeadtimeBeamActiveForRun(sourcesession,c,runnumber)
-        print 'reading from ',sourceConnect
-        print 'run : ',runnumber
-        print 'LS:deadtimebeamactive'
+        print('reading from ',sourceConnect)
+        print('run : ',runnumber)
+        print('LS:deadtimebeamactive')
         #print deadresult
         if deadresult and len(deadresult)!=0:
             for cmsls,deadtimebeamactive in deadresult.items():
-                print cmsls,deadtimebeamactive
+                print(cmsls,deadtimebeamactive)
         else:
-            print 'no deadtime found for run ',runnumber
-            print 'exit'
+            print('no deadtime found for run ',runnumber)
+            print('exit')
             return
-        print 'total LS: ',len(deadresult)
+        print('total LS: ',len(deadresult))
         if len(deadresult)!=max( [ (deadresult[x],x) for x in deadresult])[1]:
-            print 'alert: missing Lumi Sections in the middle'
+            print('alert: missing Lumi Sections in the middle')
             for x in range(1,max( [ (deadresult[x],x) for x in deadresult])[1]):
-                if not deadresult.has_key(x):
-                    print 'filling up LS deadtime with 0: LS : ',x
+                if x not in deadresult:
+                    print('filling up LS deadtime with 0: LS : ',x)
                     deadresult[x]=0
-        print deadresult
+        print(deadresult)
         if not args.dryrun:
-            print 'updating ',destConnect
+            print('updating ',destConnect)
             nupdated=patchDeadtimeForRun(destsession,c,int(runnumber),deadresult)
-            print 'number of updated rows ',nupdated
+            print('number of updated rows ',nupdated)
     elif args.action == 'lumicalib':
         if not args.delta or args.delta==0:
             raise Exception('Must provide non-zero -delta argument')
@@ -435,8 +435,8 @@ def main():
             raise Exception('runtimestamp action requies -s option for source connection string')
         if not args.runnumber and not args.inputfile: #if no runnumber nor input file specified, check all
             runnums=missingTimeRuns(destsession,c)
-            print 'these runs miss start/stop time: ',runnums
-            print 'total : ',len(runnums)
+            print('these runs miss start/stop time: ',runnums)
+            print('total : ',len(runnums))
         elif args.runnumber:
             runnums=[int(args.runnumber)]
         elif args.inputfile:

@@ -25,6 +25,7 @@
 using namespace std;
 
 #include <string>
+#include <utility>
 
 using namespace std;
 
@@ -33,7 +34,7 @@ DTGeometryBuilderFromDDD::DTGeometryBuilderFromDDD() {}
 DTGeometryBuilderFromDDD::~DTGeometryBuilderFromDDD(){}
 
 
-void DTGeometryBuilderFromDDD::build(boost::shared_ptr<DTGeometry> theGeometry,
+void DTGeometryBuilderFromDDD::build(DTGeometry& theGeometry,
                                      const DDCompactView* cview,
                                      const MuonDDDConstants& muonConstants){
   //  cout << "DTGeometryBuilderFromDDD::build" << endl;
@@ -42,29 +43,18 @@ void DTGeometryBuilderFromDDD::build(boost::shared_ptr<DTGeometry> theGeometry,
 
   std::string attribute = "MuStructure"; 
   std::string value     = "MuonBarrelDT";
-  DDValue val(attribute, value, 0.0);
 
   // Asking only for the Muon DTs
-  DDSpecificsFilter filter;
-  filter.setCriteria(val,  // name & value of a variable 
-		     DDSpecificsFilter::matches,
-		     DDSpecificsFilter::AND, 
-		     true, // compare strings otherwise doubles
-		     true  // use merged-specifics or simple-specifics
-		     );
-  DDFilteredView fview(*cview);
-  fview.addFilter(filter);
+  DDSpecificsMatchesValueFilter filter{DDValue(attribute, value, 0.0)};
+
+  DDFilteredView fview(*cview,filter);
   buildGeometry(theGeometry, fview, muonConstants);
 }
 
 
-void DTGeometryBuilderFromDDD::buildGeometry(boost::shared_ptr<DTGeometry> theGeometry,
+void DTGeometryBuilderFromDDD::buildGeometry(DTGeometry& theGeometry,
                                              DDFilteredView& fv,
                                              const MuonDDDConstants& muonConstants) const {
-  // static const string t0 = "DTGeometryBuilderFromDDD::buildGeometry";
-  // TimeMe timer(t0,true);
-
-  //DTGeometry* theGeometry = new DTGeometry;
 
   bool doChamber = fv.firstChild();
 
@@ -88,7 +78,7 @@ void DTGeometryBuilderFromDDD::buildGeometry(boost::shared_ptr<DTGeometry> theGe
     while (doSL) {
       SLCounter++;
       DTSuperLayer* sl = buildSuperLayer(fv, chamber, type, muonConstants);
-      theGeometry->add(sl);
+      theGeometry.add(sl);
 
       bool doL = fv.firstChild();
       int LCounter=0;
@@ -96,7 +86,7 @@ void DTGeometryBuilderFromDDD::buildGeometry(boost::shared_ptr<DTGeometry> theGe
       while (doL) {
         LCounter++;
         DTLayer* layer = buildLayer(fv, sl, type, muonConstants);
-        theGeometry->add(layer);
+        theGeometry.add(layer);
 
         fv.parent();
         doL = fv.nextSibling(); // go to next layer
@@ -105,7 +95,7 @@ void DTGeometryBuilderFromDDD::buildGeometry(boost::shared_ptr<DTGeometry> theGe
       fv.parent();
       doSL = fv.nextSibling(); // go to next SL
     } // sls
-    theGeometry->add(chamber);
+    theGeometry.add(chamber);
 
     fv.parent();
     doChamber = fv.nextSibling(); // go to next chamber
@@ -212,10 +202,10 @@ DTLayer* DTGeometryBuilderFromDDD::buildLayer(DDFilteredView& fv,
 vector<double> 
 DTGeometryBuilderFromDDD::extractParameters(DDFilteredView& fv) const {
   vector<double> par;
-  if (fv.logicalPart().solid().shape() != ddbox) {
+  if (fv.logicalPart().solid().shape() != DDSolidShape::ddbox) {
     DDBooleanSolid bs(fv.logicalPart().solid());
     DDSolid A = bs.solidA();
-    while (A.shape() != ddbox) {
+    while (A.shape() != DDSolidShape::ddbox) {
       DDBooleanSolid bs(A);
       A = bs.solidA();
     }
@@ -241,7 +231,7 @@ DTGeometryBuilderFromDDD::plane(const DDFilteredView& fv,
   //     ORCA uses 'passive' rotation. 
   //     'active' and 'passive' rotations are inverse to each other
   //  DDRotationMatrix tmp = fv.rotation();
-  DDRotationMatrix rotation = fv.rotation();//REMOVED .Inverse();
+  const DDRotationMatrix& rotation = fv.rotation();//REMOVED .Inverse();
   DD3Vector x, y, z;
   rotation.GetComponents(x,y,z);
 //   std::cout << "INVERSE rotation by its own operator: "<< fv.rotation() << std::endl;

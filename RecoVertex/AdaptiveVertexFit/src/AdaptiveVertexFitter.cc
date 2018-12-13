@@ -22,7 +22,9 @@ namespace {
       auto s = cont.size();
       float pt2[s]; int ind[s]; int i=0; 
       for (auto const & tk : cont) { ind[i]=i; pt2[i++] = tk.impactPointState().globalMomentum().perp2();}
-      std::sort(ind,ind+s, [&](int i, int j){return pt2[i]>pt2[j];} ); 
+      //clang can not handle lambdas with variable length arrays
+      auto * p_pt2 = pt2;
+      std::sort(ind,ind+s, [p_pt2](int i, int j){return p_pt2[i]>p_pt2[j];} ); 
       std::vector<reco::TransientTrack> tmp; tmp.reserve(s);
       for (auto i=0U; i<s; ++i) tmp.emplace_back(std::move( cont[ind[i]] ) );
       cont.swap(tmp);
@@ -63,7 +65,9 @@ namespace {
       auto s = cont.size();
       float d2[s]; int ind[s]; int i=0;
       for (auto const & tk : cont) { ind[i]=i; d2[i++] = (tk->linearizedTrack()->track().initialFreeState().position() - ref ).mag2();}
-      std::sort(ind,ind+s, [&](int i, int j){return d2[i]<d2[j];} );
+      //clang can not handle lambdas with variable length arrays
+      auto * p_d2=d2;
+      std::sort(ind,ind+s, [p_d2](int i, int j){return p_d2[i]<p_d2[j];} );
       std::vector<RefCountedVertexTrack> tmp; tmp.reserve(s);
       for (auto i=0U; i<s; ++i) tmp.emplace_back(std::move( cont[ind[i]] ) );
       cont.swap(tmp);
@@ -189,7 +193,7 @@ AdaptiveVertexFitter::vertex(const vector<RefCountedVertexTrack> & tracks) const
 CachingVertex<5>
 AdaptiveVertexFitter::vertex(const vector<RefCountedVertexTrack> & tracks, const reco::BeamSpot & spot ) const
 {
-  if ( tracks.size() < 1 )
+  if ( tracks.empty() )
   {
     LogError("RecoVertex|AdaptiveVertexFitter")
       << "Supplied no tracks. Vertex is invalid.";
@@ -230,7 +234,7 @@ CachingVertex<5>
 AdaptiveVertexFitter::vertex(const vector<reco::TransientTrack> & unstracks,
 			       const reco::BeamSpot& beamSpot) const
 {
-  if ( unstracks.size() < 1 )
+  if ( unstracks.empty() )
   {
     LogError("RecoVertex|AdaptiveVertexFitter")
       << "Supplied no tracks. Vertex is invalid.";
@@ -267,7 +271,7 @@ CachingVertex<5> AdaptiveVertexFitter::vertex(const vector<reco::TransientTrack>
                   const GlobalError& priorError) const
 
 {
-  if ( tracks.size() < 1 )
+  if ( tracks.empty() )
   {
     LogError("RecoVertex|AdaptiveVertexFitter")
       << "Supplied no tracks. Vertex is invalid.";
@@ -288,7 +292,7 @@ CachingVertex<5> AdaptiveVertexFitter::vertex(
                   const GlobalPoint& priorPos,
                   const GlobalError& priorError) const
 {
-  if ( tracks.size() < 1 )
+  if ( tracks.empty() )
   {
     LogError("RecoVertex|AdaptiveVertexFitter")
       << "Supplied no tracks. Vertex is invalid.";
@@ -338,7 +342,7 @@ AdaptiveVertexFitter::reLinearizeTracks(
                                 const vector<RefCountedVertexTrack> & tracks,
                                 const CachingVertex<5> & vertex ) const
 {
-  VertexState seed = vertex.vertexState();
+  const VertexState& seed = vertex.vertexState();
   GlobalPoint linP = seed.position();
   vector<RefCountedLinearizedTrackState> lTracks;
   for(vector<RefCountedVertexTrack>::const_iterator i = tracks.begin();
@@ -390,7 +394,7 @@ AdaptiveVertexFitter::reWeightTracks(
                     const vector<RefCountedLinearizedTrackState> & lTracks,
                     const CachingVertex<5> & vertex ) const
 {
-  VertexState seed = vertex.vertexState();
+  const VertexState& seed = vertex.vertexState();
   // cout << "[AdaptiveVertexFitter] now reweight around " << seed.position() << endl;
   theNr++;
   // GlobalPoint pos = seed.position();

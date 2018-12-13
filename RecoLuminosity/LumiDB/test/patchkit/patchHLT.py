@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys,os,csv,re,coral,array
 from RecoLuminosity.LumiDB import argparse,sessionManager,CommonUtil,dataDML,revisionDML,nameDealer,dbUtil
 DATABRANCH_ID=3
@@ -32,7 +33,7 @@ def patchV2(dbsession,runnum,inputpathnames,inputdata):
                 if cmslsnum in inputdata.keys(): # if overlap with new data, update old data with new 
                     toupdate[cmslsnum]=inputdata[cmslsnum]
         for cmslsnum,lshltcontent in inputdata.items():
-            if toupdate.has_key(cmslsnum): continue #it's to update not to insert
+            if cmslsnum in toupdate: continue #it's to update not to insert
             toinsert[cmslsnum]=inputdata[cmslsnum]
         #
         # insert into lshlt(data_id,runnum,cmslsnum,prescaleblob,hltcountblob,hltacceptblob) values()
@@ -224,7 +225,7 @@ def  main(*args):
     options=parser.parse_args()
     (runnum,lsboundaries,pathinfo)=parseInfile(options.ifile)
     (pathnames,dataresult)=parsepresc(pathinfo,options.lsmin,options.lsmax,lsboundaries)
-    print pathnames
+    print(pathnames)
     os.environ['CORAL_AUTH_PATH'] = options.authpath      
     msg=coral.MessageStream('')
     msg.setMsgVerbosity(coral.message_Level_Error)
