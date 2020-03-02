@@ -58,13 +58,18 @@ private:
 
   void analyze(const edm::Event&, const edm::EventSetup&) override;
 
+  template <typename T>
+  void accumulateSimHits(const T&, std::unordered_map<uint32_t, MTDHit>&);
+
   // ------------ member data ------------
 
   const std::string folder_;
+  const bool useCrossingFrame_;
   const float hitMinEnergy_;
 
   edm::EDGetTokenT<FTLRecHitCollection> btlRecHitsToken_;
-  edm::EDGetTokenT<CrossingFrame<PSimHit> > btlSimHitsToken_;
+  edm::EDGetTokenT<CrossingFrame<PSimHit> > btlSimHitsCFToken_;
+  edm::EDGetTokenT<edm::PSimHitContainer> btlSimHitsToken_;
 
   // --- histograms declaration
 
@@ -98,9 +103,13 @@ private:
 // ------------ constructor and destructor --------------
 BtlRecHitsValidation::BtlRecHitsValidation(const edm::ParameterSet& iConfig)
     : folder_(iConfig.getParameter<std::string>("folder")),
+      useCrossingFrame_(iConfig.getParameter<bool>("useCrossingFrame")),
       hitMinEnergy_(iConfig.getParameter<double>("hitMinimumEnergy")) {
   btlRecHitsToken_ = consumes<FTLRecHitCollection>(iConfig.getParameter<edm::InputTag>("inputTag"));
-  btlSimHitsToken_ = consumes<CrossingFrame<PSimHit> >(iConfig.getParameter<edm::InputTag>("simHitsTag"));
+  if (useCrossingFrame_)
+    btlSimHitsCFToken_ = consumes<CrossingFrame<PSimHit> >(iConfig.getParameter<edm::InputTag>("simHitsTag"));
+  else
+    btlSimHitsToken_ = consumes<edm::PSimHitContainer>(iConfig.getParameter<edm::InputTag>("simHitsTag"));
 }
 
 BtlRecHitsValidation::~BtlRecHitsValidation() {}
@@ -108,7 +117,6 @@ BtlRecHitsValidation::~BtlRecHitsValidation() {}
 // ------------ method called for each event  ------------
 void BtlRecHitsValidation::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   using namespace edm;
-  using namespace geant_units::operators;
 
   edm::ESHandle<MTDGeometry> geometryHandle;
   iSetup.get<MTDDigiGeometryRecord>().get(geometryHandle);
@@ -118,37 +126,19 @@ void BtlRecHitsValidation::analyze(const edm::Event& iEvent, const edm::EventSet
   iSetup.get<MTDTopologyRcd>().get(topologyHandle);
   const MTDTopology* topology = topologyHandle.product();
 
-  auto btlRecHitsHandle = makeValid(iEvent.getHandle(btlRecHitsToken_));
-  auto btlSimHitsHandle = makeValid(iEvent.getHandle(btlSimHitsToken_));
-  MixCollection<PSimHit> btlSimHits(btlSimHitsHandle.product());
+  // --- Accumulate the BLT SIM hits
 
-  // --- Loop over the BLT SIM hits
   std::unordered_map<uint32_t, MTDHit> m_btlSimHits;
-  for (auto const& simHit : btlSimHits) {
-    // --- Use only hits compatible with the in-time bunch-crossing
-    if (simHit.tof() < 0 || simHit.tof() > 25.)
-      continue;
 
-    DetId id = simHit.detUnitId();
-
-    auto simHitIt = m_btlSimHits.emplace(id.rawId(), MTDHit()).first;
-
-    // --- Accumulate the energy (in MeV) of SIM hits in the same detector cell
-    (simHitIt->second).energy += convertUnitsTo(0.001_MeV, simHit.energyLoss());
-
-    // --- Get the time of the first SIM hit in the cell
-    if ((simHitIt->second).time == 0 || simHit.tof() < (simHitIt->second).time) {
-      (simHitIt->second).time = simHit.tof();
-
-      auto hit_pos = simHit.entryPoint();
-      (simHitIt->second).x_local = hit_pos.x();
-      (simHitIt->second).y_local = hit_pos.y();
-      (simHitIt->second).z_local = hit_pos.z();
-    }
-
-  }  // simHit loop
+  if (useCrossingFrame_) {
+    MixCollection<PSimHit> btlSimHits(makeValid(iEvent.getHandle(btlSimHitsCFToken_)).product());
+    accumulateSimHits(btlSimHits, m_btlSimHits);
+  } else
+    accumulateSimHits(*makeValid(iEvent.getHandle(btlSimHitsToken_)), m_btlSimHits);
 
   // --- Loop over the BLT RECO hits
+
+  auto btlRecHitsHandle = makeValid(iEvent.getHandle(btlRecHitsToken_));
 
   unsigned int n_reco_btl = 0;
 
@@ -203,6 +193,40 @@ void BtlRecHitsValidation::analyze(const edm::Event& iEvent, const edm::EventSet
 
   if (n_reco_btl > 0)
     meNhits_->Fill(log10(n_reco_btl));
+
+  // --- Clean-up maps
+  m_btlSimHits.clear();
+}
+
+// ------------ method to accumulate the SimHits --------
+template <typename T>
+void BtlRecHitsValidation::accumulateSimHits(const T& btlSimHits,
+                                             std::unordered_map<uint32_t, MTDHit>& map_btlSimHits) {
+  using namespace geant_units::operators;
+
+  for (auto const& simHit : btlSimHits) {
+    // --- Use only hits compatible with the in-time bunch-crossing
+    if (simHit.tof() < 0 || simHit.tof() > 25.)
+      continue;
+
+    DetId id = simHit.detUnitId();
+
+    auto simHitIt = map_btlSimHits.emplace(id.rawId(), MTDHit()).first;
+
+    // --- Accumulate the energy (in MeV) of SIM hits in the same detector cell
+    (simHitIt->second).energy += convertUnitsTo(0.001_MeV, simHit.energyLoss());
+
+    // --- Get the time of the first SIM hit in the cell
+    if ((simHitIt->second).time == 0 || simHit.tof() < (simHitIt->second).time) {
+      (simHitIt->second).time = simHit.tof();
+
+      auto hit_pos = simHit.entryPoint();
+      (simHitIt->second).x_local = hit_pos.x();
+      (simHitIt->second).y_local = hit_pos.y();
+      (simHitIt->second).z_local = hit_pos.z();
+    }
+
+  }  // simHit loop
 }
 
 // ------------ method for histogram booking ------------
@@ -256,11 +280,12 @@ void BtlRecHitsValidation::fillDescriptions(edm::ConfigurationDescriptions& desc
   edm::ParameterSetDescription desc;
 
   desc.add<std::string>("folder", "MTD/BTL/RecHits");
+  desc.add<bool>("useCrossingFrame", true);
   desc.add<edm::InputTag>("inputTag", edm::InputTag("mtdRecHits", "FTLBarrel"));
   desc.add<edm::InputTag>("simHitsTag", edm::InputTag("mix", "g4SimHitsFastTimerHitsBarrel"));
   desc.add<double>("hitMinimumEnergy", 1.);  // [MeV]
 
-  descriptions.add("btlRecHits", desc);
+  descriptions.add("btlRecHitsDefault", desc);
 }
 
 DEFINE_FWK_MODULE(BtlRecHitsValidation);

@@ -52,12 +52,19 @@ private:
 
   void analyze(const edm::Event&, const edm::EventSetup&) override;
 
+  template <typename T>
+  void accumulateSimHits(const T&,
+                         std::unordered_map<uint32_t, MTDHit>*,
+                         std::unordered_map<uint32_t, std::set<int> >*);
+
   // ------------ member data ------------
 
   const std::string folder_;
+  const bool useCrossingFrame_;
   const float hitMinEnergy_;
 
-  edm::EDGetTokenT<CrossingFrame<PSimHit> > etlSimHitsToken_;
+  edm::EDGetTokenT<CrossingFrame<PSimHit> > etlSimHitsCFToken_;
+  edm::EDGetTokenT<edm::PSimHitContainer> etlSimHitsToken_;
 
   // --- histograms declaration
 
@@ -89,8 +96,12 @@ private:
 // ------------ constructor and destructor --------------
 EtlSimHitsValidation::EtlSimHitsValidation(const edm::ParameterSet& iConfig)
     : folder_(iConfig.getParameter<std::string>("folder")),
+      useCrossingFrame_(iConfig.getParameter<bool>("useCrossingFrame")),
       hitMinEnergy_(iConfig.getParameter<double>("hitMinimumEnergy")) {
-  etlSimHitsToken_ = consumes<CrossingFrame<PSimHit> >(iConfig.getParameter<edm::InputTag>("inputTag"));
+  if (useCrossingFrame_)
+    etlSimHitsCFToken_ = consumes<CrossingFrame<PSimHit> >(iConfig.getParameter<edm::InputTag>("inputTag"));
+  else
+    etlSimHitsToken_ = consumes<edm::PSimHitContainer>(iConfig.getParameter<edm::InputTag>("inputTag"));
 }
 
 EtlSimHitsValidation::~EtlSimHitsValidation() {}
@@ -104,40 +115,19 @@ void EtlSimHitsValidation::analyze(const edm::Event& iEvent, const edm::EventSet
   iSetup.get<MTDDigiGeometryRecord>().get(geometryHandle);
   const MTDGeometry* geom = geometryHandle.product();
 
-  auto etlSimHitsHandle = makeValid(iEvent.getHandle(etlSimHitsToken_));
-  MixCollection<PSimHit> etlSimHits(etlSimHitsHandle.product());
+  //auto etlSimHitsHandle = makeValid(iEvent.getHandle(etlSimHitsToken_));
+  //MixCollection<PSimHit> etlSimHits(etlSimHitsHandle.product());
+
+  // --- Accumulate the ELT SIM hits
 
   std::unordered_map<uint32_t, MTDHit> m_etlHits[2];
   std::unordered_map<uint32_t, std::set<int> > m_etlTrkPerCell[2];
 
-  // --- Loop over the BLT SIM hits
-  for (auto const& simHit : etlSimHits) {
-    // --- Use only hits compatible with the in-time bunch-crossing
-    if (simHit.tof() < 0 || simHit.tof() > 25.)
-      continue;
-
-    ETLDetId id = simHit.detUnitId();
-
-    int idet = (id.zside() + 1) / 2;
-
-    m_etlTrkPerCell[idet][id.rawId()].insert(simHit.trackId());
-
-    auto simHitIt = m_etlHits[idet].emplace(id.rawId(), MTDHit()).first;
-
-    // --- Accumulate the energy (in MeV) of SIM hits in the same detector cell
-    (simHitIt->second).energy += convertUnitsTo(0.001_MeV, simHit.energyLoss());
-
-    // --- Get the time of the first SIM hit in the cell
-    if ((simHitIt->second).time == 0 || simHit.tof() < (simHitIt->second).time) {
-      (simHitIt->second).time = simHit.tof();
-
-      auto hit_pos = simHit.entryPoint();
-      (simHitIt->second).x = hit_pos.x();
-      (simHitIt->second).y = hit_pos.y();
-      (simHitIt->second).z = hit_pos.z();
-    }
-
-  }  // simHit loop
+  if (useCrossingFrame_) {
+    MixCollection<PSimHit> etlSimHits(makeValid(iEvent.getHandle(etlSimHitsCFToken_)).product());
+    accumulateSimHits(etlSimHits, m_etlHits, m_etlTrkPerCell);
+  } else
+    accumulateSimHits(*makeValid(iEvent.getHandle(etlSimHitsToken_)), m_etlHits, m_etlTrkPerCell);
 
   // ==============================================================================
   //  Histogram filling
@@ -192,8 +182,50 @@ void EtlSimHitsValidation::analyze(const edm::Event& iEvent, const edm::EventSet
     }  // hit loop
 
   }  // idet loop
+
+  // --- Clean-up maps
+  m_etlHits[0].clear();
+  m_etlHits[1].clear();
+  m_etlTrkPerCell[0].clear();
+  m_etlTrkPerCell[1].clear();
 }
 
+// ------------ method to accumulate the SimHits --------
+template <typename T>
+void EtlSimHitsValidation::accumulateSimHits(const T& etlSimHits,
+                                             std::unordered_map<uint32_t, MTDHit>* map_etlHits,
+                                             std::unordered_map<uint32_t, std::set<int> >* map_etlTrkPerCell) {
+  using namespace geant_units::operators;
+
+  // --- Loop over the ELT SIM hits
+  for (auto const& simHit : etlSimHits) {
+    // --- Use only hits compatible with the in-time bunch-crossing
+    if (simHit.tof() < 0 || simHit.tof() > 25.)
+      continue;
+
+    ETLDetId id = simHit.detUnitId();
+
+    int idet = (id.zside() + 1) / 2;
+
+    map_etlTrkPerCell[idet][id.rawId()].insert(simHit.trackId());
+
+    auto simHitIt = map_etlHits[idet].emplace(id.rawId(), MTDHit()).first;
+
+    // --- Accumulate the energy (in MeV) of SIM hits in the same detector cell
+    (simHitIt->second).energy += convertUnitsTo(0.001_MeV, simHit.energyLoss());
+
+    // --- Get the time of the first SIM hit in the cell
+    if ((simHitIt->second).time == 0 || simHit.tof() < (simHitIt->second).time) {
+      (simHitIt->second).time = simHit.tof();
+
+      auto hit_pos = simHit.entryPoint();
+      (simHitIt->second).x = hit_pos.x();
+      (simHitIt->second).y = hit_pos.y();
+      (simHitIt->second).z = hit_pos.z();
+    }
+
+  }  // simHit loop
+}
 // ------------ method for histogram booking ------------
 void EtlSimHitsValidation::bookHistograms(DQMStore::IBooker& ibook,
                                           edm::Run const& run,
@@ -263,10 +295,11 @@ void EtlSimHitsValidation::fillDescriptions(edm::ConfigurationDescriptions& desc
   edm::ParameterSetDescription desc;
 
   desc.add<std::string>("folder", "MTD/ETL/SimHits");
+  desc.add<bool>("useCrossingFrame", true);
   desc.add<edm::InputTag>("inputTag", edm::InputTag("mix", "g4SimHitsFastTimerHitsEndcap"));
   desc.add<double>("hitMinimumEnergy", 0.1);  // [MeV]
 
-  descriptions.add("etlSimHits", desc);
+  descriptions.add("etlSimHitsDefault", desc);
 }
 
 DEFINE_FWK_MODULE(EtlSimHitsValidation);
