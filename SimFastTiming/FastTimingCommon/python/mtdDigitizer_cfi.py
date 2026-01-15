@@ -23,7 +23,7 @@ _barrel_MTDDigitizer = cms.PSet(
         _common_BTLparameters,
         SigmaLCEpositionSlope     = cms.double(0.002),  # [1/cm] sigma of the LCE variation vs longitudinal position shift
         PulseT2Threshold          = cms.double(8.764),  # [uA] T2 threshold
-        PulseEThrershold          = cms.double(20.32),  # [uA] energy threshold (it corresponds to 1 MeV)
+        PulseEThreshold           = cms.double(20.32),  # [uA] energy threshold (it corresponds to 1 MeV)
         ChannelRearmMode          = cms.uint32(2),      # 0: the channel rearming is switched off
                                                         # 1: the channel is rearmed after the end-of-event signal
                                                         # 2: the channel is rearmed after ChannelRearmNClocks cycles of the TOFHiR clock
