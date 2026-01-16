@@ -57,14 +57,12 @@ FTLUncalibratedRecHit BTLUncalibRecHitAlgo::makeRecHit(const BTLDataFrame& dataF
 
   // --- Reconstruct amplitude and time of the crystal's right channel
   if (sampleRight.data() > 0) {
-    // Correct the time of the right SiPM for the time-walk
-    amplitude.first = double(sampleRight.data());
-    time.first = double(sampleRight.toa()) -
-                 timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.first}}, std::array<double, 1>{{0.0}});
-
     // Convert ADC counts to MeV and TDC counts to ns
     amplitude.first = (double(sampleRight.data()) - npeToADC_[0]) * invADCPerMeV_;
-    time.first *= tdc_to_ns_;
+    time.first = double(sampleRight.toa()) * tdc_to_ns_;
+
+    // Correct the time of the right SiPM for the time-walk
+    time.first -= timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.first}}, std::array<double, 1>{{0.0}});
 
     flag |= 0x1;
     nHits += 1.;
@@ -72,14 +70,12 @@ FTLUncalibratedRecHit BTLUncalibRecHitAlgo::makeRecHit(const BTLDataFrame& dataF
 
   // --- Reconstruct amplitude and time of the crystal's left channel
   if (sampleLeft.data() > 0) {
-    // Correct the time of the left SiPM for the time-walk
-    amplitude.second = double(sampleLeft.data());
-    time.second = double(sampleLeft.toa()) -
-                  timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.second}}, std::array<double, 1>{{0.0}});
-
     // Convert ADC counts to MeV and TDC counts to ns
     amplitude.second = (double(sampleLeft.data()) - npeToADC_[0]) * invADCPerMeV_;
-    time.second *= tdc_to_ns_;
+    time.second = double(sampleLeft.toa()) * tdc_to_ns_;
+
+    // Correct the time of the left SiPM for the time-walk
+    time.second -= timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.second}}, std::array<double, 1>{{0.0}});
 
     flag |= (0x1 << 1);
     nHits += 1.;

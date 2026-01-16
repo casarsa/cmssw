@@ -262,7 +262,8 @@ def ageMTD(process,lumi):
             "time_over_thr1": [1.3e9, 9.58676, -2.51351e-10, 5.98501e-18, -3.326821e-27, -7.61576e-10, 13.21],
             "slew_rate": [1.3e9, -0.8, 8.7e-9, 11.1],
             "pulse_q": [-43.5, 0.0793],
-            "hit_time_res": "0.143789*pow(x,-1.09324)+0.0166063"
+            "hit_time_res": "0.143789*pow(x,-1.09324)+0.0166063",
+            "time_walk_corr":"2.54469*pow(x,-0.554105)-0.0632885"
         },
         3000: {
             "light_output": 1004.,
@@ -277,7 +278,8 @@ def ageMTD(process,lumi):
             "time_over_thr1": [1.3e9, 9.58676, -2.51351e-10, 5.98501e-18, -3.326821e-27, -7.61576e-10, 13.21],
             "slew_rate": [1.3e9, -0.8, 8.7e-9, 11.1],
             "pulse_q": [-34.3, 0.085],
-            "hit_time_res": "0.2567*pow(x,-1.10973)+0.0165099"
+            "hit_time_res": "0.2567*pow(x,-1.10973)+0.0165099",
+            "time_walk_corr":"3.58843*pow(x,-0.546044)-0.103027"
         },
     }
 
@@ -316,15 +318,7 @@ def ageMTD(process,lumi):
             process.mtdUncalibratedRecHits.barrel.npePerMeV = cms.double(mtd_parameters[lumi]["light_output"])
             process.mtdUncalibratedRecHits.barrel.npeToADC = cms.vdouble(mtd_parameters[lumi]["pulse_q"])
             process.mtdUncalibratedRecHits.barrel.timeResolutionInNs = cms.string(mtd_parameters[lumi]["hit_time_res"])
-            process.mtdUncalibratedRecHits.barrel.timeWalkCorrection = cms.string(
-                "{}/{}*pow({}/{}*(x-{}),{})".format( mtd_parameters[lumi]["time_at_thr1rise"][0],
-                                                     0.020, # [ns], TDC LSB
-                                                     mtd_parameters[lumi]["sipm_gain"],
-                                                     mtd_parameters[lumi]["pulse_q"][1],
-                                                     mtd_parameters[lumi]["pulse_q"][0],
-                                                     mtd_parameters[lumi]["time_at_thr1rise"][1]
-                )
-            )
+            process.mtdUncalibratedRecHits.barrel.timeWalkCorrection = cms.string(mtd_parameters[lumi]["time_walk_corr"])
 
     return process
 
