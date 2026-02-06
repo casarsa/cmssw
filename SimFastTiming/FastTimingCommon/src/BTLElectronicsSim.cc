@@ -43,6 +43,7 @@ BTLElectronicsSim::BTLElectronicsSim(const edm::ParameterSet& pset, edm::Consume
       sinPhi_(0.5 * corrCoeff_ / cosPhi_),
       scintillatorDecayTimeInv_(1. / scintillatorDecayTime_),
       sigmaConst2_(sigmaTDC_ * sigmaTDC_ + sigmaClockGlobal_ * sigmaClockGlobal_),
+      paramSiPMSaturation_(pset.getParameter<double>("SiPMSaturationParam")),
 #ifdef EDM_ML_DEBUG
       debug_(true) {
 #else
@@ -117,6 +118,8 @@ void BTLElectronicsSim::run(const mtd::MTDSimHitDataAccumulator& input,
       continue;
     }
 
+
+    float npe_eff[2] = {0.f, 0.f};
     float charge_adc[2] = {0.f, 0.f};
     float toa1[2] = {0.f, 0.f};
     float toa2[2] = {0.f, 0.f};
@@ -126,23 +129,28 @@ void BTLElectronicsSim::run(const mtd::MTDSimHitDataAccumulator& input,
         continue;
       }
 
+      
+      // Effective effective Npe including SiPM saturation  
+      npe_eff[iside] = paramSiPMSaturation_[0]*npe[iside]*npe[iside] + paramSiPMSaturation_[1]*npe[iside];
+    
+      
       // ================================================================================
       //  TOFHiR's time branch
       // ================================================================================
 
       // --- Skip the hit if its amplitude is below the T2 threshold
-      if (pulse_tbranch_uA(npe[iside]) < pulseT2Threshold_) {
+      if (pulse_tbranch_uA(npe_eff[iside]) < pulseT2Threshold_) {
         continue;
       }
 
       // --- Skip the hit if its amplitude is below the energy threshold
-      if (pulse_ebranch_uA(npe[iside]) < pulseEThreshold_) {
+      if (pulse_ebranch_uA(npe_eff[iside]) < pulseEThreshold_) {
         continue;
       }
 
       // --- Add the T1 and T2 threshold crossing times on the pulse rising edge to the SimHit time
-      float finalToA1 = (it->second).hit_info[1 + 2 * iside][iBX] + time_at_Thr1Rise(npe[iside]);
-      float finalToA2 = (it->second).hit_info[1 + 2 * iside][iBX] + time_at_Thr2Rise(npe[iside]);
+      float finalToA1 = (it->second).hit_info[1 + 2 * iside][iBX] + time_at_Thr1Rise(npe_eff[iside]);
+      float finalToA2 = (it->second).hit_info[1 + 2 * iside][iBX] + time_at_Thr2Rise(npe_eff[iside]);
 
       // --- Loop over the earlier OOT hits in the current bar to determine the channel
       //     rearming time and estimate the photon flux arriving at the in-time BX
@@ -224,12 +232,12 @@ void BTLElectronicsSim::run(const mtd::MTDSimHitDataAccumulator& input,
       // ================================================================================
 
       // --- Get the pulse amplitude in ADC counts
-      float amp = pulse_q(npe[iside]);
+      float amp = pulse_q(npe_eff[iside]);
 
       // --- Get the average uncertainty on the pulse amplitude (here the unsmeared
       //     value of Npe is used, because the parameterization of the relative
       //     amplitude resolution already includes the photostatistics fluctuation)
-      float sigma_amp = amp * pulse_qRes((it->second).hit_info[2 * iside][iBX]);
+      float sigma_amp = amp * pulse_qRes((it->second).hit_info[2 * iside][iBX]);  ///????  Here which value of Npe should we use? unsmeared but corrected for saturation?
 
       charge_adc[iside] = CLHEP::RandGaussQ::shoot(hre, amp, sigma_amp);
 

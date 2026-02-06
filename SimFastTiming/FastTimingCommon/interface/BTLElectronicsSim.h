@@ -104,7 +104,8 @@ private:
   const float sinPhi_;
   const float scintillatorDecayTimeInv_;
   const float sigmaConst2_;
-
+  const std::vector<double> paramSiPMSaturation_;
+  
   const bool debug_;
 };
 
