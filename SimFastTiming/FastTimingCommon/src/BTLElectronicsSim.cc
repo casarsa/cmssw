@@ -43,7 +43,7 @@ BTLElectronicsSim::BTLElectronicsSim(const edm::ParameterSet& pset, edm::Consume
       sinPhi_(0.5 * corrCoeff_ / cosPhi_),
       scintillatorDecayTimeInv_(1. / scintillatorDecayTime_),
       sigmaConst2_(sigmaTDC_ * sigmaTDC_ + sigmaClockGlobal_ * sigmaClockGlobal_),
-      paramSiPMSaturation_(pset.getParameter<double>("SiPMSaturationParam")),
+      paramSiPMSaturation_(pset.getParameter<std::vector<double>>("SiPMSaturationParam")),
 #ifdef EDM_ML_DEBUG
       debug_(true) {
 #else
@@ -132,8 +132,8 @@ void BTLElectronicsSim::run(const mtd::MTDSimHitDataAccumulator& input,
       
       // Effective effective Npe including SiPM saturation  
       npe_eff[iside] = paramSiPMSaturation_[0]*npe[iside]*npe[iside] + paramSiPMSaturation_[1]*npe[iside];
-    
-      
+
+
       // ================================================================================
       //  TOFHiR's time branch
       // ================================================================================

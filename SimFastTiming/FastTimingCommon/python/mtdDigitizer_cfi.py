@@ -50,7 +50,7 @@ _barrel_MTDDigitizer = cms.PSet(
 
         PulseQParam               = cms.vdouble(-22.5, 0.0348), # pulse amplitude in ADC counts vs Npe
         PulseQResParam            = cms.vdouble(51., -0.88),    # relative amplitude resolution vs Npe
-        SiPMSaturationParam       = cms.vdouble(-8.54e-06, 1.03E-01) # parametrization to account for SiPM saturation
+        SiPMSaturationParam       = cms.vdouble(-8.54e-06, 1.034) # parametrization to account for SiPM saturation
         )
 
 
