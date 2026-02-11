@@ -262,7 +262,8 @@ def ageMTD(process,lumi):
             "time_over_thr1": [1.3e9, 9.58676, -2.51351e-10, 5.98501e-18, -3.326821e-27, -7.61576e-10, 13.21],
             "slew_rate": [1.3e9, -0.8, 8.7e-9, 11.1],
             "pulse_q": [-43.5, 0.0793],
-            "hit_time_res": "0.143789*pow(x,-1.09324)+0.0166063"
+            "hit_time_res": "0.143789*pow(x,-1.09324)+0.0166063",
+            "sipm_saturation": [-9.80E-06, 1.007]
         },
         3000: {
             "light_output": 1004.,
@@ -277,7 +278,8 @@ def ageMTD(process,lumi):
             "time_over_thr1": [1.3e9, 9.58676, -2.51351e-10, 5.98501e-18, -3.326821e-27, -7.61576e-10, 13.21],
             "slew_rate": [1.3e9, -0.8, 8.7e-9, 11.1],
             "pulse_q": [-34.3, 0.085],
-            "hit_time_res": "0.2567*pow(x,-1.10973)+0.0165099"
+            "hit_time_res": "0.2567*pow(x,-1.10973)+0.0165099",
+            "sipm_saturation": [-1.04E-05, 1.008]
         },
     }
 
@@ -296,6 +298,7 @@ def ageMTD(process,lumi):
             process.mix.digitizers.fastTimingLayer.barrelDigitizer.ElectronicsSimulation.TimeOverThr1Param = cms.vdouble(mtd_parameters[lumi]["time_over_thr1"])
             process.mix.digitizers.fastTimingLayer.barrelDigitizer.ElectronicsSimulation.SlewRateParam = cms.vdouble(mtd_parameters[lumi]["slew_rate"])
             process.mix.digitizers.fastTimingLayer.barrelDigitizer.ElectronicsSimulation.PulseQParam = cms.vdouble(mtd_parameters[lumi]["pulse_q"])
+            process.mix.digitizers.fastTimingLayer.barrelDigitizer.ElectronicsSimulation.SiPMSaturationParam = cms.vdouble(mtd_parameters[lumi]["sipm_saturation"])
         # --- This is for the workflows with premixing:
         if hasattr(process,'mixData') and hasattr(process.mixData,'workers') and hasattr(process.mixData.workers,'mtdBarrel'):
             process.mixData.workers.mtdBarrel.DeviceSimulation.LightOutput = cms.double(mtd_parameters[lumi]["light_output"])
@@ -311,6 +314,7 @@ def ageMTD(process,lumi):
             process.mixData.workers.mtdBarrel.ElectronicsSimulation.TimeOverThr1Param = cms.vdouble(mtd_parameters[lumi]["time_over_thr1"])
             process.mixData.workers.mtdBarrel.ElectronicsSimulation.SlewRateParam = cms.vdouble(mtd_parameters[lumi]["slew_rate"])
             process.mixData.workers.mtdBarrel.ElectronicsSimulation.PulseQParam = cms.vdouble(mtd_parameters[lumi]["pulse_q"])
+            process.mixData.workers.mtdBarrel.ElectronicsSimulation.SiPMSaturationParam = cms.vdouble(mtd_parameters[lumi]["sipm_saturation"])
         # --- This is for the uncalibrated RecHit reconstruction:
         if hasattr(process,'mtdUncalibratedRecHits') and hasattr(process.mtdUncalibratedRecHits,'barrel'):
             process.mtdUncalibratedRecHits.barrel.npePerMeV = cms.double(mtd_parameters[lumi]["light_output"])

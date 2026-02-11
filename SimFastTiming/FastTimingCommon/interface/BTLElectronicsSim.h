@@ -62,6 +62,8 @@ private:
 
   float pulse_qRes(const float& npe) const;
 
+  float effective_npe(const float& npe) const;
+
   static constexpr float sqrt2_ = 1.41421356f;
 
   static constexpr float tofhirClock_ = 6.25f;  // [ns]
@@ -105,7 +107,7 @@ private:
   const float scintillatorDecayTimeInv_;
   const float sigmaConst2_;
   const std::vector<double> paramSiPMSaturation_;
-  
+
   const bool debug_;
 };
 

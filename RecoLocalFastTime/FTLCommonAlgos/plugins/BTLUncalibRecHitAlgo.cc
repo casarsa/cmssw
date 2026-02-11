@@ -15,6 +15,7 @@ public:
         npeToADC_(conf.getParameter<std::vector<double>>("npeToADC")),
         npePerMeV_(conf.getParameter<double>("npePerMeV")),
         invADCPerMeV_(1. / (npeToADC_[1] * npePerMeV_)),
+        npeSaturationCorr_(conf.getParameter<std::vector<double>>("npeSaturationCorrection")),
         tdc_to_ns_(conf.getParameter<double>("tdcLSB_ns")),
         timeError_(conf.getParameter<std::string>("timeResolutionInNs")),
         timeWalkCorr_(conf.getParameter<std::string>("timeWalkCorrection")) {}
@@ -35,6 +36,7 @@ private:
   const std::vector<double> npeToADC_;
   const double npePerMeV_;
   const double invADCPerMeV_;
+  const std::vector<double> npeSaturationCorr_;
   const double tdc_to_ns_;
   const reco::FormulaEvaluator timeError_;
   const reco::FormulaEvaluator timeWalkCorr_;
@@ -63,7 +65,12 @@ FTLUncalibratedRecHit BTLUncalibRecHitAlgo::makeRecHit(const BTLDataFrame& dataF
                  timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.first}}, std::array<double, 1>{{0.0}});
 
     // Convert ADC counts to MeV and TDC counts to ns
-    amplitude.first = (double(sampleRight.data()) - npeToADC_[0]) * invADCPerMeV_;
+    amplitude.first = (double(sampleRight.data()) - npeToADC_[0]) / npeToADC_[1];
+    // Correction for sipm saturation (just invert the function used to model this effect in BTLElectronicsSim)
+    float d = npeSaturationCorr_[1] * npeSaturationCorr_[1] + 4 * npeSaturationCorr_[0] * amplitude.first;
+    amplitude.first = (-npeSaturationCorr_[1] + sqrt(d)) / (2 * (npeSaturationCorr_[0]));
+    amplitude.first /= npePerMeV_;
+
     time.first *= tdc_to_ns_;
 
     flag |= 0x1;
@@ -78,7 +85,12 @@ FTLUncalibratedRecHit BTLUncalibRecHitAlgo::makeRecHit(const BTLDataFrame& dataF
                   timeWalkCorr_.evaluate(std::array<double, 1>{{amplitude.second}}, std::array<double, 1>{{0.0}});
 
     // Convert ADC counts to MeV and TDC counts to ns
-    amplitude.second = (double(sampleLeft.data()) - npeToADC_[0]) * invADCPerMeV_;
+    // Correction for sipm saturation (just invert the function used to model this effect in BTLElectronicsSim)
+    amplitude.second = (double(sampleLeft.data()) - npeToADC_[0]) / npeToADC_[1];
+    float d = npeSaturationCorr_[1] * npeSaturationCorr_[1] + 4 * npeSaturationCorr_[0] * amplitude.second;
+    amplitude.second = (-npeSaturationCorr_[1] + sqrt(d)) / (2 * (npeSaturationCorr_[0]));
+    amplitude.second /= npePerMeV_;
+
     time.second *= tdc_to_ns_;
 
     flag |= (0x1 << 1);
