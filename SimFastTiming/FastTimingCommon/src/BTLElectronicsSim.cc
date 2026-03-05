@@ -15,7 +15,7 @@ BTLElectronicsSim::BTLElectronicsSim(const edm::ParameterSet& pset, edm::Consume
       lcepositionSlope_(pset.getParameter<double>("LCEpositionSlope")),
       sigmaLCEpositionSlope_(pset.getParameter<double>("SigmaLCEpositionSlope")),
       pulseT2Threshold_(pset.getParameter<double>("PulseT2Threshold")),
-      pulseEThreshold_(pset.getParameter<double>("PulseEThrershold")),
+      pulseEThreshold_(pset.getParameter<double>("PulseEThreshold")),
       channelRearmMode_(pset.getParameter<uint32_t>("ChannelRearmMode")),
       channelRearmNClocks_(pset.getParameter<double>("ChannelRearmNClocks")),
       t1Delay_(pset.getParameter<double>("T1Delay")),
