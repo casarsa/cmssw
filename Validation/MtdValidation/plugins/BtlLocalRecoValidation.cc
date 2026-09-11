@@ -1808,10 +1808,10 @@ void BtlLocalRecoValidation::bookHistograms(DQMStore::IBooker& ibook,
 
   if (fillTimeWalkPlots_) {
     meDeltaTsimvsE_ = ibook.bookProfile(
-        "DeltaTsimvsE", "Time difference vs energy; E_{RECO} [MeV];  T_{RECO} - T_{SIM}", 110, 0., 22, -20., 20., "S");
+        "DeltaTsimvsE", "Time difference vs energy; E_{RECO} [MeV];  T_{RECO} - T_{SIM}", 220, 0., 22, -20., 20., "S");
     meDeltaTsimvsER_ = ibook.bookProfile("DeltaTsimvsE_R",
                                          "Time difference vs energy (R); E_{RECO} [MeV];  T_{RECO} - T_{SIM}",
-                                         110,
+                                         220,
                                          0.,
                                          22,
                                          -20.,
@@ -1819,7 +1819,7 @@ void BtlLocalRecoValidation::bookHistograms(DQMStore::IBooker& ibook,
                                          "S");
     meDeltaTsimvsEL_ = ibook.bookProfile("DeltaTsimvsE_L",
                                          "Time difference vs energy (L); E_{RECO} [MeV];  T_{RECO} - T_{SIM}",
-                                         110,
+                                         220,
                                          0.,
                                          22,
                                          -20.,
